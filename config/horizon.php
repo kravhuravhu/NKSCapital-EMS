@@ -223,7 +223,11 @@ return [
 
         'local' => [
             'supervisor-1' => [
-                'maxProcesses' => 3,
+                'connection' => 'redis',
+                'queue' => ['default', 'high', 'medium', 'low', 'emails', 'approvals', 'exports'],
+                'balance' => 'auto',
+                'processes' => 10,
+                'tries' => 3,
             ],
         ],
     ],
