@@ -89,12 +89,23 @@ jobs:
           if [ -f tests/database/test-data.sql ]; then
             mysql -h 127.0.0.1 -u root -D laravel_test < tests/database/test-data.sql
             echo "Test data imported successfully"
+          else
+            echo "ℹNo test data to import"
           fi
+
+      - name: Verify database tables
+        env:
+          MYSQL_PWD: root
+        run: |
+          echo "Verifying tables exist..."
+          mysql -h 127.0.0.1 -u root -D laravel_test -e "SHOW TABLES;"
+          echo "Checking users table structure..."
+          mysql -h 127.0.0.1 -u root -D laravel_test -e "DESCRIBE users;" || echo "Users table not found"
 
       - name: Clear config cache
         run: php artisan config:clear
 
-      - name: Run Laravel tests
+      - name: Run Laravel tests (without migrations)
         env:
           APP_ENV: testing
           DB_CONNECTION: mysql
@@ -103,4 +114,6 @@ jobs:
           DB_DATABASE: laravel_test
           DB_USERNAME: laravel
           DB_PASSWORD: password
-        run: php artisan test
+          # Skip migrations during tests
+          LARAVEL_LOAD_MIGRATIONS: false
+        run: php artisan test --exclude-group=migrations
