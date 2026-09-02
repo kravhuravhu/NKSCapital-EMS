@@ -3,7 +3,11 @@
 Thumbs.db
 
 .env
-.env.*
+.env.production
+.env.local
+.env.testing
+.env.backup
+.env.save
 !.env.backup
 
 .phpactor.json
