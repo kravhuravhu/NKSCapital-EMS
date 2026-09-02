@@ -46,6 +46,6 @@ Homestead.yaml
 
 *.sqlite
 
-composer.lock
+#composer.lock
 package-lock.json
 yarn.lock
