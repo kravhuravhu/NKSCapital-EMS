@@ -34,14 +34,14 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.5.9'
+          php-version: '8.5'
           extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_mysql
           coverage: none
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
+          node-version: '20'
           cache: npm
 
       - name: Copy environment file
