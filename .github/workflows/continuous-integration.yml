@@ -8,7 +8,7 @@ on:
       - preprod/v1.0.0
 
 jobs:
-  laravel-tests:
+  continuous-integration:
     runs-on: ubuntu-latest
 
     services:
