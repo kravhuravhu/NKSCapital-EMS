@@ -3,7 +3,11 @@
 Thumbs.db
 
 .env
-.env.*
+.env.production
+.env.local
+.env.testing
+.env.backup
+.env.save
 !.env.backup
 
 .phpactor.json
@@ -42,6 +46,6 @@ Homestead.yaml
 
 *.sqlite
 
-composer.lock
-package-lock.json
-yarn.lock
+#composer.lock
+#package-lock.json
+#yarn.lock

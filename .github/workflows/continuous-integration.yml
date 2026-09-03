@@ -1,0 +1,125 @@
+name: continuous-integration
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - preprod/v1.0.0
+
+jobs:
+  continuous-integration:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel_test
+          MYSQL_USER: laravel
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_mysql
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Prepare Laravel directories
+        run: |
+          mkdir -p storage/framework/cache
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          mkdir -p storage/logs
+          mkdir -p bootstrap/cache
+          chmod -R 775 storage bootstrap/cache
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Install NPM dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Wait for MySQL to be ready
+        run: |
+          until mysqladmin ping -h 127.0.0.1 -u root -proot --silent; do
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+
+      - name: Import database structure
+        env:
+          MYSQL_PWD: root
+        run: |
+          echo "Importing database structure..."
+          mysql -h 127.0.0.1 -u root -D laravel_test < tests/database/structure.sql
+          if [ $? -eq 0 ]; then
+            echo "✅ Database structure imported successfully"
+          else
+            echo "❌ Failed to import database structure"
+            exit 1
+          fi
+
+      - name: Verify tables
+        env:
+          MYSQL_PWD: root
+        run: |
+          echo "Checking tables..."
+          mysql -h 127.0.0.1 -u root -D laravel_test -e "SHOW TABLES;"
+          
+          echo "Checking users table..."
+          mysql -h 127.0.0.1 -u root -D laravel_test -e "DESCRIBE users;"
+
+      - name: Import test data
+        env:
+          MYSQL_PWD: root
+        run: |
+          if [ -f tests/database/test-data.sql ]; then
+            echo "Importing test data..."
+            mysql -h 127.0.0.1 -u root -D laravel_test < tests/database/test-data.sql
+            echo "✅ Test data imported successfully"
+          else
+            echo "ℹ️ No test data to import"
+          fi
+
+      - name: Clear config cache
+        run: php artisan config:clear
+
+      - name: Run Laravel unit tests only
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: laravel_test
+          DB_USERNAME: laravel
+          DB_PASSWORD: password
+        run: php artisan test --testsuite=Unit
