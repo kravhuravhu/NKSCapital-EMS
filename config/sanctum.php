@@ -25,6 +25,9 @@ return [
         // Sanctum::currentRequestHost(),
     ))),
 
+    // token expiration
+    'expiration' => 60,
+
     /*
     |--------------------------------------------------------------------------
     | Sanctum Guards
