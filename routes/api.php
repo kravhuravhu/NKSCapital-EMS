@@ -6,6 +6,8 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\RoleController;
 use App\Http\Controllers\API\EmployeeTypeController;
 use App\Http\Controllers\API\EmployeeController;
+use App\Http\Controllers\API\ClientController;
+use App\Http\Controllers\API\ProjectController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -74,6 +76,37 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('upload-photo', [EmployeeController::class, 'uploadPhoto']);
         Route::get('list', [EmployeeController::class, 'listEmployees']);
         Route::get('history/{id}', [EmployeeController::class, 'getHistory']);
+    });
+
+    // ========================================
+    // M3: Client & Project Management
+    // ========================================
+
+    // Client Management
+    Route::prefix('client')->group(function () {
+        Route::get('list', [ClientController::class, 'listClients']);
+        Route::post('create', [ClientController::class, 'createClient']);
+        Route::put('update/{id}', [ClientController::class, 'updateClient']);
+        Route::post('deactivate/{id}', [ClientController::class, 'deactivateClient']);
+        Route::post('manager/add', [ClientController::class, 'addClientManager']);
+        Route::get('manager/list/{clientId}', [ClientController::class, 'listClientManagers']);
+        Route::post('template/upload', [ClientController::class, 'uploadClientTemplate']);
+        Route::get('template/{clientId}', [ClientController::class, 'getClientTemplate']);
+        Route::put('template/update/{id}', [ClientController::class, 'updateClientTemplate']);
+    });
+
+    // Project Management
+    Route::prefix('project')->group(function () {
+        Route::get('list', [ProjectController::class, 'listProjects']);
+        Route::get('list/assigned', [ProjectController::class, 'listAssignedProjects']);
+        Route::get('{id}', [ProjectController::class, 'getProject']);
+        Route::get('hours/{id}', [ProjectController::class, 'getProjectHours']);
+        Route::post('create', [ProjectController::class, 'createProject']);
+        Route::put('update/{id}', [ProjectController::class, 'updateProject']);
+        Route::post('archive/{id}', [ProjectController::class, 'archiveProject']);
+        Route::post('assign-employee', [ProjectController::class, 'assignEmployee']);
+        Route::post('remove-employee', [ProjectController::class, 'removeEmployee']);
+        Route::post('assign-manager', [ProjectController::class, 'assignProjectManager']);
     });
 
     // Role management - Admin only
