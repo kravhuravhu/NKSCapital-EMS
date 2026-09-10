@@ -14,28 +14,19 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class User extends Authenticatable
 {
     use HasApiTokens, Notifiable, HasRoles;
 
-class User extends Authenticatable
-{
-    use HasApiTokens;
-    /** @use HasFactory<UserFactory> */
-    use HasFactory;
-    use HasProfilePhoto;
-    use Notifiable;
-    use TwoFactorAuthenticatable;
-
     /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
-     * @var array<int, string>
      */
     protected $fillable = [
-        'employee_number',
+        'name',
         'email',
         'email_verified_at',
         'password',
@@ -43,6 +34,7 @@ class User extends Authenticatable
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
+        'employee_number',
         'first_name',
         'last_name',
         'id_number',
@@ -77,7 +69,6 @@ class User extends Authenticatable
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>
-     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -96,6 +87,9 @@ class User extends Authenticatable
         'profile_photo_url',
         'full_name',
         'display_name',
+        'is_ps',
+        'is_pr',
+        'is_active',
     ];
 
     /**
@@ -130,6 +124,7 @@ class User extends Authenticatable
         'two_factor_enabled' => false,
         'leave_balance_annual' => 0.00,
         'leave_balance_sick' => 0.00,
+        'role' => 'employee',
     ];
 
     // ========================================
@@ -141,7 +136,7 @@ class User extends Authenticatable
      */
     public function getFullNameAttribute(): string
     {
-        return $this->first_name . ' ' . $this->last_name;
+        return trim($this->first_name . ' ' . $this->last_name);
     }
 
     /**
@@ -149,7 +144,10 @@ class User extends Authenticatable
      */
     public function getDisplayNameAttribute(): string
     {
-        return $this->full_name . ' (' . $this->employee_number . ')';
+        if ($this->employee_number) {
+            return $this->full_name . ' (' . $this->employee_number . ')';
+        }
+        return $this->full_name;
     }
 
     /**
@@ -161,13 +159,14 @@ class User extends Authenticatable
             return asset('storage/profile-photos/' . $this->profile_photo);
         }
         
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->full_name) . '&background=1a56db&color=fff&size=200';
+        $name = urlencode($this->full_name ?: $this->email);
+        return 'https://ui-avatars.com/api/?name=' . $name . '&background=1a56db&color=fff&size=200';
     }
 
     /**
      * Check if user is a Professional Services employee.
      */
-    public function getIsPSAttribute(): bool
+    public function getIsPsAttribute(): bool
     {
         return $this->employee_type === 'ps';
     }
@@ -175,15 +174,114 @@ class User extends Authenticatable
     /**
      * Check if user is a Projects employee.
      */
-    public function getIsPRAttribute(): bool
+    public function getIsPrAttribute(): bool
     {
         return $this->employee_type === 'pr';
+    }
+
+    /**
+     * Check if user is active.
+     */
+    public function getIsActiveAttribute(): bool
+    {
+        return (bool) ($this->attributes['is_active'] ?? true);
+    }
+
+    /**
+     * Get the user's initials.
+     */
+    public function getInitialsAttribute(): string
+    {
+        return strtoupper(
+            substr($this->first_name ?? '', 0, 1) . 
+            substr($this->last_name ?? '', 0, 1)
+        );
+    }
+
+    /**
+     * Get the user's role label.
+     */
+    public function getRoleLabelAttribute(): string
+    {
+        $labels = [
+            'employee' => 'Employee',
+            'manager' => 'Manager',
+            'director' => 'Director',
+            'admin' => 'Administrator',
+            'recruiter' => 'Recruiter',
+        ];
+        return $labels[$this->role] ?? ucfirst($this->role);
+    }
+
+    /**
+     * Get the employee type label.
+     */
+    public function getEmployeeTypeLabelAttribute(): string
+    {
+        $labels = [
+            'ps' => 'Professional Services',
+            'pr' => 'Projects',
+        ];
+        return $labels[$this->employee_type] ?? 'Not Assigned';
+    }
+
+    /**
+     * Get the service type label.
+     */
+    public function getServiceTypeLabelAttribute(): string
+    {
+        $labels = [
+            'permanent' => 'Permanent',
+            'contractor' => 'Contractor',
+            'temporary' => 'Temporary',
+            'intern' => 'Intern',
+        ];
+        return $labels[$this->service_type] ?? 'Not Assigned';
+    }
+
+    // ========================================
+    // MUTATORS
+    // ========================================
+
+    /**
+     * Set the employee type with validation.
+     */
+    public function setEmployeeTypeAttribute($value)
+    {
+        if ($value && !in_array($value, ['ps', 'pr'])) {
+            throw new \InvalidArgumentException('Invalid employee type. Must be ps or pr.');
+        }
+        $this->attributes['employee_type'] = $value;
+    }
+
+    /**
+     * Set the service type with validation.
+     */
+    public function setServiceTypeAttribute($value)
+    {
+        if ($value && !in_array($value, ['permanent', 'contractor', 'temporary', 'intern'])) {
+            throw new \InvalidArgumentException('Invalid service type.');
+        }
+        $this->attributes['service_type'] = $value;
+    }
+
+    /**
+     * Set the role with validation.
+     */
+    public function setRoleAttribute($value)
+    {
+        if ($value && !in_array($value, ['employee', 'manager', 'director', 'admin', 'recruiter'])) {
+            throw new \InvalidArgumentException('Invalid role.');
+        }
+        $this->attributes['role'] = $value;
     }
 
     // ========================================
     // RELATIONSHIPS
     // ========================================
 
+    // ---------- MANAGER / SUBORDINATE ----------
+    
     /**
      * Get the manager of this employee.
      */
@@ -201,6 +299,21 @@ class User extends Authenticatable
     }
 
     /**
+     * Get all subordinates recursively (for hierarchy).
+     */
+    public function allSubordinates(): \Illuminate\Support\Collection
+    {
+        $subordinates = collect();
+        foreach ($this->subordinates as $subordinate) {
+            $subordinates->push($subordinate);
+            $subordinates = $subordinates->merge($subordinate->allSubordinates());
+        }
+        return $subordinates;
+    }
+
+    // ---------- CLIENT / PROJECT ----------
+    
+    /**
      * Get the client assigned to this employee (PS only).
      */
     public function client(): BelongsTo
@@ -216,6 +329,8 @@ class User extends Authenticatable
         return $this->belongsTo(Project::class);
     }
 
+    // ---------- EMPLOYEE TYPES ----------
+    
     /**
      * Get the employee type of this user.
      */
@@ -232,248 +347,342 @@ class User extends Authenticatable
         return $this->belongsTo(ServiceType::class, 'service_type', 'service_code');
     }
 
-    // ========================================
-    // TIMESHEET RELATIONSHIPS
-    // ========================================
-
+    // ---------- TIMESHEETS ----------
+    
+    /**
+     * Get the PS timesheets for this employee.
+     */
     public function psTimesheets(): HasMany
     {
         return $this->hasMany(PSTimesheet::class);
     }
 
+    /**
+     * Get the PR timesheets for this employee.
+     */
     public function prTimesheets(): HasMany
     {
         return $this->hasMany(PRTimesheet::class);
     }
 
+    /**
+     * Get timesheets where this user is L1 approver.
+     */
     public function l1Approvals(): HasMany
     {
         return $this->hasMany(PRTimesheet::class, 'level1_approver_id');
     }
 
+    /**
+     * Get timesheets where this user is L2 approver.
+     */
     public function l2Approvals(): HasMany
     {
         return $this->hasMany(PRTimesheet::class, 'level2_approver_id');
     }
 
-    // ========================================
-    // LEAVE RELATIONSHIPS
-    // ========================================
-
+    // ---------- LEAVE ----------
+    
+    /**
+     * Get the leave requests for this employee.
+     */
     public function leaveRequests(): HasMany
     {
         return $this->hasMany(LeaveRequest::class);
     }
 
+    /**
+     * Get leave requests approved by this user.
+     */
     public function approvedLeaveRequests(): HasMany
     {
         return $this->hasMany(LeaveRequest::class, 'approved_by');
     }
 
+    /**
+     * Get the leave balances for this employee.
+     */
     public function leaveBalances(): HasMany
     {
         return $this->hasMany(LeaveBalance::class);
     }
 
+    /**
+     * Get the leave calendar entries for this employee.
+     */
     public function leaveCalendar(): HasMany
     {
         return $this->hasMany(LeaveCalendar::class);
     }
 
-    // ========================================
-    // ASSET RELATIONSHIPS
-    // ========================================
-
+    // ---------- ASSETS ----------
+    
+    /**
+     * Get assets currently assigned to this employee.
+     */
     public function assets(): HasMany
     {
         return $this->hasMany(Asset::class, 'current_assignee_id');
     }
 
+    /**
+     * Get asset custody history for this employee.
+     */
     public function assetCustodyHistory(): HasMany
     {
         return $this->hasMany(AssetCustodyHistory::class, 'assigned_to_id');
     }
 
-    // ========================================
-    // MEETING RELATIONSHIPS
-    // ========================================
-
+    // ---------- MEETINGS ----------
+    
+    /**
+     * Get meeting attendance records for this employee.
+     */
     public function meetingAttendance(): HasMany
     {
         return $this->hasMany(MeetingAttendance::class);
     }
 
+    /**
+     * Get meetings created by this employee.
+     */
     public function createdMeetings(): HasMany
     {
         return $this->hasMany(Meeting::class, 'created_by');
     }
 
-    // ========================================
-    // CONTRACT RELATIONSHIPS
-    // ========================================
-
+    // ---------- CONTRACTS ----------
+    
+    /**
+     * Get contracts for this employee.
+     */
     public function contracts(): HasMany
     {
         return $this->hasMany(Contract::class);
     }
 
-    // ========================================
-    // PROJECT RELATIONSHIPS
-    // ========================================
+    /**
+     * Get the active contract for this employee.
+     */
+    public function activeContract(): HasOne
+    {
+        return $this->hasOne(Contract::class)->where('status', 'active');
+    }
 
+    // ---------- PROJECTS ----------
+    
+    /**
+     * Get project assignments for this employee.
+     */
     public function projectAssignments(): HasMany
     {
         return $this->hasMany(ProjectAssignment::class);
     }
 
+    /**
+     * Get projects where this user is project manager.
+     */
     public function managedProjects(): HasMany
     {
         return $this->hasMany(Project::class, 'project_manager_id');
     }
 
-    // ========================================
-    // RECRUITMENT RELATIONSHIPS
-    // ========================================
+    /**
+     * Get active projects for this employee.
+     */
+    public function activeProjects()
+    {
+        return $this->projectAssignments()
+                    ->where('is_active', true)
+                    ->with('project');
+    }
 
+    // ---------- RECRUITMENT ----------
+    
+    /**
+     * Get requisitions created by this user.
+     */
     public function createdRequisitions(): HasMany
     {
         return $this->hasMany(Requisition::class, 'created_by');
     }
 
+    /**
+     * Get requisitions approved by this user.
+     */
     public function approvedRequisitions(): HasMany
     {
         return $this->hasMany(Requisition::class, 'approved_by');
     }
 
+    /**
+     * Get candidates that were hired by this user (converted to employee).
+     */
     public function hiredCandidates(): HasMany
     {
         return $this->hasMany(Candidate::class, 'hired_employee_id');
     }
 
+    /**
+     * Get interviews conducted by this user.
+     */
     public function conductedInterviews(): HasMany
     {
         return $this->hasMany(Interview::class, 'interviewer_id');
     }
 
+    /**
+     * Get offers created by this user.
+     */
     public function createdOffers(): HasMany
     {
         return $this->hasMany(Offer::class, 'created_by');
     }
 
-    // ========================================
-    // SYSTEM RELATIONSHIPS
-    // ========================================
-
+    // ---------- SYSTEM ----------
+    
+    /**
+     * Get delegations where this user is the original approver.
+     */
     public function delegationsGiven(): HasMany
     {
         return $this->hasMany(ApprovalDelegation::class, 'original_approver_id');
     }
 
+    /**
+     * Get delegations where this user is the delegate.
+     */
     public function delegationsReceived(): HasMany
     {
         return $this->hasMany(ApprovalDelegation::class, 'delegate_id');
     }
 
+    /**
+     * Get audit logs generated by this user.
+     */
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);
     }
 
+    /**
+     * Get notifications for this user.
+     */
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
     }
 
+    /**
+     * Get unread notifications.
+     */
+    public function unreadNotifications()
+    {
+        return $this->notifications()->where('is_read', false);
+    }
+
+    /**
+     * Get two-factor authentication record for this user.
+     */
     public function twoFactorAuth(): HasOne
     {
         return $this->hasOne(TwoFactorAuth::class);
     }
 
+    /**
+     * Get passkeys for this user.
+     */
     public function passkeys(): HasMany
     {
         return $this->hasMany(Passkey::class);
+    }
+
+    // ---------- SPATIE PERMISSION OVERRIDE ----------
+    
+    /**
+     * Override the default role relationship to use our role column.
+     */
+    public function getRoleNamesAttribute()
+    {
+        return $this->getRoleNames();
     }
 
     // ========================================
     // SCOPES
     // ========================================
 
+    /**
+     * Scope a query to only include Professional Services employees.
+     */
     public function scopePS($query)
     {
         return $query->where('employee_type', 'ps');
     }
 
+    /**
+     * Scope a query to only include Projects employees.
+     */
     public function scopePR($query)
     {
         return $query->where('employee_type', 'pr');
     }
 
+    /**
+     * Scope a query to only include active employees.
+     */
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
+    /**
+     * Scope a query to only include inactive employees.
+     */
     public function scopeInactive($query)
-        'two_factor_recovery_codes',
-        'two_factor_secret',
-    ];
-
-    /**
-     * The accessors to append to the model's array form.
-     *
-     * @var array<int, string>
-     */
-    protected $appends = [
-        'profile_photo_url',
-    ];
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'two_factor_enabled' => 'boolean',
-            'is_active' => 'boolean',
-            'hire_date' => 'date',
-            'termination_date' => 'date',
-            'last_login_at' => 'datetime',
-            'leave_balance_annual' => 'decimal:2',
-            'leave_balance_sick' => 'decimal:2',
-        ];
-    }
-
-    /**
-     * Get the user's full name.
-     *
-     * @return string
-     */
-    public function getFullNameAttribute(): string
     {
         return $query->where('is_active', false);
     }
 
+    /**
+     * Scope a query to only include employees with a specific role.
+     */
     public function scopeWithRole($query, string $role)
     {
         return $query->where('role', $role);
     }
 
+    /**
+     * Scope a query to only include employees with a specific employee type.
+     */
     public function scopeWithEmployeeType($query, string $type)
     {
         return $query->where('employee_type', $type);
     }
 
+    /**
+     * Scope a query to only include employees with a specific service type.
+     */
     public function scopeWithServiceType($query, string $type)
     {
         return $query->where('service_type', $type);
     }
 
+    /**
+     * Scope a query to search employees.
+     */
+    public function scopeSearch($query, string $search)
+    {
+        return $query->where(function($q) use ($search) {
+            $q->where('first_name', 'LIKE', "%{$search}%")
+              ->orWhere('last_name', 'LIKE', "%{$search}%")
+              ->orWhere('email', 'LIKE', "%{$search}%")
+              ->orWhere('employee_number', 'LIKE', "%{$search}%")
+              ->orWhere('phone', 'LIKE', "%{$search}%");
+        });
+    }
+
     // ========================================
-    // HELPER METHODS
+    // HELPER METHODS - ROLE CHECKS
     // ========================================
 
     /**
@@ -489,7 +698,7 @@ class User extends Authenticatable
      */
     public function hasTwoFactorEnabled(): bool
     {
-        return $this->two_factor_enabled && !empty($this->two_factor_secret);
+        return (bool) $this->two_factor_enabled && !empty($this->two_factor_secret);
     }
 
     /**
@@ -504,14 +713,8 @@ class User extends Authenticatable
      * Check if user is a Projects employee.
      */
     public function isPR(): bool
-     * Get the user's profile photo URL.
-     * Override to use custom profile_photo field.
-     *
-     * @return string
-     */
-    public function getProfilePhotoUrlAttribute(): string
     {
-        return $this->profile_photo ?? 'https://ui-avatars.com/api/?name=' . urlencode($this->full_name) . '&color=7F9CF5&background=EBF4FF';
+        return $this->employee_type === 'pr';
     }
 
     /**
@@ -547,15 +750,46 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user is an employee (base role).
+     */
+    public function isEmployee(): bool
+    {
+        return $this->role === 'employee';
+    }
+
+    /**
+     * Check if user has any of the specified roles.
+     */
+    public function hasAnyRole(array $roles): bool
+    {
+        return in_array($this->role, $roles);
+    }
+
+    // ========================================
+    // HELPER METHODS - LEAVE BALANCE
+    // ========================================
+
+    /**
      * Get the user's leave balance for a specific type.
      */
     public function getLeaveBalance(string $type): float
     {
         return match ($type) {
             'annual' => (float) $this->leave_balance_annual,
-            'sick' => (float) $this->leave_balance_sick,
-            default => 0.00,
+            'sick'   => (float) $this->leave_balance_sick,
+            default  => 0.00,
         };
+    }
+
+    /**
+     * Get all leave balances as an array.
+     */
+    public function getAllLeaveBalances(): array
+    {
+        return [
+            'annual' => (float) $this->leave_balance_annual,
+            'sick'   => (float) $this->leave_balance_sick,
+        ];
     }
 
     /**
@@ -573,8 +807,8 @@ class User extends Authenticatable
         
         match ($type) {
             'annual' => $this->leave_balance_annual = $newBalance,
-            'sick' => $this->leave_balance_sick = $newBalance,
-            default => null,
+            'sick'   => $this->leave_balance_sick = $newBalance,
+            default  => null,
         };
         
         $this->save();
@@ -589,15 +823,29 @@ class User extends Authenticatable
     {
         match ($type) {
             'annual' => $this->leave_balance_annual += $days,
-            'sick' => $this->leave_balance_sick += $days,
-            default => null,
+            'sick'   => $this->leave_balance_sick += $days,
+            default  => null,
         };
         
         $this->save();
     }
 
     /**
-     * Get the user's full name.
+     * Reset leave balances to default values.
+     */
+    public function resetLeaveBalances(): void
+    {
+        $this->leave_balance_annual = 0;
+        $this->leave_balance_sick = 0;
+        $this->save();
+    }
+
+    // ========================================
+    // HELPER METHODS - AUTHENTICATION
+    // ========================================
+
+    /**
+     * Get the user's full name (alias for getFullNameAttribute).
      */
     public function getName(): string
     {
@@ -609,6 +857,108 @@ class User extends Authenticatable
      */
     public function getInitials(): string
     {
-        return strtoupper(substr($this->first_name, 0, 1) . substr($this->last_name, 0, 1));
+        return $this->initials;
+    }
+
+    /**
+     * Update last login timestamp.
+     */
+    public function updateLastLogin(): void
+    {
+        $this->last_login_at = now();
+        $this->save();
+    }
+
+    /**
+     * Check if user can access the specified module.
+     */
+    public function canAccessModule(string $module): bool
+    {
+        // Admin and Director can access everything
+        if (in_array($this->role, ['admin', 'director'])) {
+            return true;
+        }
+
+        // Module-specific access
+        $moduleAccess = [
+            'recruitment' => ['recruiter', 'manager', 'admin', 'director'],
+            'timesheet'   => ['employee', 'manager', 'admin', 'director'],
+            'leave'       => ['employee', 'manager', 'admin', 'director'],
+            'assets'      => ['employee', 'manager', 'admin', 'director'],
+            'reports'     => ['manager', 'admin', 'director'],
+            'audit'       => ['director', 'admin'],
+            'payroll'     => ['director', 'admin'],
+            'delegation'  => ['director', 'admin'],
+        ];
+
+        $allowedRoles = $moduleAccess[$module] ?? ['employee', 'manager', 'admin', 'director'];
+        
+        return in_array($this->role, $allowedRoles);
+    }
+
+    // ========================================
+    // HELPER METHODS - EMPLOYEE TYPE
+    // ========================================
+
+    /**
+     * Get the workflow type for this employee.
+     */
+    public function getWorkflowType(): ?string
+    {
+        if ($this->employeeType) {
+            return $this->employeeType->workflow_type;
+        }
+        return null;
+    }
+
+    /**
+     * Check if employee has external approval (PS workflow).
+     */
+    public function hasExternalApproval(): bool
+    {
+        return $this->employeeType && $this->employeeType->has_external_approval;
+    }
+
+    /**
+     * Check if employee has internal approval (PR workflow).
+     */
+    public function hasInternalApproval(): bool
+    {
+        return $this->employeeType && $this->employeeType->has_internal_approval;
+    }
+
+    /**
+     * Get the employee's hierarchy level.
+     */
+    public function getHierarchyLevel(): int
+    {
+        $levels = [
+            'employee' => 1,
+            'manager' => 2,
+            'director' => 3,
+            'admin' => 4,
+            'recruiter' => 2,
+        ];
+        return $levels[$this->role] ?? 1;
+    }
+
+    /**
+     * Check if this user is a superior to another user.
+     */
+    public function isSuperiorTo(User $user): bool
+    {
+        if ($this->id === $user->id) {
+            return false;
+        }
+
+        if ($this->role === 'admin' || $this->role === 'director') {
+            return true;
+        }
+
+        if ($this->role === 'manager' && $user->manager_id === $this->id) {
+            return true;
+        }
+
+        return false;
     }
 }
