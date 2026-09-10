@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EmployeeType extends Model
 {
@@ -15,8 +16,18 @@ class EmployeeType extends Model
         'description',
     ];
 
-    public function users()
+    protected $casts = [
+        'has_external_approval' => 'boolean',
+        'has_internal_approval' => 'boolean',
+    ];
+
+    public function users(): HasMany
     {
         return $this->hasMany(User::class, 'employee_type', 'type_code');
+    }
+
+    public function workflowConfig(): HasMany
+    {
+        return $this->hasMany(WorkflowConfig::class, 'workflow_type', 'workflow_type');
     }
 }

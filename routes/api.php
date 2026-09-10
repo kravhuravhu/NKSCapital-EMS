@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\RoleController;
+use App\Http\Controllers\API\EmployeeTypeController;
+use App\Http\Controllers\API\EmployeeController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -38,6 +40,40 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
             Route::post('2fa/verify', [AuthController::class, 'verify2FA']);
             Route::post('2fa/disable', [AuthController::class, 'disable2FA']);
         });
+    });
+
+    // ========================================
+    // M2: Employee Foundation & Configuration
+    // ========================================
+
+    // Employee Type & Service Type APIs
+    Route::prefix('employee')->group(function () {
+        Route::post('type/assign', [EmployeeTypeController::class, 'assignEmployeeType']);
+        Route::get('type/{id}', [EmployeeTypeController::class, 'getEmployeeType']);
+        Route::post('client/assign', [EmployeeController::class, 'assignClient']);
+        Route::post('project/assign', [EmployeeController::class, 'assignProject']);
+        Route::post('role/assign', [EmployeeController::class, 'assignRoleToUser'])->middleware('role:admin,super_admin');
+    });
+
+    // Admin only - Employee Type Management
+    Route::prefix('admin')->middleware(['role:admin,super_admin'])->group(function () {
+        // Employee Types
+        Route::get('employee-type/list', [EmployeeTypeController::class, 'listEmployeeTypes']);
+        Route::post('employee-type/create', [EmployeeTypeController::class, 'createEmployeeType']);
+        Route::get('service-type/list', [EmployeeTypeController::class, 'listServiceTypes']);
+        Route::post('workflow/assign', [EmployeeTypeController::class, 'assignWorkflow']);
+    });
+
+    // Employee Management
+    Route::prefix('employee')->middleware(['auth:sanctum'])->group(function () {
+        Route::post('create', [EmployeeController::class, 'createEmployee'])->middleware('role:admin,super_admin');
+        Route::get('profile/{id}', [EmployeeController::class, 'getProfile']);
+        Route::put('update', [EmployeeController::class, 'updateProfile']);
+        Route::put('update-full/{id}', [EmployeeController::class, 'updateFullProfile'])->middleware('role:admin,manager,director');
+        Route::post('deactivate/{id}', [EmployeeController::class, 'deactivateEmployee'])->middleware('role:admin,super_admin');
+        Route::post('upload-photo', [EmployeeController::class, 'uploadPhoto']);
+        Route::get('list', [EmployeeController::class, 'listEmployees']);
+        Route::get('history/{id}', [EmployeeController::class, 'getHistory']);
     });
 
     // Role management - Admin only
