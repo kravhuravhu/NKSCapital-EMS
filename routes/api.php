@@ -10,6 +10,8 @@ use App\Http\Controllers\API\ClientController;
 use App\Http\Controllers\API\ProjectController;
 use App\Http\Controllers\API\PSTimesheetController;
 use App\Http\Controllers\API\PRTimesheetController;
+use App\Http\Controllers\API\TimesheetReportController;
+use App\Http\Controllers\API\WorkflowController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -142,6 +144,39 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('list', [PRTimesheetController::class, 'list']);
         Route::get('history', [PRTimesheetController::class, 'history']);
         Route::get('{id}', [PRTimesheetController::class, 'show']);
+    });
+    
+    // ========================================
+    // M5: Timesheet Reporting & Payroll Integration
+    // ========================================
+
+    // Timesheet Reports
+    Route::prefix('timesheet')->group(function () {
+        // PR Payroll Export
+        Route::get('pr/export/payroll', [TimesheetReportController::class, 'exportPayroll']);
+        Route::get('pr/report/monthly', [TimesheetReportController::class, 'monthlyReport']);
+        
+        // History (Admin/Director view)
+        Route::get('ps/history', [TimesheetReportController::class, 'psHistory']);
+        Route::get('pr/history', [TimesheetReportController::class, 'prHistory']);
+        
+        // Reports
+        Route::get('report/compliance', [TimesheetReportController::class, 'complianceReport']);
+        Route::get('report/department', [TimesheetReportController::class, 'departmentReport']);
+        
+        // Export endpoints
+        Route::post('report/export/excel', [TimesheetReportController::class, 'exportExcel']);
+        Route::post('report/export/pdf', [TimesheetReportController::class, 'exportPdf']);
+    });
+
+    // Workflow Management (Admin/Director)
+    Route::prefix('admin/workflow')->middleware(['role:admin,super_admin,director'])->group(function () {
+        Route::get('rules', [WorkflowController::class, 'getRules']);
+        Route::get('{type}', [WorkflowController::class, 'getWorkflow']);
+        Route::post('config', [WorkflowController::class, 'configureWorkflow']);
+        Route::post('assign', [WorkflowController::class, 'assignWorkflow']);
+        Route::post('test/{employeeId}', [WorkflowController::class, 'testWorkflow']);
+        Route::put('update/{id}', [WorkflowController::class, 'updateWorkflow']);
     });
 
     // Role management - Admin only
