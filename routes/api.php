@@ -8,6 +8,8 @@ use App\Http\Controllers\API\EmployeeTypeController;
 use App\Http\Controllers\API\EmployeeController;
 use App\Http\Controllers\API\ClientController;
 use App\Http\Controllers\API\ProjectController;
+use App\Http\Controllers\API\PSTimesheetController;
+use App\Http\Controllers\API\PRTimesheetController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -107,6 +109,39 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('assign-employee', [ProjectController::class, 'assignEmployee']);
         Route::post('remove-employee', [ProjectController::class, 'removeEmployee']);
         Route::post('assign-manager', [ProjectController::class, 'assignProjectManager']);
+    });
+
+    // ========================================
+    // M4: PS & PR Timesheet Core Workflows
+    // ========================================
+
+    // PS Timesheet Routes
+    Route::prefix('timesheet/ps')->group(function () {
+        Route::post('create', [PSTimesheetController::class, 'create']);
+        Route::post('generate-template', [PSTimesheetController::class, 'generateTemplate']);
+        Route::get('download-template', [PSTimesheetController::class, 'downloadTemplate']);
+        Route::post('upload-signed', [PSTimesheetController::class, 'uploadSigned']);
+        Route::post('send-to-client', [PSTimesheetController::class, 'sendToClient']);
+        Route::post('recall', [PSTimesheetController::class, 'recall']);
+        Route::get('history', [PSTimesheetController::class, 'history']);
+        Route::get('{id}', [PSTimesheetController::class, 'show']);
+    });
+
+    // PR Timesheet Routes
+    Route::prefix('timesheet/pr')->group(function () {
+        Route::post('create', [PRTimesheetController::class, 'create']);
+        Route::put('save-draft', [PRTimesheetController::class, 'saveDraft']);
+        Route::post('submit', [PRTimesheetController::class, 'submit']);
+        Route::post('approve/l1', [PRTimesheetController::class, 'approveL1']);
+        Route::post('reject/l1', [PRTimesheetController::class, 'rejectL1']);
+        Route::post('approve/l2', [PRTimesheetController::class, 'approveL2']);
+        Route::post('reject/l2', [PRTimesheetController::class, 'rejectL2']);
+        Route::post('recall', [PRTimesheetController::class, 'recall']);
+        Route::get('pending/l1', [PRTimesheetController::class, 'pendingL1']);
+        Route::get('pending/l2', [PRTimesheetController::class, 'pendingL2']);
+        Route::get('list', [PRTimesheetController::class, 'list']);
+        Route::get('history', [PRTimesheetController::class, 'history']);
+        Route::get('{id}', [PRTimesheetController::class, 'show']);
     });
 
     // Role management - Admin only

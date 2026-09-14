@@ -532,19 +532,15 @@ class EmployeeController extends Controller
         $prefix = 'EN';
         $year = date('y');
 
-        $lastEmployee = User::whereNotNull('employee_number')
-            ->orderByDesc('employee_sequence')
-            ->first();
+        do {
+            // 4 random letters/numbers
+            $random = strtoupper(Str::random(4));
 
-        $sequence = $lastEmployee
-            ? $lastEmployee->employee_sequence + 1
-            : 18;
-
-        // Convert sequence to Base36 and pad to 4 characters
-        $encodedSequence = strtoupper(
-            str_pad(base_convert($sequence, 10, 36), 4, '0', STR_PAD_LEFT)
+            $employeeNumber = $prefix . $year . $random;
+        } while (
+            User::where('employee_number', $employeeNumber)->exists()
         );
 
-        return $prefix . $year . $encodedSequence;
+        return $employeeNumber;
     }
 }
