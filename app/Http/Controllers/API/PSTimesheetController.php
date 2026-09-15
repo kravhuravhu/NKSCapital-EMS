@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use App\Models\LeaveCalendar;
 
 class PSTimesheetController extends Controller
 {
@@ -83,6 +84,31 @@ class PSTimesheetController extends Controller
             'status' => 'draft',
             'notes' => $request->notes,
         ]);
+        
+        // Check for leave day conflicts
+        $leaveConflicts = [];
+        foreach ($request->entries as $entry) {
+            $workDate = $entry['work_date'];
+            $leaveEntry = LeaveCalendar::where('user_id', $user->id)
+                ->where('leave_date', $workDate)
+                ->where('is_approved', true)
+                ->first();
+            
+            if ($leaveEntry) {
+                $leaveConflicts[] = [
+                    'date' => $workDate,
+                    'leave_type' => $leaveEntry->leave_type,
+                ];
+            }
+        }
+
+        if (!empty($leaveConflicts)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Cannot add work hours on approved leave days',
+                'conflicts' => $leaveConflicts,
+            ], 422);
+        }
 
         // Create details
         $totalHours = 0;

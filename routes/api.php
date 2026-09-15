@@ -12,6 +12,8 @@ use App\Http\Controllers\API\PSTimesheetController;
 use App\Http\Controllers\API\PRTimesheetController;
 use App\Http\Controllers\API\TimesheetReportController;
 use App\Http\Controllers\API\WorkflowController;
+use App\Http\Controllers\API\LeaveController;
+use App\Http\Controllers\API\LeaveConfigController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -178,6 +180,48 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('test/{employeeId}', [WorkflowController::class, 'testWorkflow']);
         Route::put('update/{id}', [WorkflowController::class, 'updateWorkflow']);
     });
+
+    // ========================================
+    // M6: Leave Management
+    // ========================================
+
+    // Leave Routes (all authenticated users)
+    Route::prefix('leave')->group(function () {
+        Route::post('apply', [LeaveController::class, 'apply']);
+        Route::get('balance', [LeaveController::class, 'balance']);
+        Route::get('history', [LeaveController::class, 'history']);
+        Route::get('calendar', [LeaveController::class, 'calendar']);
+        Route::get('conflicts/{dateRange}', [LeaveController::class, 'conflicts']);
+        
+        // Approval actions (Manager/Director)
+        Route::middleware(['role:manager,director,admin,super_admin'])->group(function () {
+            Route::get('pending', [LeaveController::class, 'pending']);
+            Route::post('approve', [LeaveController::class, 'approve']);
+            Route::post('reject', [LeaveController::class, 'reject']);
+            Route::post('hold', [LeaveController::class, 'hold']);
+            Route::post('partial-approve', [LeaveController::class, 'partialApprove']);
+            Route::get('team-report', [LeaveController::class, 'teamReport']);
+        });
+        
+        // Admin/Director only
+        Route::middleware(['role:admin,director,super_admin'])->group(function () {
+            Route::post('balance/adjust', [LeaveController::class, 'adjustBalance']);
+        });
+        
+        // Employee cancel
+        Route::post('cancel', [LeaveController::class, 'cancel']);
+    });
+
+    // Leave Configuration (Super Admin & Director ONLY)
+    Route::prefix('admin/leave-config')
+        ->middleware(['role:super_admin,director'])
+        ->group(function () {
+            Route::get('', [LeaveConfigController::class, 'index']);
+            Route::put('update', [LeaveConfigController::class, 'update']);
+            Route::post('accrual-rate', [LeaveConfigController::class, 'updateAccrualRate']);
+            Route::put('entitlements', [LeaveConfigController::class, 'updateEntitlements']);
+            Route::post('reset-employee/{userId}', [LeaveConfigController::class, 'resetEmployee']);
+        });
 
     // Role management - Admin only
     Route::prefix('admin/roles')

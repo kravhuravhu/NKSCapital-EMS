@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use App\Models\LeaveCalendar;
 
 class PRTimesheetController extends Controller
 {
@@ -41,6 +42,17 @@ class PRTimesheetController extends Controller
             'entries.*.task_description' => 'nullable|string|max:500',
             'entries.*.is_overtime' => 'nullable|boolean',
         ]);
+
+        if ($request->has('entries') && !empty($request->entries)) {
+            $leaveConflicts = $this->validateAgainstLeave($user, $request->entries);
+            if ($leaveConflicts) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cannot add work hours on approved leave days',
+                    'conflicts' => $leaveConflicts,
+                ], 422);
+            }
+        }
 
         if ($validator->fails()) {
             return response()->json([
@@ -114,6 +126,17 @@ class PRTimesheetController extends Controller
             ], 422);
         }
 
+        if ($request->has('entries') && !empty($request->entries)) {
+            $leaveConflicts = $this->validateAgainstLeave($user, $request->entries);
+            if ($leaveConflicts) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cannot add work hours on approved leave days',
+                    'conflicts' => $leaveConflicts,
+                ], 422);
+            }
+        }
+
         $user = Auth::user();
         $timesheet = PRTimesheet::where('user_id', $user->id)
             ->findOrFail($request->timesheet_id);
@@ -145,6 +168,29 @@ class PRTimesheetController extends Controller
                 'entries_count' => count($request->entries),
             ]
         ], 200);
+    }
+
+    /**
+     * check timesheet entries against leave days
+     */
+    private function validateAgainstLeave(User $user, array $entries): ?array
+    {
+        $conflicts = [];
+        foreach ($entries as $entry) {
+            $workDate = $entry['work_date'];
+            $leaveEntry = LeaveCalendar::where('user_id', $user->id)
+                ->where('leave_date', $workDate)
+                ->where('is_approved', true)
+                ->first();
+            
+            if ($leaveEntry) {
+                $conflicts[] = [
+                    'date' => $workDate,
+                    'leave_type' => $leaveEntry->leave_type,
+                ];
+            }
+        }
+        return empty($conflicts) ? null : $conflicts;
     }
 
     /**
