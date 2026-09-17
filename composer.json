@@ -17,9 +17,11 @@
         "laravel/tinker": "^3.0",
         "livewire/livewire": "^3.6.4",
         "maatwebsite/excel": "^4.0",
+        "phpoffice/phpword": "^1.4",
         "pragmarx/google2fa": "^9.1",
         "predis/predis": "^3.6",
         "ramsey/uuid": "^4.9",
+        "smalot/pdfparser": "^2.12",
         "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {
