@@ -777,6 +777,7 @@ class User extends Authenticatable
         return match ($type) {
             'annual' => (float) $this->leave_balance_annual,
             'sick'   => (float) $this->leave_balance_sick,
+            'family' => (float) $this->leave_balance_family,
             default  => 0.00,
         };
     }
@@ -808,6 +809,7 @@ class User extends Authenticatable
         match ($type) {
             'annual' => $this->leave_balance_annual = $newBalance,
             'sick'   => $this->leave_balance_sick = $newBalance,
+            'family' => $this->leave_balance_family = $newBalance,
             default  => null,
         };
         

@@ -100,14 +100,14 @@ class LeaveController extends Controller
         $autoApproveReason = '';
 
         // Sick leave with certificate > 2 days
-        if ($request->leave_type === 'sick' && $attachmentPath && $daysTaken > 2) {
+        if ($request->leave_type === 'sick' && $attachmentPath && $daysTaken >= $config->auto_approve_min_days) {
             $shouldAutoApprove = true;
             $autoApproveReason = 'Sick leave with medical certificate';
         }
         // Family responsibility <= 3 days, employed > 4 months
-        elseif ($request->leave_type === 'family' && $daysTaken <= 3) {
+        elseif ($request->leave_type === 'family' && $daysTaken <= $config->family_auto_approve_max_days) {
             $monthsOfService = $user->hire_date ? $user->hire_date->diffInMonths(now()) : 0;
-            if ($monthsOfService >= 4) {
+            if ($monthsOfService >= $config->family_auto_approve_min_months) {
                 $shouldAutoApprove = true;
                 $autoApproveReason = 'Family responsibility leave (eligible)';
             }
@@ -210,7 +210,7 @@ class LeaveController extends Controller
                         'used_this_year' => $this->getUsedDays($user->id, 'sick'),
                     ],
                     'family' => [
-                        'available' => 3.00, // Computed from config
+                        'available' => (float) $user->leave_balance_family,
                         'entitlement' => (float) ($configs['family']->default_entitlement ?? 3),
                         'used_this_year' => $this->getUsedDays($user->id, 'family'),
                     ],
