@@ -16,6 +16,7 @@ use App\Http\Controllers\API\LeaveController;
 use App\Http\Controllers\API\LeaveConfigController;
 use App\Http\Controllers\API\LeaveAttachmentController;
 use App\Http\Controllers\API\AssetController;
+use App\Http\Controllers\API\ContractController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -231,19 +232,34 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
             Route::post('reset-employee/{userId}', [LeaveConfigController::class, 'resetEmployee']);
         });
 
-        // ========================================
-        // M7: Asset Tracking
-        // ========================================
-        Route::prefix('asset')->group(function () {
-            Route::post('register', [AssetController::class, 'register']);
-            Route::post('loan', [AssetController::class, 'loan']);
-            Route::post('return', [AssetController::class, 'returnAsset']);
-            Route::get('overdue', [AssetController::class, 'overdue']);
-            Route::get('track', [AssetController::class, 'track']);
-            Route::post('repair/request', [AssetController::class, 'requestRepair']);
-            Route::get('history/{assetId}', [AssetController::class, 'history']);
-            Route::get('report', [AssetController::class, 'report']);
-        });
+    // ========================================
+    // M7: Asset Tracking
+    // ========================================
+    Route::prefix('asset')->group(function () {
+        Route::post('register', [AssetController::class, 'register']);
+        Route::post('loan', [AssetController::class, 'loan']);
+        Route::post('return', [AssetController::class, 'returnAsset']);
+        Route::get('overdue', [AssetController::class, 'overdue']);
+        Route::get('track', [AssetController::class, 'track']);
+        Route::post('repair/request', [AssetController::class, 'requestRepair']);
+        Route::get('history/{assetId}', [AssetController::class, 'history']);
+        Route::get('report', [AssetController::class, 'report']);
+    });
+
+    // ========================================
+    // M7(Extended): Contract Management
+    // ========================================
+    Route::prefix('contract')->group(function () {
+        Route::post('upload', [ContractController::class, 'upload']);
+        Route::get('view/{id}', [ContractController::class, 'view']);
+        Route::get('download/{id}', [ContractController::class, 'download']);
+        Route::post('renew', [ContractController::class, 'renew']);
+        Route::post('status/update', [ContractController::class, 'updateStatus']);
+        Route::post('sign/{id}', [ContractController::class, 'sign']);
+        Route::get('expiring', [ContractController::class, 'expiring']);
+        Route::get('history/{userId}', [ContractController::class, 'history']);
+        Route::delete('delete/{id}', [ContractController::class, 'destroy']);
+    });
 
     // Role management - Admin only
     Route::prefix('admin/roles')
