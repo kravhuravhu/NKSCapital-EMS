@@ -37,6 +37,9 @@ class LeaveConfigController extends Controller
 
         // Only Super Admin and Director can update
         if (!in_array($user->role, ['super_admin', 'director', 'admin'])) {
+            AuditService::logWarning('LEAVE_CONFIG_UPDATE_UNAUTHORIZED', 'leave_configs', 0, [
+                'actor_id' => $user->id,
+            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Only Super Admin and Director can modify leave configuration'
@@ -45,7 +48,7 @@ class LeaveConfigController extends Controller
 
         $validator = Validator::make($request->all(), [
             'configs' => 'required|array',
-            'configs.*.leave_type' => 'required|in:annual,sick,family,unpaid,study,maternity',
+            'configs.*.leave_type' => 'required|in:annual,sick,family,unpaid,study,maternity,paternity',
             'configs.*.default_entitlement' => 'nullable|numeric|min:0',
             'configs.*.accrual_rate' => 'nullable|numeric|min:0',
             'configs.*.accrual_frequency' => 'nullable|in:daily,weekly,monthly,yearly,none',
@@ -53,8 +56,22 @@ class LeaveConfigController extends Controller
             'configs.*.requires_attachment' => 'nullable|boolean',
             'configs.*.min_days_attachment' => 'nullable|integer|min:0',
             'configs.*.auto_approve' => 'nullable|boolean',
-            'configs.*.min_service_months' => 'nullable|integer|min:0',
+            'configs.*.min_service_months' => 'nullable|numeric|min:0',
             'configs.*.description' => 'nullable|string',
+            // NEW FIELDS
+            'configs.*.approval_type' => 'nullable|in:auto,manual,hybrid',
+            'configs.*.auto_approve_max_days' => 'nullable|integer|min:0',
+            'configs.*.partial_approve_threshold' => 'nullable|integer|min:0',
+            'configs.*.requires_proof_after' => 'nullable|integer|min:0',
+            'configs.*.proof_upload_deadline_days' => 'nullable|integer|min:0',
+            'configs.*.notification_frequency_hours' => 'nullable|integer|min:0',
+            'configs.*.notification_start_hour' => 'nullable|integer|min:0|max:23',
+            'configs.*.notification_end_hour' => 'nullable|integer|min:0|max:23',
+            'configs.*.convert_to_unpaid_after_deadline' => 'nullable|boolean',
+            'configs.*.fallback_leave_type' => 'nullable|string|max:50',
+            'configs.*.is_accruable' => 'nullable|boolean',
+            'configs.*.is_carryover_allowed' => 'nullable|boolean',
+            'configs.*.is_infinite_balance' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -84,7 +101,8 @@ class LeaveConfigController extends Controller
                 tableName: 'leave_configs',
                 recordId: $config->id,
                 oldValues: $oldValues,
-                newValues: $config->toArray()
+                newValues: $config->toArray(),
+                logType: 'success'
             );
 
             $updated[] = $config;
@@ -142,7 +160,8 @@ class LeaveConfigController extends Controller
             tableName: 'leave_configs',
             recordId: $config->id,
             oldValues: ['accrual_rate' => $oldRate],
-            newValues: ['accrual_rate' => $request->accrual_rate]
+            newValues: ['accrual_rate' => $request->accrual_rate],
+            logType: 'success'
         );
 
         // Apply to existing employees if requested
@@ -178,7 +197,7 @@ class LeaveConfigController extends Controller
 
         $validator = Validator::make($request->all(), [
             'entitlements' => 'required|array',
-            'entitlements.*.leave_type' => 'required|in:annual,sick,family',
+            'entitlements.*.leave_type' => 'required|in:annual,sick,family,unpaid,study,maternity,paternity',
             'entitlements.*.default_entitlement' => 'required|numeric|min:0',
             'entitlements.*.max_carryover' => 'nullable|numeric|min:0',
         ]);
@@ -242,6 +261,7 @@ class LeaveConfigController extends Controller
         $validator = Validator::make($request->all(), [
             'annual_balance' => 'nullable|numeric|min:0',
             'sick_balance' => 'nullable|numeric|min:0',
+            'family_balance' => 'nullable|numeric|min:0',
             'reason' => 'required|string|max:500',
         ]);
 
@@ -263,6 +283,9 @@ class LeaveConfigController extends Controller
         if ($request->has('sick_balance')) {
             $employee->leave_balance_sick = $request->sick_balance;
         }
+        if ($request->has('family_balance')) {
+            $employee->leave_balance_family = $request->family_balance;
+        }
         $employee->save();
 
         // Log to leave_balances
@@ -273,6 +296,7 @@ class LeaveConfigController extends Controller
                 'balance_before' => $oldAnnual,
                 'balance_after' => $request->annual_balance,
                 'adjustment_reason' => $request->reason,
+                'reference_type' => 'config_reset',
                 'adjusted_by' => $user->id,
                 'adjusted_at' => now(),
             ]);
@@ -285,6 +309,7 @@ class LeaveConfigController extends Controller
                 'balance_before' => $oldSick,
                 'balance_after' => $request->sick_balance,
                 'adjustment_reason' => $request->reason,
+                'reference_type' => 'config_reset',
                 'adjusted_by' => $user->id,
                 'adjusted_at' => now(),
             ]);
@@ -298,6 +323,7 @@ class LeaveConfigController extends Controller
             newValues: [
                 'annual' => $request->annual_balance,
                 'sick' => $request->sick_balance,
+                'family' => $request->family_balance,
                 'reason' => $request->reason,
             ]
         );
@@ -309,6 +335,7 @@ class LeaveConfigController extends Controller
                 'employee' => $employee->full_name,
                 'annual_balance' => $employee->leave_balance_annual,
                 'sick_balance' => $employee->leave_balance_sick,
+                'family_balance' => $employee->leave_balance_family,
             ]
         ], 200);
     }
@@ -325,9 +352,8 @@ class LeaveConfigController extends Controller
         $affected = 0;
         foreach ($users as $user) {
             if ($leaveType === 'annual') {
-                // Recalculate based on months of service
-                $monthsOfService = $user->hire_date 
-                    ? $user->hire_date->diffInMonths(now()) 
+                $monthsOfService = $user->hire_date
+                    ? $user->hire_date->diffInMonths(now())
                     : 0;
                 $config = LeaveConfig::where('leave_type', 'annual')->first();
                 $newBalance = min($monthsOfService * $config->accrual_rate, $config->default_entitlement);

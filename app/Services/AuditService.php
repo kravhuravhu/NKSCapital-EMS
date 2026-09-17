@@ -19,7 +19,15 @@ class AuditService
         ?array $newValues = null,
         ?int $userId = null,
         ?string $ipAddress = null,
-        ?string $userAgent = null
+        ?string $userAgent = null,
+        string $logType = 'info',
+        ?int $httpStatus = null,
+        ?string $requestMethod = null,
+        ?string $requestPath = null,
+        ?string $requestId = null,
+        ?int $durationMs = null,
+        ?string $errorMessage = null,
+        ?string $errorTrace = null
     ): AuditLog {
         // Get the last audit log to chain
         $lastLog = AuditLog::orderBy('id', 'desc')->first();
@@ -37,6 +45,8 @@ class AuditService
             'user_id' => $userId,
             'ip_address' => $ipAddress,
             'action' => $action,
+            'log_type' => $logType,
+            'http_status' => $httpStatus,
             'table_name' => $tableName,
             'record_id' => $recordId,
             'old_values' => $oldValues,
@@ -58,16 +68,67 @@ class AuditService
             'user_id' => $userId,
             'ip_address' => $ipAddress,
             'action' => $action,
+            'log_type' => $logType,
+            'http_status' => $httpStatus,
             'table_name' => $tableName,
             'record_id' => $recordId,
             'old_values' => $oldValues ? json_encode($oldValues) : null,
             'new_values' => $newValues ? json_encode($newValues) : null,
             'user_agent' => $userAgent,
+            'request_method' => $requestMethod,
+            'request_path' => $requestPath,
+            'request_id' => $requestId,
+            'duration_ms' => $durationMs,
+            'error_message' => $errorMessage,
+            'error_trace' => $errorTrace,
         ]);
     }
 
     /**
-     * Verify the integrity of the audit chain
+     * Convenience: log an error event.
+     */
+    public static function logError(
+        string $action,
+        string $tableName,
+        int $recordId = 0,
+        ?string $errorMessage = null,
+        ?string $errorTrace = null,
+        ?array $context = null,
+        ?int $httpStatus = null
+    ): AuditLog {
+        return self::log(
+            action: $action,
+            tableName: $tableName,
+            recordId: $recordId,
+            oldValues: null,
+            newValues: $context,
+            logType: 'error',
+            httpStatus: $httpStatus ?? 500,
+            errorMessage: $errorMessage,
+            errorTrace: $errorTrace
+        );
+    }
+
+    /**
+     * Convenience: log a warning.
+     */
+    public static function logWarning(
+        string $action,
+        string $tableName,
+        int $recordId = 0,
+        ?array $context = null
+    ): AuditLog {
+        return self::log(
+            action: $action,
+            tableName: $tableName,
+            recordId: $recordId,
+            newValues: $context,
+            logType: 'warning'
+        );
+    }
+
+    /**
+     * Verify the integrity of the audit chain.
      */
     public static function verifyChain(): array
     {
@@ -83,6 +144,8 @@ class AuditService
                 'user_id' => $log->user_id,
                 'ip_address' => $log->ip_address,
                 'action' => $log->action,
+                'log_type' => $log->log_type,
+                'http_status' => $log->http_status,
                 'table_name' => $log->table_name,
                 'record_id' => $log->record_id,
                 'old_values' => $log->old_values ? json_decode($log->old_values, true) : null,

@@ -53,6 +53,11 @@ class User extends Authenticatable
         'is_active',
         'leave_balance_annual',
         'leave_balance_sick',
+        'leave_balance_family',
+        'leave_balance_unpaid',
+        'leave_balance_study',
+        'leave_balance_maternity',
+        'leave_balance_paternity',
         'address',
         'emergency_contact_name',
         'emergency_contact_phone',
@@ -109,6 +114,11 @@ class User extends Authenticatable
             'two_factor_enabled' => 'boolean',
             'leave_balance_annual' => 'decimal:2',
             'leave_balance_sick' => 'decimal:2',
+            'leave_balance_family' => 'decimal:2',
+            'leave_balance_unpaid' => 'decimal:2',
+            'leave_balance_study' => 'decimal:2',
+            'leave_balance_maternity' => 'decimal:2',
+            'leave_balance_paternity' => 'decimal:2',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -124,6 +134,11 @@ class User extends Authenticatable
         'two_factor_enabled' => false,
         'leave_balance_annual' => 0.00,
         'leave_balance_sick' => 0.00,
+        'leave_balance_family' => 0.00,
+        'leave_balance_unpaid' => 0.00,
+        'leave_balance_study' => 0.00,
+        'leave_balance_maternity' => 0.00,
+        'leave_balance_paternity' => 0.00,
         'role' => 'employee',
     ];
 
@@ -771,14 +786,19 @@ class User extends Authenticatable
 
     /**
      * Get the user's leave balance for a specific type.
+     * Returns PHP_FLOAT_MAX for infinite leave types.
      */
     public function getLeaveBalance(string $type): float
     {
         return match ($type) {
-            'annual' => (float) $this->leave_balance_annual,
-            'sick'   => (float) $this->leave_balance_sick,
-            'family' => (float) $this->leave_balance_family,
-            default  => 0.00,
+            'annual'    => (float) $this->leave_balance_annual,
+            'sick'      => (float) $this->leave_balance_sick,
+            'family'    => (float) $this->leave_balance_family,
+            'unpaid'    => (float) $this->leave_balance_unpaid,
+            'study'     => (float) $this->leave_balance_study,
+            'maternity' => (float) $this->leave_balance_maternity,
+            'paternity' => (float) $this->leave_balance_paternity,
+            default     => 0.00,
         };
     }
 
@@ -788,8 +808,13 @@ class User extends Authenticatable
     public function getAllLeaveBalances(): array
     {
         return [
-            'annual' => (float) $this->leave_balance_annual,
-            'sick'   => (float) $this->leave_balance_sick,
+            'annual'    => (float) $this->leave_balance_annual,
+            'sick'      => (float) $this->leave_balance_sick,
+            'family'    => (float) $this->leave_balance_family,
+            'unpaid'    => (float) $this->leave_balance_unpaid,
+            'study'     => (float) $this->leave_balance_study,
+            'maternity' => (float) $this->leave_balance_maternity,
+            'paternity' => (float) $this->leave_balance_paternity,
         ];
     }
 
@@ -799,22 +824,26 @@ class User extends Authenticatable
     public function deductLeaveBalance(string $type, float $days): bool
     {
         $current = $this->getLeaveBalance($type);
-        
+
         if ($current < $days) {
             return false;
         }
-        
+
         $newBalance = $current - $days;
-        
+
         match ($type) {
-            'annual' => $this->leave_balance_annual = $newBalance,
-            'sick'   => $this->leave_balance_sick = $newBalance,
-            'family' => $this->leave_balance_family = $newBalance,
-            default  => null,
+            'annual'    => $this->leave_balance_annual = $newBalance,
+            'sick'      => $this->leave_balance_sick = $newBalance,
+            'family'    => $this->leave_balance_family = $newBalance,
+            'unpaid'    => $this->leave_balance_unpaid = $newBalance,
+            'study'     => $this->leave_balance_study = $newBalance,
+            'maternity' => $this->leave_balance_maternity = $newBalance,
+            'paternity' => $this->leave_balance_paternity = $newBalance,
+            default     => null,
         };
-        
+
         $this->save();
-        
+
         return true;
     }
 
@@ -824,11 +853,16 @@ class User extends Authenticatable
     public function addLeaveBalance(string $type, float $days): void
     {
         match ($type) {
-            'annual' => $this->leave_balance_annual += $days,
-            'sick'   => $this->leave_balance_sick += $days,
-            default  => null,
+            'annual'    => $this->leave_balance_annual += $days,
+            'sick'      => $this->leave_balance_sick += $days,
+            'family'    => $this->leave_balance_family += $days,
+            'unpaid'    => $this->leave_balance_unpaid += $days,
+            'study'     => $this->leave_balance_study += $days,
+            'maternity' => $this->leave_balance_maternity += $days,
+            'paternity' => $this->leave_balance_paternity += $days,
+            default     => null,
         };
-        
+
         $this->save();
     }
 
@@ -839,7 +873,34 @@ class User extends Authenticatable
     {
         $this->leave_balance_annual = 0;
         $this->leave_balance_sick = 0;
+        $this->leave_balance_family = 0;
+        $this->leave_balance_unpaid = 0;
+        $this->leave_balance_study = 0;
+        $this->leave_balance_maternity = 0;
+        $this->leave_balance_paternity = 0;
         $this->save();
+    }
+
+    /**
+     * Get months of service from hire date.
+     */
+    public function getMonthsOfService(): float
+    {
+        if (!$this->hire_date) {
+            return 0.0;
+        }
+        return round($this->hire_date->diffInDays(now()) / 30.4375, 2);
+    }
+
+    /**
+     * Check if user meets minimum service months.
+     */
+    public function meetsMinService(float $minMonths): bool
+    {
+        if ($minMonths <= 0) {
+            return true;
+        }
+        return $this->getMonthsOfService() >= $minMonths;
     }
 
     // ========================================

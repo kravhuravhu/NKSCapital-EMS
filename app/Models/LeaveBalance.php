@@ -15,6 +15,8 @@ class LeaveBalance extends Model
         'adjustment_reason',
         'reference_id',
         'reference_type',
+        'is_fallback',
+        'related_leave_request_id',
         'adjusted_by',
         'adjusted_at',
     ];
@@ -23,6 +25,7 @@ class LeaveBalance extends Model
         'balance_before' => 'decimal:2',
         'balance_after' => 'decimal:2',
         'adjusted_at' => 'datetime',
+        'is_fallback' => 'boolean',
     ];
 
     public function user(): BelongsTo
@@ -33,5 +36,10 @@ class LeaveBalance extends Model
     public function adjustedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'adjusted_by');
+    }
+
+    public function relatedLeaveRequest(): BelongsTo
+    {
+        return $this->belongsTo(LeaveRequest::class, 'related_leave_request_id');
     }
 }
