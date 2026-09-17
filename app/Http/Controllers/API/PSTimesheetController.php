@@ -91,13 +91,19 @@ class PSTimesheetController extends Controller
             $workDate = $entry['work_date'];
             $leaveEntry = LeaveCalendar::where('user_id', $user->id)
                 ->where('leave_date', $workDate)
-                ->where('is_approved', true)
+                ->where(function ($q) {
+                    $q->where('is_approved', true)
+                      ->orWhere('is_pending_proof', true)
+                      ->orWhere('is_unpaid_conversion', true);
+                })
                 ->first();
-            
+
             if ($leaveEntry) {
                 $leaveConflicts[] = [
                     'date' => $workDate,
                     'leave_type' => $leaveEntry->leave_type,
+                    'is_pending_proof' => (bool) $leaveEntry->is_pending_proof,
+                    'is_unpaid_conversion' => (bool) $leaveEntry->is_unpaid_conversion,
                 ];
             }
         }

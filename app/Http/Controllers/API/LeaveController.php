@@ -10,6 +10,8 @@ use App\Models\LeaveConfig;
 use App\Models\User;
 use App\Models\Notification;
 use App\Services\AuditService;
+use App\Services\LeaveApprovalService;
+use App\Services\LeaveProofService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
@@ -18,23 +20,39 @@ use Carbon\Carbon;
 
 class LeaveController extends Controller
 {
-    /**
-     * POST /api/v1/leave/apply
-     * Employee submits leave request
-     */
+    protected LeaveApprovalService $approvalService;
+    protected LeaveProofService $proofService;
+
+    public function __construct(
+        LeaveApprovalService $approvalService,
+        LeaveProofService $proofService
+    ) {
+        $this->approvalService = $approvalService;
+        $this->proofService = $proofService;
+    }
+
+    // ============================================================
+    // APPLY
+    // ============================================================
+
     public function apply(Request $request)
     {
         $user = Auth::user();
 
         $validator = Validator::make($request->all(), [
-            'leave_type' => 'required|in:annual,sick,family,unpaid,study,maternity',
+            'leave_type' => 'required|in:annual,sick,family,unpaid,study,maternity,paternity',
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'required|date|after_or_equal:start_date',
             'reason' => 'nullable|string|max:1000',
-            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,zip|max:10240',
         ]);
 
         if ($validator->fails()) {
+            AuditService::logWarning('LEAVE_APPLY_VALIDATION_FAILED', 'leave_requests', 0, [
+                'errors' => $validator->errors()->toArray(),
+                'input' => $request->except(['attachment']),
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
@@ -48,6 +66,11 @@ class LeaveController extends Controller
         $daysTaken = $this->calculateBusinessDays($startDate, $endDate);
 
         if ($daysTaken <= 0) {
+            AuditService::logWarning('LEAVE_APPLY_NO_BUSINESS_DAYS', 'leave_requests', 0, [
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'No business days in the selected range'
@@ -56,11 +79,25 @@ class LeaveController extends Controller
 
         // Get leave config
         $config = LeaveConfig::where('leave_type', $request->leave_type)->first();
+        if (!$config) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Leave type '{$request->leave_type}' is not configured."
+            ], 422);
+        }
 
         // Check balance for leave types that need it
-        if (in_array($request->leave_type, ['annual', 'sick', 'family'])) {
+        if (!in_array($request->leave_type, ['unpaid', 'study'])) {
             $balance = $user->getLeaveBalance($request->leave_type);
-            if ($balance < $daysTaken) {
+            $isInfinite = $config->isInfinite();
+
+            if (!$isInfinite && $balance < $daysTaken) {
+                AuditService::logWarning('LEAVE_APPLY_INSUFFICIENT_BALANCE', 'leave_requests', 0, [
+                    'leave_type' => $request->leave_type,
+                    'required' => $daysTaken,
+                    'available' => $balance,
+                ]);
+
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient leave balance',
@@ -71,21 +108,31 @@ class LeaveController extends Controller
             }
         }
 
-        // Check for conflicts (teammates on leave)
-        $conflicts = $this->checkConflicts($user, $startDate, $endDate);
+        // Evaluate application (service-month + approval path)
+        $decision = $this->approvalService->evaluateApplication(
+            $user,
+            $request->leave_type,
+            $daysTaken,
+            $request->hasFile('attachment')
+        );
 
-        // Validate attachment requirement
-        if ($config && $config->requires_attachment && $daysTaken >= $config->min_days_attachment) {
-            if (!$request->hasFile('attachment')) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => "Attachment is required for {$request->leave_type} leave of {$daysTaken} days or more",
-                    'requires_attachment' => true,
-                ], 422);
-            }
+        if (!empty($decision['errors'])) {
+            AuditService::logWarning('LEAVE_APPLY_RULE_FAILED', 'leave_requests', 0, [
+                'leave_type' => $request->leave_type,
+                'errors' => $decision['errors'],
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $decision['reason'],
+                'errors' => $decision['errors'],
+            ], 422);
         }
 
-        // Handle attachment upload
+        // Conflict check
+        $conflicts = $this->checkConflicts($user, $startDate, $endDate);
+
+        // Handle optional attachment upload at apply time
         $attachmentPath = null;
         $attachmentHash = null;
         if ($request->hasFile('attachment')) {
@@ -95,30 +142,21 @@ class LeaveController extends Controller
             $attachmentHash = hash_file('sha256', $file->getRealPath());
         }
 
-        // Determine if auto-approval applies
-        $shouldAutoApprove = false;
-        $autoApproveReason = '';
+        // Resolve initial status
+        $status = $decision['status'];
+        $requiresProof = $decision['requires_proof'];
 
-        // Sick leave with certificate > 2 days
-        if ($request->leave_type === 'sick' && $attachmentPath && $daysTaken >= $config->auto_approve_min_days) {
-            $shouldAutoApprove = true;
-            $autoApproveReason = 'Sick leave with medical certificate';
-        }
-        // Family responsibility <= 3 days, employed > 4 months
-        elseif ($request->leave_type === 'family' && $daysTaken <= $config->family_auto_approve_max_days) {
-            $monthsOfService = $user->hire_date ? $user->hire_date->diffInMonths(now()) : 0;
-            if ($monthsOfService >= $config->family_auto_approve_min_months) {
-                $shouldAutoApprove = true;
-                $autoApproveReason = 'Family responsibility leave (eligible)';
-            }
+        // If sick leave requires proof and no attachment uploaded at apply time → set status to pending
+        // (Manager will approve → approved_pending_proof)
+        // Auto-approval only happens if not requiring proof
+        if ($status === 'auto_approved' && $requiresProof) {
+            $status = 'pending';
         }
 
-        $status = $shouldAutoApprove ? 'auto_approved' : 'pending';
-
-        // Create leave request
         $leaveRequest = LeaveRequest::create([
             'user_id' => $user->id,
             'leave_type' => $request->leave_type,
+            'original_leave_type' => $request->leave_type,
             'start_date' => $startDate->format('Y-m-d'),
             'end_date' => $endDate->format('Y-m-d'),
             'days_taken' => $daysTaken,
@@ -126,30 +164,33 @@ class LeaveController extends Controller
             'attachment_path' => $attachmentPath,
             'attachment_hash' => $attachmentHash,
             'status' => $status,
-            'approved_by' => $shouldAutoApprove ? $user->id : null,
-            'approved_at' => $shouldAutoApprove ? now() : null,
+            'requires_proof' => $requiresProof,
+            'approved_by' => $status === 'auto_approved' ? $user->id : null,
+            'approved_at' => $status === 'auto_approved' ? now() : null,
+            'service_months_at_application' => $user->getMonthsOfService(),
         ]);
 
-        // If auto-approved, deduct balance and block calendar
-        if ($shouldAutoApprove) {
+        // If auto-approved, deduct and block calendar
+        if ($status === 'auto_approved') {
             $this->deductBalance($user, $request->leave_type, $daysTaken, $leaveRequest);
-            $this->blockCalendar($user, $startDate, $endDate, $request->leave_type, $leaveRequest, true);
+            $this->blockCalendar($user, $startDate, $endDate, $request->leave_type, $leaveRequest, true, false, false);
         }
 
         AuditService::log(
-            action: $shouldAutoApprove ? 'LEAVE_AUTO_APPROVED' : 'LEAVE_APPLIED',
+            action: $status === 'auto_approved' ? 'LEAVE_AUTO_APPROVED' : 'LEAVE_APPLIED',
             tableName: 'leave_requests',
             recordId: $leaveRequest->id,
             newValues: [
                 'leave_type' => $request->leave_type,
                 'days_taken' => $daysTaken,
                 'status' => $status,
-                'auto_approve_reason' => $autoApproveReason,
-            ]
+                'requires_proof' => $requiresProof,
+                'service_months' => $user->getMonthsOfService(),
+            ],
+            logType: 'success'
         );
 
-        // Notify manager if pending
-        if (!$shouldAutoApprove && $user->manager_id) {
+        if ($status !== 'auto_approved' && $user->manager_id) {
             Notification::create([
                 'user_id' => $user->manager_id,
                 'type' => 'LEAVE_PENDING',
@@ -162,24 +203,25 @@ class LeaveController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => $shouldAutoApprove 
-                ? 'Leave auto-approved successfully' 
+            'message' => $status === 'auto_approved'
+                ? 'Leave auto-approved successfully'
                 : 'Leave request submitted for approval',
             'data' => [
                 'leave_request' => $leaveRequest->load('user:id,first_name,last_name,employee_number'),
                 'days_taken' => $daysTaken,
                 'conflicts' => $conflicts,
-                'auto_approved' => $shouldAutoApprove,
-                'auto_approve_reason' => $autoApproveReason,
+                'auto_approved' => $status === 'auto_approved',
+                'requires_proof' => $requiresProof,
+                'service_months' => $user->getMonthsOfService(),
                 'remaining_balance' => $user->fresh()->getLeaveBalance($request->leave_type),
             ]
         ], 201);
     }
 
-    /**
-     * GET /api/v1/leave/balance
-     * Get current user's leave balances
-     */
+    // ============================================================
+    // BALANCE
+    // ============================================================
+
     public function balance()
     {
         $user = Auth::user();
@@ -214,15 +256,41 @@ class LeaveController extends Controller
                         'entitlement' => (float) ($configs['family']->default_entitlement ?? 3),
                         'used_this_year' => $this->getUsedDays($user->id, 'family'),
                     ],
+                    'unpaid' => [
+                        'available' => $configs['unpaid']->isInfinite() ?? false
+                            ? 'infinite'
+                            : (float) $user->leave_balance_unpaid,
+                        'entitlement' => $configs['unpaid']->isInfinite() ?? false
+                            ? 'infinite'
+                            : (float) ($configs['unpaid']->default_entitlement ?? 0),
+                        'used_this_year' => $this->getUsedDays($user->id, 'unpaid'),
+                    ],
+                    'study' => [
+                        'available' => (float) $user->leave_balance_study,
+                        'entitlement' => (float) ($configs['study']->default_entitlement ?? 0),
+                        'used_this_year' => $this->getUsedDays($user->id, 'study'),
+                    ],
+                    'maternity' => [
+                        'available' => (float) $user->leave_balance_maternity,
+                        'entitlement' => (float) ($configs['maternity']->default_entitlement ?? 90),
+                        'used_this_year' => $this->getUsedDays($user->id, 'maternity'),
+                    ],
+                    'paternity' => [
+                        'available' => (float) $user->leave_balance_paternity,
+                        'entitlement' => (float) ($configs['paternity']->default_entitlement ?? 10),
+                        'used_this_year' => $this->getUsedDays($user->id, 'paternity'),
+                    ],
                 ],
                 'history' => $history,
+                'months_of_service' => $user->getMonthsOfService(),
             ]
         ], 200);
     }
 
-    /**
-     * GET /api/v1/leave/history
-     */
+    // ============================================================
+    // HISTORY
+    // ============================================================
+
     public function history(Request $request)
     {
         $user = Auth::user();
@@ -246,9 +314,10 @@ class LeaveController extends Controller
         ], 200);
     }
 
-    /**
-     * POST /api/v1/leave/approve
-     */
+    // ============================================================
+    // APPROVE (manager)
+    // ============================================================
+
     public function approve(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -270,10 +339,10 @@ class LeaveController extends Controller
 
         // Check permission (manager or director)
         if (!in_array($user->role, ['manager', 'director', 'admin', 'super_admin'])) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized to approve leave'
-            ], 403);
+            AuditService::logWarning('LEAVE_APPROVE_UNAUTHORIZED', 'leave_requests', $leaveRequest->id, [
+                'actor_id' => $user->id,
+            ]);
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized to approve leave'], 403);
         }
 
         if ($leaveRequest->status !== 'pending') {
@@ -284,23 +353,35 @@ class LeaveController extends Controller
             ], 422);
         }
 
+        $config = LeaveConfig::where('leave_type', $leaveRequest->leave_type)->firstOrFail();
+        $newStatus = $this->approvalService->resolveApprovedStatus($leaveRequest, $config);
+
         // Deduct balance
         $this->deductBalance($employee, $leaveRequest->leave_type, $leaveRequest->days_taken, $leaveRequest);
 
-        // Block calendar
+        // Determine calendar flags
+        $isApprovedForCalendar = $newStatus === 'approved';
+        $isPendingProof = $newStatus === 'approved_pending_proof';
+
         $this->blockCalendar(
             $employee,
             $leaveRequest->start_date,
             $leaveRequest->end_date,
             $leaveRequest->leave_type,
             $leaveRequest,
-            true
+            $isApprovedForCalendar,
+            $isPendingProof,
+            false
         );
 
         // Update request
-        $leaveRequest->status = 'approved';
+        $leaveRequest->status = $newStatus;
         $leaveRequest->approved_by = $user->id;
         $leaveRequest->approved_at = now();
+        if ($isPendingProof) {
+            $leaveRequest->requires_proof = true;
+            $leaveRequest->proof_upload_deadline = $this->approvalService->computeProofDeadline($leaveRequest, $config);
+        }
         $leaveRequest->save();
 
         AuditService::log(
@@ -308,32 +389,44 @@ class LeaveController extends Controller
             tableName: 'leave_requests',
             recordId: $leaveRequest->id,
             oldValues: ['status' => 'pending'],
-            newValues: ['status' => 'approved', 'comment' => $request->comment]
+            newValues: [
+                'status' => $newStatus,
+                'comment' => $request->comment,
+                'requires_proof' => $isPendingProof,
+                'proof_deadline' => $leaveRequest->proof_upload_deadline?->toIso8601String(),
+            ],
+            logType: 'success'
         );
 
-        // Notify employee
         Notification::create([
             'user_id' => $employee->id,
-            'type' => 'LEAVE_APPROVED',
-            'title' => 'Leave Request Approved',
-            'message' => "Your {$leaveRequest->leave_type} leave ({$leaveRequest->days_taken} days) has been approved.",
+            'type' => $isPendingProof ? 'LEAVE_APPROVED_PENDING_PROOF' : 'LEAVE_APPROVED',
+            'title' => $isPendingProof ? 'Leave Approved — Proof Required' : 'Leave Request Approved',
+            'message' => $isPendingProof
+                ? "Your {$leaveRequest->leave_type} leave ({$leaveRequest->days_taken} days) has been approved. Please upload proof by {$leaveRequest->proof_upload_deadline->format('d M Y H:i')}."
+                : "Your {$leaveRequest->leave_type} leave ({$leaveRequest->days_taken} days) has been approved.",
             'reference_id' => $leaveRequest->id,
             'reference_type' => LeaveRequest::class,
         ]);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Leave approved successfully',
+            'message' => $isPendingProof
+                ? 'Leave approved — proof upload required'
+                : 'Leave approved successfully',
             'data' => [
                 'leave_request' => $leaveRequest->fresh(),
                 'remaining_balance' => $employee->fresh()->getLeaveBalance($leaveRequest->leave_type),
+                'requires_proof' => $isPendingProof,
+                'proof_upload_deadline' => $leaveRequest->proof_upload_deadline,
             ]
         ], 200);
     }
 
-    /**
-     * POST /api/v1/leave/reject
-     */
+    // ============================================================
+    // REJECT
+    // ============================================================
+
     public function reject(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -352,11 +445,9 @@ class LeaveController extends Controller
         $user = Auth::user();
         $leaveRequest = LeaveRequest::findOrFail($request->leave_request_id);
 
+        // Check permission (manager or director)
         if (!in_array($user->role, ['manager', 'director', 'admin', 'super_admin'])) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized'
-            ], 403);
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
         if ($leaveRequest->status !== 'pending') {
@@ -377,7 +468,8 @@ class LeaveController extends Controller
             tableName: 'leave_requests',
             recordId: $leaveRequest->id,
             oldValues: ['status' => 'pending'],
-            newValues: ['status' => 'rejected', 'reason' => $request->reason]
+            newValues: ['status' => 'rejected', 'reason' => $request->reason],
+            logType: 'success'
         );
 
         Notification::create([
@@ -396,9 +488,10 @@ class LeaveController extends Controller
         ], 200);
     }
 
-    /**
-     * POST /api/v1/leave/hold
-     */
+    // ============================================================
+    // HOLD
+    // ============================================================
+
     public function hold(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -456,9 +549,10 @@ class LeaveController extends Controller
         ], 200);
     }
 
-    /**
-     * POST /api/v1/leave/partial-approve
-     */
+    // ============================================================
+    // PARTIAL APPROVE
+    // ============================================================
+
     public function partialApprove(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -497,26 +591,39 @@ class LeaveController extends Controller
         }
 
         $employee = $leaveRequest->user;
+        $config = LeaveConfig::where('leave_type', $leaveRequest->leave_type)->firstOrFail();
 
         // Deduct only approved days
         $this->deductBalance($employee, $leaveRequest->leave_type, $request->approved_days, $leaveRequest);
 
-        // Block calendar only for approved days
+        // Block calendar for approved days
         $approvedEndDate = $leaveRequest->start_date->copy()->addWeekdays($request->approved_days - 1);
+
+        $requiresProof = $config->requiresProofFor((float) $request->approved_days) && !$leaveRequest->hasProof();
+        $isPendingProof = $requiresProof;
+
         $this->blockCalendar(
             $employee,
             $leaveRequest->start_date,
             $approvedEndDate,
             $leaveRequest->leave_type,
             $leaveRequest,
-            true
+            !$isPendingProof,
+            $isPendingProof,
+            false
         );
 
-        $leaveRequest->status = 'partially_approved';
+        $newStatus = $isPendingProof ? 'approved_pending_proof' : 'partially_approved';
+
+        $leaveRequest->status = $newStatus;
         $leaveRequest->approved_by = $user->id;
         $leaveRequest->approved_at = now();
         $leaveRequest->partial_approved_days = $request->approved_days;
         $leaveRequest->rejection_reason = $request->comment;
+        $leaveRequest->requires_proof = $requiresProof;
+        if ($requiresProof) {
+            $leaveRequest->proof_upload_deadline = $this->approvalService->computeProofDeadline($leaveRequest, $config);
+        }
         $leaveRequest->save();
 
         AuditService::log(
@@ -525,17 +632,22 @@ class LeaveController extends Controller
             recordId: $leaveRequest->id,
             oldValues: ['status' => 'pending'],
             newValues: [
-                'status' => 'partially_approved',
+                'status' => $newStatus,
                 'approved_days' => $request->approved_days,
                 'requested_days' => $leaveRequest->days_taken,
+                'requires_proof' => $requiresProof,
             ]
         );
 
         Notification::create([
             'user_id' => $leaveRequest->user_id,
-            'type' => 'LEAVE_PARTIALLY_APPROVED',
-            'title' => 'Leave Partially Approved',
-            'message' => "Your leave has been partially approved for {$request->approved_days} of {$leaveRequest->days_taken} days requested.",
+            'type' => $isPendingProof ? 'LEAVE_PARTIALLY_APPROVED_PENDING_PROOF' : 'LEAVE_PARTIALLY_APPROVED',
+            'title' => $isPendingProof
+                ? 'Leave Partially Approved — Proof Required'
+                : 'Leave Partially Approved',
+            'message' => $isPendingProof
+                ? "Your leave has been partially approved for {$request->approved_days} of {$leaveRequest->days_taken} days. Please upload proof by {$leaveRequest->proof_upload_deadline->format('d M Y H:i')}."
+                : "Your leave has been partially approved for {$request->approved_days} of {$leaveRequest->days_taken} days requested.",
             'reference_id' => $leaveRequest->id,
             'reference_type' => LeaveRequest::class,
         ]);
@@ -547,13 +659,15 @@ class LeaveController extends Controller
                 'leave_request' => $leaveRequest->fresh(),
                 'approved_days' => $request->approved_days,
                 'remaining_balance' => $employee->fresh()->getLeaveBalance($leaveRequest->leave_type),
+                'requires_proof' => $requiresProof,
             ]
         ], 200);
     }
 
-    /**
-     * POST /api/v1/leave/cancel
-     */
+    // ============================================================
+    // CANCEL
+    // ============================================================
+
     public function cancel(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -581,7 +695,9 @@ class LeaveController extends Controller
             ], 422);
         }
 
-        $wasApproved = in_array($leaveRequest->status, ['approved', 'auto_approved', 'partially_approved']);
+        $wasApproved = in_array($leaveRequest->status, [
+            'approved', 'auto_approved', 'partially_approved', 'approved_pending_proof'
+        ]);
         $daysToReturn = $leaveRequest->partial_approved_days ?? $leaveRequest->days_taken;
         $isLate = $leaveRequest->isLateCancellation();
 
@@ -617,7 +733,7 @@ class LeaveController extends Controller
             action: 'LEAVE_CANCELLED',
             tableName: 'leave_requests',
             recordId: $leaveRequest->id,
-            oldValues: ['status' => 'approved'],
+            oldValues: ['status' => $leaveRequest->getOriginal('status')],
             newValues: [
                 'status' => 'cancelled',
                 'days_returned' => $wasApproved && !$isLate ? $daysToReturn : 0,
@@ -627,7 +743,7 @@ class LeaveController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => $isLate 
+            'message' => $isLate
                 ? 'Leave cancelled (late cancellation - days forfeited)'
                 : 'Leave cancelled successfully',
             'data' => [
@@ -638,9 +754,10 @@ class LeaveController extends Controller
         ], 200);
     }
 
-    /**
-     * GET /api/v1/leave/calendar
-     */
+    // ============================================================
+    // CALENDAR
+    // ============================================================
+
     public function calendar(Request $request)
     {
         $user = Auth::user();
@@ -665,12 +782,15 @@ class LeaveController extends Controller
 
         $query = LeaveCalendar::with([
             'user:id,first_name,last_name,employee_number,department',
-            'leaveRequest:id,leave_type,reason'
+            'leaveRequest:id,leave_type,reason,status'
         ])
             ->whereBetween('leave_date', [$monthStart->format('Y-m-d'), $monthEnd->format('Y-m-d')])
-            ->where('is_approved', true);
+            ->where(function ($q) {
+                $q->where('is_approved', true)
+                  ->orWhere('is_pending_proof', true)
+                  ->orWhere('is_unpaid_conversion', true);
+            });
 
-        // Filter by department
         if ($request->has('department')) {
             $query->whereHas('user', function ($q) use ($request) {
                 $q->where('department', $request->department);
@@ -706,6 +826,8 @@ class LeaveController extends Controller
                         'employee_number' => $e->user->employee_number,
                         'department' => $e->user->department,
                         'leave_type' => $e->leave_type,
+                        'is_pending_proof' => (bool) $e->is_pending_proof,
+                        'is_unpaid_conversion' => (bool) $e->is_unpaid_conversion,
                     ];
                 }),
             ];
@@ -722,14 +844,17 @@ class LeaveController extends Controller
                     'sick' => $entries->where('leave_type', 'sick')->count(),
                     'family' => $entries->where('leave_type', 'family')->count(),
                     'unpaid' => $entries->where('leave_type', 'unpaid')->count(),
+                    'maternity' => $entries->where('leave_type', 'maternity')->count(),
+                    'paternity' => $entries->where('leave_type', 'paternity')->count(),
                 ],
             ]
         ], 200);
     }
 
-    /**
-     * GET /api/v1/leave/pending
-     */
+    // ============================================================
+    // PENDING
+    // ============================================================
+
     public function pending(Request $request)
     {
         $user = Auth::user();
@@ -757,9 +882,10 @@ class LeaveController extends Controller
         ], 200);
     }
 
-    /**
-     * POST /api/v1/leave/balance/adjust
-     */
+    // ============================================================
+    // ADJUST BALANCE
+    // ============================================================
+
     public function adjustBalance(Request $request)
     {
         $user = Auth::user();
@@ -773,7 +899,7 @@ class LeaveController extends Controller
 
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|exists:users,id',
-            'leave_type' => 'required|in:annual,sick,family',
+            'leave_type' => 'required|in:annual,sick,family,unpaid,study,maternity,paternity',
             'adjustment' => 'required|numeric',
             'reason' => 'required|string|max:500',
         ]);
@@ -792,9 +918,14 @@ class LeaveController extends Controller
 
         // Update balance
         match ($request->leave_type) {
-            'annual' => $employee->leave_balance_annual = $newBalance,
-            'sick' => $employee->leave_balance_sick = $newBalance,
-            default => null,
+            'annual'    => $employee->leave_balance_annual = $newBalance,
+            'sick'      => $employee->leave_balance_sick = $newBalance,
+            'family'    => $employee->leave_balance_family = $newBalance,
+            'unpaid'    => $employee->leave_balance_unpaid = $newBalance,
+            'study'     => $employee->leave_balance_study = $newBalance,
+            'maternity' => $employee->leave_balance_maternity = $newBalance,
+            'paternity' => $employee->leave_balance_paternity = $newBalance,
+            default     => null,
         };
         $employee->save();
 
@@ -805,6 +936,7 @@ class LeaveController extends Controller
             'balance_before' => $oldBalance,
             'balance_after' => $newBalance,
             'adjustment_reason' => $request->reason,
+            'reference_type' => 'manual_adjustment',
             'adjusted_by' => $user->id,
             'adjusted_at' => now(),
         ]);
@@ -830,9 +962,10 @@ class LeaveController extends Controller
         ], 200);
     }
 
-    /**
-     * GET /api/v1/leave/conflicts/{dateRange}
-     */
+    // ============================================================
+    // CONFLICTS
+    // ============================================================
+
     public function conflicts(Request $request, $dateRange)
     {
         // dateRange format: YYYY-MM-DD_YYYY-MM-DD
@@ -850,7 +983,11 @@ class LeaveController extends Controller
 
         // Find team members (same department) with approved leave in this range
         $conflicts = LeaveCalendar::with(['user:id,first_name,last_name,employee_number,department'])
-            ->where('is_approved', true)
+            ->where(function ($q) {
+                $q->where('is_approved', true)
+                  ->orWhere('is_pending_proof', true)
+                  ->orWhere('is_unpaid_conversion', true);
+            })
             ->whereBetween('leave_date', [$startDate, $endDate])
             ->where('user_id', '!=', $user->id)
             ->whereHas('user', function ($q) use ($user) {
@@ -883,9 +1020,10 @@ class LeaveController extends Controller
         ], 200);
     }
 
-    /**
-     * GET /api/v1/leave/team-report
-     */
+    // ============================================================
+    // TEAM REPORT
+    // ============================================================
+
     public function teamReport(Request $request)
     {
         $user = Auth::user();
@@ -911,7 +1049,7 @@ class LeaveController extends Controller
 
         $query = LeaveRequest::with('user:id,first_name,last_name,employee_number,department')
             ->whereYear('start_date', $year)
-            ->whereIn('status', ['approved', 'auto_approved', 'partially_approved']);
+            ->whereIn('status', ['approved', 'auto_approved', 'partially_approved', 'approved_pending_proof']);
 
         if ($request->has('department')) {
             $query->whereHas('user', function ($q) use ($request) {
@@ -937,6 +1075,8 @@ class LeaveController extends Controller
                     'sick' => $group->where('leave_type', 'sick')->sum('days_taken'),
                     'family' => $group->where('leave_type', 'family')->sum('days_taken'),
                     'unpaid' => $group->where('leave_type', 'unpaid')->sum('days_taken'),
+                    'maternity' => $group->where('leave_type', 'maternity')->sum('days_taken'),
+                    'paternity' => $group->where('leave_type', 'paternity')->sum('days_taken'),
                 ],
             ];
         })->values();
@@ -952,13 +1092,10 @@ class LeaveController extends Controller
         ], 200);
     }
 
-    // ========================================
-    // PRIVATE HELPER METHODS
-    // ========================================
+    // ============================================================
+    // PRIVATE HELPERS
+    // ============================================================
 
-    /**
-     * Calculate business days between two dates (excludes weekends)
-     */
     private function calculateBusinessDays(Carbon $start, Carbon $end): float
     {
         $days = 0;
@@ -979,8 +1116,12 @@ class LeaveController extends Controller
      */
     private function checkConflicts(User $user, Carbon $start, Carbon $end): array
     {
-        $conflicts = LeaveCalendar::with('user:id,first_name,last_name')
-            ->where('is_approved', true)
+        return LeaveCalendar::with('user:id,first_name,last_name')
+            ->where(function ($q) {
+                $q->where('is_approved', true)
+                  ->orWhere('is_pending_proof', true)
+                  ->orWhere('is_unpaid_conversion', true);
+            })
             ->whereBetween('leave_date', [$start, $end])
             ->where('user_id', '!=', $user->id)
             ->whereHas('user', function ($q) use ($user) {
@@ -996,8 +1137,6 @@ class LeaveController extends Controller
             })
             ->values()
             ->toArray();
-
-        return $conflicts;
     }
 
     /**
@@ -1005,7 +1144,35 @@ class LeaveController extends Controller
      */
     private function deductBalance(User $user, string $leaveType, float $days, LeaveRequest $leaveRequest): void
     {
-        if ($leaveType === 'unpaid' || $leaveType === 'study' || $leaveType === 'maternity') {
+        if (in_array($leaveType, ['unpaid', 'study'])) {
+            // Unpaid/study: infinite → just log
+            LeaveBalance::create([
+                'user_id' => $user->id,
+                'leave_type' => $leaveType,
+                'balance_before' => $user->getLeaveBalance($leaveType),
+                'balance_after' => $user->getLeaveBalance($leaveType),
+                'adjustment_reason' => "Leave request {$leaveType} (no balance deduction)",
+                'reference_id' => $leaveRequest->id,
+                'reference_type' => 'leave_request',
+                'adjusted_by' => Auth::id(),
+                'adjusted_at' => now(),
+            ]);
+            return;
+        }
+
+        $config = LeaveConfig::where('leave_type', $leaveType)->first();
+        if ($config && $config->isInfinite()) {
+            LeaveBalance::create([
+                'user_id' => $user->id,
+                'leave_type' => $leaveType,
+                'balance_before' => $user->getLeaveBalance($leaveType),
+                'balance_after' => $user->getLeaveBalance($leaveType),
+                'adjustment_reason' => "Leave request {$leaveType} (infinite balance)",
+                'reference_id' => $leaveRequest->id,
+                'reference_type' => 'leave_request',
+                'adjusted_by' => Auth::id(),
+                'adjusted_at' => now(),
+            ]);
             return;
         }
 
@@ -1035,7 +1202,9 @@ class LeaveController extends Controller
         Carbon $end,
         string $leaveType,
         LeaveRequest $leaveRequest,
-        bool $isApproved
+        bool $isApproved,
+        bool $isPendingProof,
+        bool $isUnpaidConversion
     ): void {
         $current = $start->copy();
         while ($current->lte($end)) {
@@ -1049,6 +1218,8 @@ class LeaveController extends Controller
                         'leave_type' => $leaveType,
                         'leave_request_id' => $leaveRequest->id,
                         'is_approved' => $isApproved,
+                        'is_pending_proof' => $isPendingProof,
+                        'is_unpaid_conversion' => $isUnpaidConversion,
                     ]
                 );
             }
@@ -1064,7 +1235,7 @@ class LeaveController extends Controller
         return LeaveRequest::where('user_id', $userId)
             ->where('leave_type', $leaveType)
             ->whereYear('start_date', now()->year)
-            ->whereIn('status', ['approved', 'auto_approved', 'partially_approved'])
+            ->whereIn('status', ['approved', 'auto_approved', 'partially_approved', 'approved_pending_proof', 'converted_to_unpaid'])
             ->sum('days_taken');
     }
 }

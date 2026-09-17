@@ -15,11 +15,15 @@ class LeaveCalendar extends Model
         'leave_type',
         'leave_request_id',
         'is_approved',
+        'is_pending_proof',
+        'is_unpaid_conversion',
     ];
 
     protected $casts = [
         'leave_date' => 'date',
         'is_approved' => 'boolean',
+        'is_pending_proof' => 'boolean',
+        'is_unpaid_conversion' => 'boolean',
     ];
 
     public function user(): BelongsTo
@@ -38,5 +42,17 @@ class LeaveCalendar extends Model
         return $query->where('user_id', $userId)
                      ->where('leave_date', $date)
                      ->where('is_approved', true);
+    }
+
+    /**
+     * Scope: approved OR pending-proof (both block timesheets).
+     */
+    public function scopeBlocking($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('is_approved', true)
+              ->orWhere('is_pending_proof', true)
+              ->orWhere('is_unpaid_conversion', true);
+        });
     }
 }

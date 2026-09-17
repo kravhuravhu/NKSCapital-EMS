@@ -14,6 +14,7 @@ use App\Http\Controllers\API\TimesheetReportController;
 use App\Http\Controllers\API\WorkflowController;
 use App\Http\Controllers\API\LeaveController;
 use App\Http\Controllers\API\LeaveConfigController;
+use App\Http\Controllers\API\LeaveAttachmentController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -202,6 +203,12 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
             Route::post('partial-approve', [LeaveController::class, 'partialApprove']);
             Route::get('team-report', [LeaveController::class, 'teamReport']);
         });
+
+        // Attachment / proof endpoints
+        Route::post('{leaveRequestId}/upload-attachment', [LeaveAttachmentController::class, 'upload']);
+        Route::post('{leaveRequestId}/approve-proof', [LeaveAttachmentController::class, 'approveProof'])
+            ->middleware(['role:manager,director,admin,super_admin']);
+        Route::get('{leaveRequestId}/proof-status', [LeaveAttachmentController::class, 'status']);
         
         // Admin/Director only
         Route::middleware(['role:admin,director,super_admin'])->group(function () {
