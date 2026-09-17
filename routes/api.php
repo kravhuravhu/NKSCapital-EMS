@@ -17,6 +17,7 @@ use App\Http\Controllers\API\LeaveConfigController;
 use App\Http\Controllers\API\LeaveAttachmentController;
 use App\Http\Controllers\API\AssetController;
 use App\Http\Controllers\API\ContractController;
+use App\Http\Controllers\API\RecruitmentController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -259,6 +260,34 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('expiring', [ContractController::class, 'expiring']);
         Route::get('history/{userId}', [ContractController::class, 'history']);
         Route::delete('delete/{id}', [ContractController::class, 'destroy']);
+    });
+
+    // ========================================
+    // M8: Recruitment — Requisitions, Candidates, Interviews
+    // ========================================
+    Route::prefix('recruitment')->group(function () {
+        // Requisitions
+        Route::get('requisition/list', [RecruitmentController::class, 'listRequisitions']);
+        Route::post('requisition/create', [RecruitmentController::class, 'createRequisition']);
+        Route::post('requisition/approve', [RecruitmentController::class, 'approveRequisition']);
+        Route::put('requisition/update/{id}', [RecruitmentController::class, 'updateRequisition']);
+
+        // Candidates
+        Route::get('candidate/list', [RecruitmentController::class, 'listCandidates']);
+        Route::get('candidate/{id}', [RecruitmentController::class, 'showCandidate']);
+        Route::post('candidate/add', [RecruitmentController::class, 'addCandidate']);
+        Route::post('candidate/parse-resume', [RecruitmentController::class, 'parseResume']);
+        Route::post('candidate/reject', [RecruitmentController::class, 'rejectCandidate']);
+        Route::put('candidate/stage', [RecruitmentController::class, 'advanceStage']);
+
+        // Interviews
+        Route::get('interview/list', [RecruitmentController::class, 'listInterviews']);
+        Route::get('interview/calendar', [RecruitmentController::class, 'interviewCalendar']);
+        Route::get('interview/{id}', [RecruitmentController::class, 'showInterview']);
+        Route::post('interview/schedule', [RecruitmentController::class, 'scheduleInterview']);
+        Route::post('interview/feedback', [RecruitmentController::class, 'submitFeedback']);
+        Route::post('interview/cancel/{id}', [RecruitmentController::class, 'cancelInterview']);
+        Route::put('interview/reschedule/{id}', [RecruitmentController::class, 'rescheduleInterview']);
     });
 
     // Role management - Admin only
