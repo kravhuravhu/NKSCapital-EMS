@@ -15,6 +15,7 @@ use App\Http\Controllers\API\WorkflowController;
 use App\Http\Controllers\API\LeaveController;
 use App\Http\Controllers\API\LeaveConfigController;
 use App\Http\Controllers\API\LeaveAttachmentController;
+use App\Http\Controllers\API\AssetController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -228,6 +229,20 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
             Route::post('accrual-rate', [LeaveConfigController::class, 'updateAccrualRate']);
             Route::put('entitlements', [LeaveConfigController::class, 'updateEntitlements']);
             Route::post('reset-employee/{userId}', [LeaveConfigController::class, 'resetEmployee']);
+        });
+
+        // ========================================
+        // M7: Asset Tracking
+        // ========================================
+        Route::prefix('asset')->group(function () {
+            Route::post('register', [AssetController::class, 'register']);
+            Route::post('loan', [AssetController::class, 'loan']);
+            Route::post('return', [AssetController::class, 'returnAsset']);
+            Route::get('overdue', [AssetController::class, 'overdue']);
+            Route::get('track', [AssetController::class, 'track']);
+            Route::post('repair/request', [AssetController::class, 'requestRepair']);
+            Route::get('history/{assetId}', [AssetController::class, 'history']);
+            Route::get('report', [AssetController::class, 'report']);
         });
 
     // Role management - Admin only

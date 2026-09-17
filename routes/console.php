@@ -8,4 +8,8 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// Leave proof reminders (M6)
 Schedule::command('leave:send-proof-reminders')->hourly();
+
+// Asset overdue escalation (M7)
+Schedule::command('assets:check-overdue')->dailyAt('08:00');
