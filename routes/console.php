@@ -13,3 +13,6 @@ Schedule::command('leave:send-proof-reminders')->hourly();
 
 // Asset overdue escalation (M7)
 Schedule::command('assets:check-overdue')->dailyAt('08:00');
+
+// Contract expiry alerts (M7)
+Schedule::command('contracts:check-expiry')->dailyAt('06:00');
