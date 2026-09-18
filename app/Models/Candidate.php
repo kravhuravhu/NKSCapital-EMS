@@ -30,6 +30,8 @@ class Candidate extends Model
         'applied_date',
         'hired_employee_id',
         'hire_date',
+        'converted_from_offer_id',
+        'conversion_notes',
     ];
 
     protected $casts = [
@@ -96,5 +98,21 @@ class Candidate extends Model
     {
         $order = ['applied' => 1, 'screening' => 2, 'interview' => 3, 'offer' => 4, 'hired' => 5];
         return $order[$this->current_stage] ?? 0;
+    }
+
+    // M9 Relationships for offers & conversion
+    public function convertedFromOffer(): BelongsTo
+    {
+        return $this->belongsTo(Offer::class, 'converted_from_offer_id');
+    }
+
+    public function activeOffer(): ?Offer
+    {
+        return $this->offers()->where('status', 'extended')->latest()->first();
+    }
+
+    public function acceptedOffer(): ?Offer
+    {
+        return $this->offers()->where('status', 'accepted')->latest()->first();
     }
 }

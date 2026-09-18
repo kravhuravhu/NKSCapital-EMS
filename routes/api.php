@@ -18,6 +18,7 @@ use App\Http\Controllers\API\LeaveAttachmentController;
 use App\Http\Controllers\API\AssetController;
 use App\Http\Controllers\API\ContractController;
 use App\Http\Controllers\API\RecruitmentController;
+use App\Http\Controllers\API\OfferController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -288,6 +289,18 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('interview/feedback', [RecruitmentController::class, 'submitFeedback']);
         Route::post('interview/cancel/{id}', [RecruitmentController::class, 'cancelInterview']);
         Route::put('interview/reschedule/{id}', [RecruitmentController::class, 'rescheduleInterview']);
+
+        // Offers
+        Route::post('offer/generate', [OfferController::class, 'generate']);
+        Route::get('offer/{id}', [OfferController::class, 'show']);
+        Route::post('offer/accept', [OfferController::class, 'accept']);
+        Route::post('offer/decline', [OfferController::class, 'decline']);
+        Route::post('offer/send-email', [OfferController::class, 'sendEmail']);
+        Route::post('convert-to-employee', [OfferController::class, 'convertToEmployee']);
+
+        // Analytics
+        Route::get('metrics', [OfferController::class, 'metrics']);
+        Route::get('report', [OfferController::class, 'report']);
     });
 
     // Role management - Admin only
