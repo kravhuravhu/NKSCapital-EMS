@@ -19,10 +19,16 @@ use App\Http\Controllers\API\AssetController;
 use App\Http\Controllers\API\ContractController;
 use App\Http\Controllers\API\RecruitmentController;
 use App\Http\Controllers\API\OfferController;
+use App\Http\Controllers\API\MeetingController;
+use App\Http\Controllers\API\DelegationController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+Route::get('/meeting/checkin/{secret}', function ($secret) {
+    return redirect(config('app.frontend_url', '/') . '/meetings/checkin/' . $secret);
+})->name('meeting.checkin.redirect');
 
 /*
 |--------------------------------------------------------------------------
@@ -301,6 +307,34 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         // Analytics
         Route::get('metrics', [OfferController::class, 'metrics']);
         Route::get('report', [OfferController::class, 'report']);
+    });
+
+    // ========================================
+    // M10: Meeting & Attendance
+    // ========================================
+    Route::prefix('meeting')->group(function () {
+        Route::post('schedule', [MeetingController::class, 'schedule']);
+        Route::get('list', [MeetingController::class, 'list']);
+        Route::get('qr/{meetingId}', [MeetingController::class, 'qr']);
+        Route::get('ical/{meetingId}', [MeetingController::class, 'ical']);
+        Route::post('checkin', [MeetingController::class, 'checkin']);
+        Route::post('override', [MeetingController::class, 'override']);
+        Route::post('cancel/{id}', [MeetingController::class, 'cancel']);
+        Route::put('update/{id}', [MeetingController::class, 'update']);
+        Route::get('attendance/{meetingId}', [MeetingController::class, 'attendance']);
+        Route::get('late-report', [MeetingController::class, 'lateReport']);
+    });
+
+    // ========================================
+    // M10: Delegation
+    // ========================================
+    Route::prefix('admin/delegation')->group(function () {
+        Route::get('list', [DelegationController::class, 'list']);
+        Route::get('{id}', [DelegationController::class, 'show']);
+        Route::post('create', [DelegationController::class, 'create']);
+        Route::put('update/{id}', [DelegationController::class, 'update']);
+        Route::post('activate/{id}', [DelegationController::class, 'activate']);
+        Route::post('revoke', [DelegationController::class, 'revoke']);
     });
 
     // Role management - Admin only
