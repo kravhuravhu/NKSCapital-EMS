@@ -1024,4 +1024,42 @@ class User extends Authenticatable
 
         return false;
     }
+
+    /**
+     * Get active delegations where this user is the original approver.
+     */
+    public function activeDelegationsGiven()
+    {
+        return $this->hasMany(ApprovalDelegation::class, 'original_approver_id')
+            ->where('is_active', true)
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now());
+    }
+
+    /**
+     * Get active delegations where this user is the delegate.
+     */
+    public function activeDelegationsReceived()
+    {
+        return $this->hasMany(ApprovalDelegation::class, 'delegate_id')
+            ->where('is_active', true)
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now());
+    }
+
+    /**
+     * Check if this user currently has an active delegate.
+     */
+    public function hasActiveDelegate(): bool
+    {
+        return $this->activeDelegationsGiven()->exists();
+    }
+
+    /**
+     * Get the current delegate (if any).
+     */
+    public function currentDelegate(): ?User
+    {
+        return $this->activeDelegationsGiven()->first()?->delegate;
+    }
 }
