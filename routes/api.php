@@ -19,6 +19,8 @@ use App\Http\Controllers\API\AssetController;
 use App\Http\Controllers\API\ContractController;
 use App\Http\Controllers\API\RecruitmentController;
 use App\Http\Controllers\API\OfferController;
+use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\AuditController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -301,6 +303,33 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         // Analytics
         Route::get('metrics', [OfferController::class, 'metrics']);
         Route::get('report', [OfferController::class, 'report']);
+    });
+
+    // ========================================
+    // M11: Notifications
+    // ========================================
+    Route::prefix('notifications')->group(function () {
+        Route::get('list', [NotificationController::class, 'list']);
+        Route::get('unread/count', [NotificationController::class, 'unreadCount']);
+        Route::post('mark-read', [NotificationController::class, 'markRead']);
+        Route::post('mark-all-read', [NotificationController::class, 'markAllRead']);
+        Route::delete('delete/{id}', [NotificationController::class, 'delete']);
+        Route::get('preferences', [NotificationController::class, 'preferences']);
+        Route::put('preferences/update', [NotificationController::class, 'updatePreferences']);
+        Route::post('send-email', [NotificationController::class, 'sendEmail'])
+            ->middleware(['role:admin,super_admin,director']);
+    });
+
+    // ========================================
+    // M11: Audit & Compliance
+    // ========================================
+    Route::prefix('admin/audit')->middleware(['role:admin,super_admin,director'])->group(function () {
+        Route::post('search', [AuditController::class, 'search']);
+        Route::get('export', [AuditController::class, 'export']);
+        Route::get('verify-chain', [AuditController::class, 'verifyChain']);
+        Route::get('report', [AuditController::class, 'report']);
+        Route::get('user/{userId}', [AuditController::class, 'userAudit']);
+        Route::get('table/{tableName}', [AuditController::class, 'tableAudit']);
     });
 
     // Role management - Admin only

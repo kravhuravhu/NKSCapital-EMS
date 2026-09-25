@@ -19,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'audit' => \App\Http\Middleware\AuditLogMiddleware::class,
             'rate.limit' => \App\Http\Middleware\RateLimitMiddleware::class,
         ]);
+
+        // Audit EVERY API request globally
+        $middleware->api(prepend: [
+            \App\Http\Middleware\AuditLogMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

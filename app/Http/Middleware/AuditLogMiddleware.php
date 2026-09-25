@@ -25,12 +25,12 @@ class AuditLogMiddleware
     ];
 
     /**
-     * Actions that always require full logging (success + errors).
+     * HTTP methods that always produce a success log entry.
      */
-    protected array $alwaysLogMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    protected array $mutatingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
     /**
-     * Paths to skip entirely (e.g., health checks, metrics).
+     * Paths to skip entirely (health checks, metrics, debug).
      */
     protected array $skipPaths = [
         'up',
@@ -38,7 +38,13 @@ class AuditLogMiddleware
         'api/metrics',
         '_debugbar',
         'horizon',
+        'telescope',
     ];
+
+    /**
+     * Requests longer than this (ms) are flagged as slow.
+     */
+    protected int $slowThresholdMs = 2000;
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -50,36 +56,41 @@ class AuditLogMiddleware
         }
 
         $requestId = (string) Str::uuid();
+        $sessionId = $this->resolveSessionId($request);
         $request->headers->set('X-Request-Id', $requestId);
 
         $startedAt = microtime(true);
-        $shouldLogSuccess = in_array($request->method(), $this->alwaysLogMethods, true);
+        $startMemory = memory_get_usage();
 
         try {
             $response = $next($request);
-            $duration = (int) round((microtime(true) - $startedAt) * 1000);
 
-            // Log successful mutations (and optionally all requests)
-            if ($shouldLogSuccess && $response->getStatusCode() < 400) {
-                $this->logRequest(
-                    request: $request,
-                    response: $response,
-                    requestId: $requestId,
-                    durationMs: $duration,
-                    logType: 'success'
-                );
-            }
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+            $peakMemoryKb = (int) round((memory_get_peak_usage() - $startMemory) / 1024);
+
+            $this->logRequest(
+                request: $request,
+                response: $response,
+                requestId: $requestId,
+                sessionId: $sessionId,
+                durationMs: $durationMs,
+                peakMemoryKb: $peakMemoryKb
+            );
 
             return $response;
-        } catch (Throwable $e) {
-            $duration = (int) round((microtime(true) - $startedAt) * 1000);
 
-            // Log ALL exceptions (including validation, auth, server errors)
+        } catch (Throwable $e) {
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+            $peakMemoryKb = (int) round((memory_get_peak_usage() - $startMemory) / 1024);
+
+            // Log ALL exceptions — validation, auth, 404, 500, everything
             $this->logError(
                 request: $request,
                 exception: $e,
                 requestId: $requestId,
-                durationMs: $duration
+                sessionId: $sessionId,
+                durationMs: $durationMs,
+                peakMemoryKb: $peakMemoryKb
             );
 
             throw $e;
@@ -87,17 +98,31 @@ class AuditLogMiddleware
     }
 
     /**
-     * Log a successful API request.
+     * Log a successful API request (mutations always; GETs on demand).
      */
     protected function logRequest(
         Request $request,
         Response $response,
         string $requestId,
+        ?string $sessionId,
         int $durationMs,
-        string $logType
+        int $peakMemoryKb
     ): void {
         try {
+            $isMutating = in_array($request->method(), $this->mutatingMethods, true);
+            $status = $response->getStatusCode();
+
+            // Only log GETs that fail (4xx/5xx) or are explicitly tracked endpoints
+            if (!$isMutating && $status < 400 && !$this->shouldLogGet($request)) {
+                return;
+            }
+
             $maskedInput = $this->maskSensitive($request->all());
+            $content = $response->getContent();
+            $size = is_string($content) ? strlen($content) : 0;
+
+            $severity = $this->resolveSeverityFromStatus($status);
+            $logType = $this->resolveLogType($status);
 
             AuditService::log(
                 action: $request->method() . ' ' . $request->path(),
@@ -109,14 +134,19 @@ class AuditLogMiddleware
                 ipAddress: $request->ip(),
                 userAgent: $request->userAgent(),
                 logType: $logType,
-                httpStatus: $response->getStatusCode(),
+                httpStatus: $status,
                 requestMethod: $request->method(),
                 requestPath: '/' . ltrim($request->path(), '/'),
                 requestId: $requestId,
-                durationMs: $durationMs
+                durationMs: $durationMs,
+                responseStatus: $status,
+                responseSize: $size,
+                memoryPeakKb: $peakMemoryKb,
+                isSlow: $durationMs > $this->slowThresholdMs,
+                severity: $severity,
+                sessionId: $sessionId
             );
         } catch (Throwable $e) {
-            // Never let audit logging break the request
             Log::warning('AuditLogMiddleware: failed to log success', [
                 'error' => $e->getMessage(),
             ]);
@@ -124,17 +154,21 @@ class AuditLogMiddleware
     }
 
     /**
-     * Log an error/exception.
+     * Log an error/exception. Called for ANY uncaught throwable.
      */
     protected function logError(
         Request $request,
         Throwable $exception,
         string $requestId,
-        int $durationMs
+        ?string $sessionId,
+        int $durationMs,
+        int $peakMemoryKb
     ): void {
         try {
             $maskedInput = $this->maskSensitive($request->all());
             $status = $this->resolveHttpStatus($exception);
+
+            $severity = $status >= 500 ? 'critical' : ($status === 404 ? 'warning' : 'error');
 
             AuditService::log(
                 action: $request->method() . ' ' . $request->path() . ' FAILED',
@@ -158,7 +192,12 @@ class AuditLogMiddleware
                 requestId: $requestId,
                 durationMs: $durationMs,
                 errorMessage: $exception->getMessage(),
-                errorTrace: $exception->getTraceAsString()
+                errorTrace: $exception->getTraceAsString(),
+                responseStatus: $status,
+                memoryPeakKb: $peakMemoryKb,
+                isSlow: $durationMs > $this->slowThresholdMs,
+                severity: $severity,
+                sessionId: $sessionId
             );
         } catch (Throwable $e) {
             Log::error('AuditLogMiddleware: failed to log error', [
@@ -198,7 +237,19 @@ class AuditLogMiddleware
     }
 
     /**
-     * Resolve HTTP status from exception.
+     * Resolve the current session id safely.
+     */
+    protected function resolveSessionId(Request $request): ?string
+    {
+        try {
+            return $request->hasSession() ? $request->session()->getId() : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Resolve HTTP status from a Throwable.
      */
     protected function resolveHttpStatus(Throwable $e): int
     {
@@ -214,6 +265,48 @@ class AuditLogMiddleware
             $e instanceof \Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException => 405,
             $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface => $e->getStatusCode(),
             default => 500,
+        };
+    }
+
+    /**
+     * Is this a GET that we explicitly track?
+     */
+    protected function shouldLogGet(Request $request): bool
+    {
+        // Log sensitive reads like downloads / reports / exports
+        $trackedPrefixes = [
+            'api/v1/contract/download',
+            'api/v1/asset/report',
+            'api/v1/timesheet/report',
+            'api/v1/admin/audit',
+            'api/v1/recruitment/report',
+            'api/v1/recruitment/metrics',
+            'api/v1/dashboard',
+        ];
+        foreach ($trackedPrefixes as $prefix) {
+            if ($request->is($prefix) || $request->is($prefix . '/*')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected function resolveSeverityFromStatus(int $status): string
+    {
+        return match (true) {
+            $status >= 500 => 'critical',
+            $status >= 400 => 'warning',
+            $status >= 300 => 'info',
+            default => 'success',
+        };
+    }
+
+    protected function resolveLogType(int $status): string
+    {
+        return match (true) {
+            $status >= 500 => 'error',
+            $status >= 400 => 'warning',
+            default => 'success',
         };
     }
 }
