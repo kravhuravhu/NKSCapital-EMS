@@ -23,7 +23,8 @@ use App\Http\Controllers\API\MeetingController;
 use App\Http\Controllers\API\DelegationController;
 use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\AuditController;
-
+use App\Http\Controllers\API\DashboardController;
+use App\Http\Controllers\API\ReportController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -368,6 +369,37 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('report', [AuditController::class, 'report']);
         Route::get('user/{userId}', [AuditController::class, 'userAudit']);
         Route::get('table/{tableName}', [AuditController::class, 'tableAudit']);
+    });
+
+    // ========================================
+    // M12: Dashboards
+    // ========================================
+    Route::prefix('dashboard')->group(function () {
+        Route::get('employee/ps', [DashboardController::class, 'employeePS']);
+        Route::get('employee/pr', [DashboardController::class, 'employeePR']);
+        Route::get('manager', [DashboardController::class, 'manager']);
+        Route::get('director', [DashboardController::class, 'director']);
+        Route::get('admin', [DashboardController::class, 'admin']);
+        Route::get('recruiter', [DashboardController::class, 'recruiter']);
+        Route::get('websocket/token', [DashboardController::class, 'websocketToken']);
+        Route::get('recent-activity', [DashboardController::class, 'recentActivity']);
+        Route::get('pending-counts', [DashboardController::class, 'pendingCounts']);
+    });
+
+    // ========================================
+    // M12: Reports
+    // ========================================
+    Route::prefix('reports')->group(function () {
+        Route::get('employee/ps/timesheet', [ReportController::class, 'employeePSTimesheet']);
+        Route::get('employee/pr/timesheet', [ReportController::class, 'employeePRTimesheet']);
+        Route::get('manager/team-performance', [ReportController::class, 'teamPerformance']);
+        Route::get('director/company-kpi', [ReportController::class, 'companyKpi']);
+        Route::get('director/financial', [ReportController::class, 'financial']);
+        Route::get('admin/system-usage', [ReportController::class, 'systemUsage']);
+        Route::get('recruitment/pipeline', [ReportController::class, 'recruitmentPipeline']);
+        Route::get('compliance/audit', [ReportController::class, 'complianceAudit']);
+        Route::get('export/excel', [ReportController::class, 'exportExcel']);
+        Route::get('export/pdf', [ReportController::class, 'exportPdf']);
     });
 
     // Role management - Admin only
