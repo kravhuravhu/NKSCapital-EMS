@@ -27,9 +27,15 @@ class AuditService
         ?string $requestId = null,
         ?int $durationMs = null,
         ?string $errorMessage = null,
-        ?string $errorTrace = null
+        ?string $errorTrace = null,
+        ?int $responseStatus = null,
+        ?int $responseSize = null,
+        ?int $memoryPeakKb = null,
+        bool $isSlow = false,
+        ?string $severity = null,
+        ?string $sessionId = null
     ): AuditLog {
-        // Get the last audit log to chain
+        // Chain
         $lastLog = AuditLog::orderBy('id', 'desc')->first();
         $previousHash = $lastLog ? $lastLog->chain_hash : '0';
 
@@ -38,6 +44,8 @@ class AuditService
         $ipAddress = $ipAddress ?? Request::ip();
         $userAgent = $userAgent ?? Request::userAgent();
         $timestamp = now();
+        $severity = $severity ?? self::severityFromLogType($logType);
+        $environment = app()->environment();
 
         // Build payload for hashing
         $payload = json_encode([
@@ -46,6 +54,7 @@ class AuditService
             'ip_address' => $ipAddress,
             'action' => $action,
             'log_type' => $logType,
+            'severity' => $severity,
             'http_status' => $httpStatus,
             'table_name' => $tableName,
             'record_id' => $recordId,
@@ -69,7 +78,14 @@ class AuditService
             'ip_address' => $ipAddress,
             'action' => $action,
             'log_type' => $logType,
+            'severity' => $severity,
             'http_status' => $httpStatus,
+            'response_status' => $responseStatus ?? $httpStatus,
+            'response_size' => $responseSize,
+            'memory_peak_kb' => $memoryPeakKb,
+            'is_slow' => $isSlow,
+            'duration_ms' => $durationMs,
+            'environment' => $environment,
             'table_name' => $tableName,
             'record_id' => $recordId,
             'old_values' => $oldValues ? json_encode($oldValues) : null,
@@ -78,14 +94,33 @@ class AuditService
             'request_method' => $requestMethod,
             'request_path' => $requestPath,
             'request_id' => $requestId,
-            'duration_ms' => $durationMs,
+            'session_id' => $sessionId,
             'error_message' => $errorMessage,
             'error_trace' => $errorTrace,
         ]);
     }
 
     /**
-     * Convenience: log an error event.
+     * Log a warning event.
+     */
+    public static function logWarning(
+        string $action,
+        string $tableName,
+        int $recordId = 0,
+        ?array $context = null
+    ): AuditLog {
+        return self::log(
+            action: $action,
+            tableName: $tableName,
+            recordId: $recordId,
+            newValues: $context,
+            logType: 'warning',
+            severity: 'warning'
+        );
+    }
+
+    /**
+     * Log an error event.
      */
     public static function logError(
         string $action,
@@ -100,30 +135,34 @@ class AuditService
             action: $action,
             tableName: $tableName,
             recordId: $recordId,
-            oldValues: null,
             newValues: $context,
             logType: 'error',
             httpStatus: $httpStatus ?? 500,
             errorMessage: $errorMessage,
-            errorTrace: $errorTrace
+            errorTrace: $errorTrace,
+            severity: 'error'
         );
     }
 
     /**
-     * Convenience: log a warning.
+     * Log a critical event.
      */
-    public static function logWarning(
+    public static function logCritical(
         string $action,
         string $tableName,
         int $recordId = 0,
-        ?array $context = null
+        ?array $context = null,
+        ?string $errorMessage = null
     ): AuditLog {
         return self::log(
             action: $action,
             tableName: $tableName,
             recordId: $recordId,
             newValues: $context,
-            logType: 'warning'
+            logType: 'error',
+            httpStatus: 500,
+            errorMessage: $errorMessage,
+            severity: 'critical'
         );
     }
 
@@ -145,6 +184,7 @@ class AuditService
                 'ip_address' => $log->ip_address,
                 'action' => $log->action,
                 'log_type' => $log->log_type,
+                'severity' => $log->severity,
                 'http_status' => $log->http_status,
                 'table_name' => $log->table_name,
                 'record_id' => $log->record_id,
@@ -170,6 +210,17 @@ class AuditService
             'is_valid' => $isValid,
             'total_logs' => $logs->count(),
             'broken_at' => $brokenAt,
+            'verified_at' => now()->toIso8601String(),
         ];
+    }
+
+    protected static function severityFromLogType(string $logType): string
+    {
+        return match ($logType) {
+            'error' => 'error',
+            'warning' => 'warning',
+            'success' => 'success',
+            default => 'info',
+        };
     }
 }

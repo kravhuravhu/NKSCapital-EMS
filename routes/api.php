@@ -21,6 +21,9 @@ use App\Http\Controllers\API\RecruitmentController;
 use App\Http\Controllers\API\OfferController;
 use App\Http\Controllers\API\MeetingController;
 use App\Http\Controllers\API\DelegationController;
+use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\AuditController;
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -296,6 +299,9 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('interview/cancel/{id}', [RecruitmentController::class, 'cancelInterview']);
         Route::put('interview/reschedule/{id}', [RecruitmentController::class, 'rescheduleInterview']);
 
+        // ========================================
+        // M9: Recruitment — Offers, Conversion, & Analytics
+        // ========================================
         // Offers
         Route::post('offer/generate', [OfferController::class, 'generate']);
         Route::get('offer/{id}', [OfferController::class, 'show']);
@@ -335,6 +341,33 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::put('update/{id}', [DelegationController::class, 'update']);
         Route::post('activate/{id}', [DelegationController::class, 'activate']);
         Route::post('revoke', [DelegationController::class, 'revoke']);
+    });
+
+    // ========================================
+    // M11: Notifications
+    // ========================================
+    Route::prefix('notifications')->group(function () {
+        Route::get('list', [NotificationController::class, 'list']);
+        Route::get('unread/count', [NotificationController::class, 'unreadCount']);
+        Route::post('mark-read', [NotificationController::class, 'markRead']);
+        Route::post('mark-all-read', [NotificationController::class, 'markAllRead']);
+        Route::delete('delete/{id}', [NotificationController::class, 'delete']);
+        Route::get('preferences', [NotificationController::class, 'preferences']);
+        Route::put('preferences/update', [NotificationController::class, 'updatePreferences']);
+        Route::post('send-email', [NotificationController::class, 'sendEmail'])
+            ->middleware(['role:admin,super_admin,director']);
+    });
+
+    // ========================================
+    // M11: Audit & Compliance
+    // ========================================
+    Route::prefix('admin/audit')->middleware(['role:admin,super_admin,director'])->group(function () {
+        Route::post('search', [AuditController::class, 'search']);
+        Route::get('export', [AuditController::class, 'export']);
+        Route::get('verify-chain', [AuditController::class, 'verifyChain']);
+        Route::get('report', [AuditController::class, 'report']);
+        Route::get('user/{userId}', [AuditController::class, 'userAudit']);
+        Route::get('table/{tableName}', [AuditController::class, 'tableAudit']);
     });
 
     // Role management - Admin only

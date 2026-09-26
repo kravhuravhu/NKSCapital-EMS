@@ -28,6 +28,13 @@ class AuditLog extends Model
         'duration_ms',
         'error_message',
         'error_trace',
+        'response_status',
+        'response_size',
+        'memory_peak_kb',
+        'is_slow',
+        'severity',
+        'environment',
+        'session_id',
     ];
 
     protected $casts = [
@@ -36,6 +43,10 @@ class AuditLog extends Model
         'timestamp' => 'datetime',
         'http_status' => 'integer',
         'duration_ms' => 'integer',
+        'response_status' => 'integer',
+        'response_size' => 'integer',
+        'memory_peak_kb' => 'integer',
+        'is_slow' => 'boolean',
     ];
 
     // Disable mass assignment protection bypass for immutable logs
@@ -74,5 +85,36 @@ class AuditLog extends Model
     public function scopeForRequest($query, string $requestId)
     {
         return $query->where('request_id', $requestId);
+    }
+
+    // Notification scopes
+    public function scopeCritical($query)
+    {
+        return $query->where('severity', 'critical');
+    }
+
+    public function scopeWarnings($query)
+    {
+        return $query->where('severity', 'warning');
+    }
+
+    public function scopeSeverity($query, string $severity)
+    {
+        return $query->where('severity', $severity);
+    }
+
+    public function scopeSlow($query)
+    {
+        return $query->where('is_slow', true);
+    }
+
+    public function scopeBetweenDates($query, $from, $to)
+    {
+        return $query->whereBetween('timestamp', [$from, $to]);
+    }
+
+    public function scopeActionLike($query, string $term)
+    {
+        return $query->where('action', 'like', "%{$term}%");
     }
 }
