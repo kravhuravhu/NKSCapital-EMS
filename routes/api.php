@@ -25,6 +25,8 @@ use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\AuditController;
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\ReportController;
+use App\Http\Controllers\API\IntegrationController;
+use App\Http\Controllers\API\HealthController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -401,6 +403,38 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('export/excel', [ReportController::class, 'exportExcel']);
         Route::get('export/pdf', [ReportController::class, 'exportPdf']);
     });
+
+    // ========================================
+    // M13: Integrations
+    // ========================================
+    Route::prefix('integrations')->group(function () {
+        // Webhooks (Admin/Director)
+        Route::get('webhook/list', [IntegrationController::class, 'webhookList']);
+        Route::get('webhook/logs', [IntegrationController::class, 'webhookLogs']);
+        Route::post('webhook/register', [IntegrationController::class, 'webhookRegister']);
+        Route::post('webhook/test/{id}', [IntegrationController::class, 'webhookTest']);
+        Route::post('webhook/retry/{id}', [IntegrationController::class, 'webhookRetry']);
+        Route::delete('webhook/delete/{id}', [IntegrationController::class, 'webhookDelete']);
+
+        // Calendar (User)
+        Route::get('calendar/connect', [IntegrationController::class, 'calendarConnect']);
+        Route::post('calendar/sync', [IntegrationController::class, 'calendarSync']);
+
+        // Payroll (Admin/Director)
+        Route::get('payroll/export', [IntegrationController::class, 'payrollExport']);
+    });
+
+    // ========================================
+    // M13: Health & Production
+    // ========================================
+    Route::prefix('admin')->group(function () {
+        Route::get('health', [HealthController::class, 'check']);
+        Route::get('queue/stats', [HealthController::class, 'queueStats']);
+        Route::post('backup/trigger', [HealthController::class, 'triggerBackup']);
+    });
+
+    // Payroll webhook (external system) — no auth, separate group
+    Route::post('/v1/integrations/payroll/webhook', [IntegrationController::class, 'payrollWebhook']);
 
     // Role management - Admin only
     Route::prefix('admin/roles')
