@@ -21,3 +21,6 @@ Schedule::command('contracts:check-expiry')->dailyAt('06:00');
 Schedule::command('reminders:generate --type=timesheet')->cron('0 0 */5 * *');
 Schedule::command('reminders:generate --type=timesheet --urgent')->monthlyOn(27, '08:00');
 Schedule::command('reminders:generate --type=contract')->dailyAt('07:00');
+
+// M13 - Health check (daily)
+Schedule::command('deploy:check')->dailyAt('05:00');
