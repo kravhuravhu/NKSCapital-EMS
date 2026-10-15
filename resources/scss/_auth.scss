@@ -1,0 +1,145 @@
+// auth shell
+
+.auth-shell {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: var(--nks-page);
+    padding: 32px 16px;
+}
+
+.auth-card {
+    background: #FFF;
+    border-radius: var(--nks-radius);
+    padding: 40px 40px 36px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 2px 12px rgba(31, 41, 55, 0.05);
+}
+
+.auth-brand {
+    text-align: center;
+    margin-bottom: 30px;
+
+    span {
+        display: inline-block;
+        background: var(--nks-gold);
+        color: #FFF;
+        padding: 8px 7px;
+        font-size: 24px;
+        font-weight: 700;
+        border-radius: 2px;
+        line-height: 1;
+    }
+
+    strong {
+        font-size: 30px;
+        color: var(--nks-muted);
+        margin-left: 8px;
+    }
+
+    small {
+        display: block;
+        color: var(--nks-muted);
+        margin-top: 6px;
+        font-size: 11px;
+    }
+}
+
+// the login form — matches the reference rhythm
+.nks-auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.nks-auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    label {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--nks-navy);
+    }
+
+    input {
+        width: 100%;
+        height: 26px;
+        padding: 2px 6px;
+        border: 1px solid #6B7280;
+        border-radius: 2px;
+        background: #FFF;
+        font-size: 14px;
+
+        &:focus {
+            outline: none;
+            border-color: var(--nks-gold);
+            box-shadow: 0 0 0 2px rgba(200, 169, 81, 0.2);
+        }
+    }
+}
+
+.nks-auth-error {
+    color: #8A2A2A;
+    font-size: 12px;
+}
+
+.nks-auth-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.nks-auth-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    cursor: pointer;
+
+    input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--nks-gold);
+        cursor: pointer;
+    }
+}
+
+.nks-auth-link {
+    color: var(--nks-navy);
+    font-size: 13px;
+
+    &:hover {
+        color: var(--nks-gold);
+        text-decoration: underline;
+    }
+}
+
+.nks-auth-submit {
+    width: auto;
+    align-self: flex-start;
+    height: 30px;
+    padding: 0 20px;
+    margin-top: 6px;
+    background: var(--nks-gold-soft);
+    color: #FFF;
+    border: 0;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover:not(:disabled) {
+        background: var(--nks-gold);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}

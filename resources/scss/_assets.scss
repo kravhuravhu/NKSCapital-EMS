@@ -1,0 +1,135 @@
+// assets page only
+.page-assets {
+
+    .asset-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .asset-card {
+        background: var(--nks-surface);
+        border: 1px solid var(--nks-border);
+        border-radius: var(--nks-radius);
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+
+        .asset-card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--nks-radius-sm);
+            background: var(--nks-accent);
+            color: var(--nks-gold);
+            display: grid;
+            place-items: center;
+            font-size: 26px;
+            flex-shrink: 0;
+        }
+
+        .asset-card-info {
+            flex: 1;
+
+            .asset-card-name {
+                font-size: 14px;
+                font-weight: 700;
+                color: var(--nks-navy);
+            }
+
+            .asset-card-type {
+                font-size: 12px;
+                color: var(--nks-muted);
+                margin-top: 2px;
+            }
+
+            .asset-card-meta {
+                display: flex;
+                gap: 24px;
+                margin-top: 8px;
+                font-size: 12px;
+
+                .asset-meta-item {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+
+                    .asset-meta-label {
+                        font-size: 10px;
+                        color: var(--nks-muted);
+                    }
+
+                    .asset-meta-value {
+                        font-weight: 500;
+                        color: var(--nks-navy);
+                    }
+                }
+            }
+        }
+
+        .asset-card-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+    }
+
+    .asset-summary-total {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--nks-border);
+        margin-bottom: 12px;
+
+        .asset-total-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--nks-navy);
+        }
+
+        .asset-total-label {
+            font-size: 11px;
+            color: var(--nks-muted);
+            margin-top: 2px;
+        }
+
+        i {
+            font-size: 42px;
+            color: var(--nks-gold);
+        }
+    }
+
+    .asset-status-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            font-size: 12px;
+            color: var(--nks-body);
+
+            .asset-status-count {
+                font-weight: 700;
+                color: var(--nks-navy);
+                width: 20px;
+            }
+
+            .asset-status-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--nks-success);
+
+                &.is-returned    { background: var(--nks-gold); }
+                &.is-maintenance { background: #D08A2C; }
+                &.is-overdue     { background: #E26B6B; }
+            }
+        }
+    }
+}

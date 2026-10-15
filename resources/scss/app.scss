@@ -1,0 +1,51 @@
+// NKS Capital
+// Bootstrap shell entry
+
+// fonts
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+// nks variable overrides (before bootstrap)
+@import 'variables';
+
+// bootstrap full chain
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/utilities';
+
+// bootstrap components
+@import 'bootstrap/scss/root';
+@import 'bootstrap/scss/reboot';
+@import 'bootstrap/scss/type';
+@import 'bootstrap/scss/containers';
+@import 'bootstrap/scss/grid';
+@import 'bootstrap/scss/forms';
+@import 'bootstrap/scss/buttons';
+@import 'bootstrap/scss/transitions';
+@import 'bootstrap/scss/dropdown';
+@import 'bootstrap/scss/modal';
+@import 'bootstrap/scss/tooltip';
+@import 'bootstrap/scss/helpers';
+@import 'bootstrap/scss/utilities/api';
+
+// font awesome
+@import '@fortawesome/fontawesome-free/css/all.min.css';
+
+// NKS layers
+@import 'base';
+@import 'shell';
+@import 'components';
+@import 'loader';
+@import 'auth';
+
+// page-scoped styles
+@import 'dashboard';
+@import 'timesheets';
+@import 'leave';
+@import 'assets';
+@import 'documents';
+@import 'profile';
+@import 'security';
+@import 'notifications';

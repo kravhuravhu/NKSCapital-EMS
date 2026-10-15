@@ -1,0 +1,157 @@
+// timesheets page only
+.page-timesheets {
+
+    .ts-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--nks-border);
+
+        .ts-header-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--nks-navy);
+        }
+
+        .ts-header-status {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            color: var(--nks-muted);
+        }
+    }
+
+    .ts-metrics {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr) 2fr;
+        gap: 0;
+        margin-bottom: 20px;
+
+        .ts-metric {
+            padding: 0 18px;
+            border-right: 1px solid var(--nks-border);
+
+            &:first-child { padding-left: 0; }
+            &:last-child  { border-right: 0; padding-right: 0; }
+
+            .ts-metric-label {
+                font-size: 11px;
+                color: var(--nks-muted);
+            }
+
+            .ts-metric-value {
+                font-size: 15px;
+                font-weight: 700;
+                color: var(--nks-navy);
+                margin-top: 4px;
+
+                &.is-overtime { color: #5B3FBF; }
+                &.is-leave    { color: var(--nks-success); }
+            }
+        }
+
+        .ts-progress-metric {
+            .ts-progress-value {
+                font-size: 20px;
+                font-weight: 700;
+                color: var(--nks-gold);
+                float: right;
+                margin-top: -22px;
+            }
+        }
+    }
+
+    .ts-table {
+        font-size: 12px;
+
+        input {
+            width: 100%;
+            height: 30px;
+            border: 1px solid var(--nks-border);
+            border-radius: var(--nks-radius-sm);
+            padding: 0 8px;
+            font-size: 12px;
+            background: var(--nks-surface);
+
+            &:focus {
+                outline: none;
+                border-color: var(--nks-gold);
+                box-shadow: 0 0 0 2px rgba(200, 169, 81, 0.15);
+            }
+        }
+
+        .ts-actions {
+            display: flex;
+            gap: 6px;
+        }
+    }
+
+    .ts-total {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 12px 14px;
+        background: var(--nks-accent);
+        border-radius: var(--nks-radius-sm);
+        margin-top: 12px;
+        font-size: 12px;
+
+        .ts-total-label {
+            font-weight: 700;
+            color: var(--nks-muted);
+        }
+
+        .ts-total-value {
+            font-weight: 700;
+            color: var(--nks-navy);
+        }
+
+        .nks-btn { margin-left: auto; }
+    }
+
+    .ts-bottom {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 20px;
+
+        .ts-bottom-block {
+            background: var(--nks-accent);
+            border-radius: var(--nks-radius);
+            padding: 14px 16px;
+
+            .ts-bottom-title {
+                font-size: 12px;
+                font-weight: 700;
+                color: var(--nks-navy);
+                margin-bottom: 8px;
+
+                span { font-weight: 400; color: var(--nks-muted); }
+            }
+
+            textarea {
+                width: 100%;
+                min-height: 64px;
+                border: 1px solid var(--nks-border);
+                border-radius: var(--nks-radius-sm);
+                padding: 8px;
+                font-size: 12px;
+                resize: none;
+                background: var(--nks-surface);
+            }
+        }
+    }
+
+    .ts-action-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+
+        .nks-btn { width: 100%; }
+        .nks-btn--block { grid-column: 1 / -1; }
+    }
+}

@@ -1,0 +1,1 @@
+<span {{ $attributes->merge(['class' => 'symbol-block']) }} aria-hidden="true"></span>

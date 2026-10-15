@@ -13,6 +13,13 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Fortify;
+use App\Http\Responses\LoginResponse;
+use App\Http\Responses\LogoutResponse;
+use App\Listeners\IssueSanctumTokenOnLogin;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Support\Facades\Event;
+use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
+use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -21,7 +28,8 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(LoginResponseContract::class, LoginResponse::class);
+        $this->app->singleton(LogoutResponseContract::class, LogoutResponse::class);
     }
 
     /**
@@ -52,5 +60,7 @@ class FortifyServiceProvider extends ServiceProvider
                 ($credentialId ?: $request->session()->getId()).'|'.$request->ip()
             );
         });
+
+        Event::listen(Login::class, IssueSanctumTokenOnLogin::class);
     }
 }

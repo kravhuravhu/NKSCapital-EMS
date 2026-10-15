@@ -1,0 +1,201 @@
+// app shell
+
+.nks-app {
+    max-width: 100%;
+    padding: 29px 38px 34px 51px;
+    margin: auto;
+}
+
+// header
+.app-header {
+    height: 80px;
+    display: flex;
+    align-items: flex-start;
+    gap: 68px;
+    padding: 0 31px 0 20px;
+}
+
+.brand {
+    flex: 0 0 163px;
+
+    & > div {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        white-space: nowrap;
+    }
+
+    span {
+        display: inline-block;
+        background: var(--nks-gold);
+        color: #FFF;
+        padding: 8px 7px;
+        font-size: 24px;
+        font-weight: 700;
+    }
+
+    strong {
+        font-size: 30px;
+        color: var(--nks-muted);
+    }
+
+    small {
+        display: block;
+        color: var(--nks-muted);
+        margin-top: 3px;
+        white-space: nowrap;
+    }
+}
+
+.page-heading {
+    margin-top: 14px;
+
+    h1 {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--nks-navy);
+    }
+
+    p {
+        color: var(--nks-muted);
+        margin-top: 8px;
+        font-size: 12px;
+    }
+}
+
+.employee {
+    margin-left: auto;
+    display: flex;
+    gap: 13px;
+    align-items: center;
+
+    & > div:first-child {
+        text-align: right;
+    }
+
+    span {
+        color: var(--nks-muted);
+        font-size: 25px;
+        white-space: nowrap;
+    }
+
+    small {
+        display: block;
+        color: var(--nks-muted);
+        margin-top: 2px;
+        font-size: 11px;
+    }
+}
+
+.employee-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--nks-gold);
+    color: #FFF;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+
+    i {
+        font-size: 22px;
+        color: #FFF;
+    }
+}
+
+// layout — sidebar on left, content on right
+.app-layout {
+    display: grid;
+    grid-template-columns: 246px minmax(0, 1fr);
+    gap: 25px;
+    align-items: start;   // essential: keeps sidebar from stretching
+}
+
+// sidebar — visual design preserved, made sticky
+.sidebar {
+    background: #FFF;
+    border-radius: 10px;
+    padding: 27px 0 15px;
+    display: flex;
+    flex-direction: column;
+
+    // functional change only — sticky + own scroll
+    position: sticky;
+    top: 29px;
+    max-height: calc(100vh - 58px);
+    overflow: hidden;
+
+    nav {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 8px;
+    }
+
+    // logout pinned at bottom
+    .logout {
+        flex-shrink: 0;
+        margin: 15px 0 0 21px;
+    }
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 19px;
+    height: 54px;
+    padding: 0 21px;
+    font-size: 20px;
+    white-space: nowrap;
+    position: relative;
+    color: var(--nks-navy);
+
+    i {
+        width: 23px;
+        text-align: center;
+        font-size: 20px;
+        color: var(--nks-gold);
+        flex-shrink: 0;
+    }
+
+    &.is-active {
+        background: var(--nks-accent);
+
+        &::before {
+            content: '';
+            background: var(--nks-gold);
+            opacity: 0.7;
+            width: 6px;
+            position: absolute;
+            inset: 6px auto 6px 0;
+            border-radius: 3px;
+        }
+    }
+}
+
+.logout {
+    align-self: flex-start;
+}
+
+.page-content {
+    min-width: 0;
+}
+
+.sidebar {
+    .logout {
+        margin: 0;
+        padding: 12px 14px;
+        border-top: 1px solid var(--nks-border);
+        flex-shrink: 0;
+
+        .nks-button {
+            width: 100%;
+            justify-content: flex-start;
+            gap: 10px;
+            height: 38px;
+            font-size: 13px;
+            color: var(--nks-gold);
+
+            &:hover { background: var(--nks-gold-tint); }
+        }
+    }
+}

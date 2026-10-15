@@ -4,6 +4,11 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use App\Http\Middleware\RoleMiddleware;
+use App\Http\Middleware\TwoFactorMiddleware;
+use App\Http\Middleware\AuditLogMiddleware;
+use App\Http\Middleware\RateLimitMiddleware;
+use App\Http\Middleware\EnsureApiToken;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,15 +19,21 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
-            '2fa' => \App\Http\Middleware\TwoFactorMiddleware::class,
-            'audit' => \App\Http\Middleware\AuditLogMiddleware::class,
-            'rate.limit' => \App\Http\Middleware\RateLimitMiddleware::class,
+            'role' => RoleMiddleware::class,
+            '2fa' => TwoFactorMiddleware::class,
+            'audit' => AuditLogMiddleware::class,
+            'rate.limit' => RateLimitMiddleware::class,
+            'api.token' => EnsureApiToken::class,
         ]);
 
         // Audit EVERY API request globally
         $middleware->api(prepend: [
-            \App\Http\Middleware\AuditLogMiddleware::class,
+            AuditLogMiddleware::class,
+        ]);
+
+        // Ensure API token is issued for every authenticated user
+        $middleware->web(append: [
+            EnsureApiToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

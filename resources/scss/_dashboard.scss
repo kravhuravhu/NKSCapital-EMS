@@ -1,0 +1,217 @@
+// dashboard page only
+.page-dashboard {
+
+    .dash-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 22px;
+    }
+
+    .dash-stat {
+        background: var(--nks-surface);
+        border: 1px solid var(--nks-border);
+        border-radius: var(--nks-radius);
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        .dash-stat-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--nks-body);
+            font-size: 12px;
+            font-weight: 500;
+
+            i {
+                color: var(--nks-gold);
+                font-size: 15px;
+            }
+        }
+
+        .dash-stat-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--nks-navy);
+            line-height: 1.15;
+        }
+
+        .dash-stat-note {
+            font-size: 11px;
+            color: var(--nks-muted);
+        }
+    }
+
+    .dash-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr);
+        gap: 18px;
+    }
+
+    .dash-progress {
+        .dash-progress-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+
+            .dash-progress-label {
+                font-size: 12px;
+                color: var(--nks-muted);
+            }
+
+            .dash-progress-value {
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--nks-gold);
+            }
+        }
+
+        .dash-progress-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--nks-accent);
+            overflow: hidden;
+            margin-bottom: 16px;
+
+            .dash-progress-fill {
+                height: 100%;
+                background: var(--nks-gold);
+                border-radius: 3px;
+                transition: width 0.4s ease;
+            }
+        }
+
+        .dash-progress-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+
+            .dash-progress-metric {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+
+                .metric-label {
+                    font-size: 11px;
+                    color: var(--nks-muted);
+                }
+
+                .metric-value {
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: var(--nks-navy);
+                }
+            }
+        }
+    }
+
+    .dash-activity {
+        .dash-activity-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--nks-accent);
+            font-size: 12px;
+
+            &:last-child { border-bottom: 0; }
+
+            i {
+                color: var(--nks-gold);
+                font-size: 13px;
+                flex-shrink: 0;
+            }
+
+            .dash-activity-text {
+                flex: 1;
+                color: var(--nks-body);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .dash-activity-time {
+                color: var(--nks-muted);
+                font-size: 11px;
+                white-space: nowrap;
+            }
+        }
+    }
+
+    .dash-leave-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .dash-leave-tile {
+        border: 1px solid var(--nks-border);
+        border-radius: var(--nks-radius);
+        padding: 12px 14px;
+
+        .dash-leave-name {
+            font-size: 11px;
+            color: var(--nks-muted);
+        }
+
+        .dash-leave-days {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--nks-navy);
+            margin-top: 4px;
+        }
+
+        .dash-leave-sub {
+            font-size: 10px;
+            color: var(--nks-muted);
+            margin-top: 2px;
+        }
+    }
+
+    .dash-asset-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--nks-accent);
+
+        &:last-child { border-bottom: 0; }
+
+        .dash-asset-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--nks-radius-sm);
+            background: var(--nks-accent);
+            color: var(--nks-gold);
+            display: grid;
+            place-items: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .dash-asset-info {
+            flex: 1;
+            min-width: 0;
+
+            .dash-asset-name {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--nks-navy);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .dash-asset-serial {
+                font-size: 11px;
+                color: var(--nks-muted);
+                margin-top: 2px;
+            }
+        }
+    }
+}
