@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Shared\SmokeTest;
+use App\Livewire\Employee\Dashboard as EmployeeDashboard;
+use App\Livewire\Manager\Dashboard  as ManagerDashboard;
+use App\Livewire\Director\Dashboard as DirectorDashboard;
+use App\Livewire\Admin\Dashboard    as AdminDashboard;
+use App\Livewire\Recruiter\Dashboard as RecruiterDashboard;
 
 Route::get('/', function () {
     return auth()->check()
@@ -24,7 +29,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     // employee
     Route::middleware('role:employee,manager,director,admin,super_admin')
         ->prefix('employee')->name('employee.')->group(function () {
-            Route::get('/dashboard',     SmokeTest::class)->name('dashboard');
+            Route::get('/dashboard',     EmployeeDashboard::class)->name('dashboard');
             Route::get('/timesheet',     SmokeTest::class)->name('timesheet');
             Route::get('/projects',      SmokeTest::class)->name('projects');
             Route::get('/leave',         SmokeTest::class)->name('leave');
@@ -37,7 +42,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     // manager
     Route::middleware('role:manager,director,admin,super_admin')
         ->prefix('manager')->name('manager.')->group(function () {
-            Route::get('/dashboard',       SmokeTest::class)->name('dashboard');
+            Route::get('/dashboard',       ManagerDashboard::class)->name('dashboard');
             Route::get('/pending-l1',      SmokeTest::class)->name('pending-l1');
             Route::get('/team-timesheets', SmokeTest::class)->name('team-timesheets');
             Route::get('/pending-leave',   SmokeTest::class)->name('pending-leave');
@@ -51,7 +56,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     // director
     Route::middleware('role:director,admin,super_admin')
         ->prefix('director')->name('director.')->group(function () {
-            Route::get('/dashboard',          SmokeTest::class)->name('dashboard');
+            Route::get('/dashboard',          DirectorDashboard::class)->name('dashboard');
             Route::get('/pending-l2',         SmokeTest::class)->name('pending-l2');
             Route::get('/audit-log',          SmokeTest::class)->name('audit-log');
             Route::get('/delegation',         SmokeTest::class)->name('delegation');
@@ -64,7 +69,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     // admin
     Route::middleware('role:admin,super_admin')
         ->prefix('admin')->name('admin.')->group(function () {
-            Route::get('/dashboard',        SmokeTest::class)->name('dashboard');
+            Route::get('/dashboard',        AdminDashboard::class)->name('dashboard');
             Route::get('/employees',        SmokeTest::class)->name('employees');
             Route::get('/employee-types',   SmokeTest::class)->name('employee-types');
             Route::get('/roles',            SmokeTest::class)->name('roles');
@@ -81,7 +86,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     // recruiter
     Route::middleware('role:recruiter,manager,director,admin,super_admin')
         ->prefix('recruiter')->name('recruiter.')->group(function () {
-            Route::get('/dashboard',    SmokeTest::class)->name('dashboard');
+            Route::get('/dashboard',    RecruiterDashboard::class)->name('dashboard');
             Route::get('/requisitions', SmokeTest::class)->name('requisitions');
             Route::get('/candidates',   SmokeTest::class)->name('candidates');
             Route::get('/pipeline',     SmokeTest::class)->name('pipeline');

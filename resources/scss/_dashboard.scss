@@ -215,3 +215,26 @@
         }
     }
 }
+
+// KPI dashboards for manager / director / admin / recruiter
+.page-dashboard {
+
+    // KPI tiles use the same .dash-stat but we allow more compact metrics grids
+    .dash-progress-metrics {
+        .dash-progress-metric {
+            .metric-label {
+                font-size: 10px;
+                color: var(--nks-muted);
+                text-transform: uppercase;
+                letter-spacing: 0.2px;
+            }
+
+            .metric-value {
+                font-size: 15px;
+                font-weight: 700;
+                color: var(--nks-navy);
+                margin-top: 3px;
+            }
+        }
+    }
+}
