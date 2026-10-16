@@ -1,0 +1,82 @@
+// NKS design tokens
+:root {
+    --nks-gold:        #C8A951;
+    --nks-gold-soft:   #E5D9A8;
+    --nks-gold-tint:   #F0E9D5;
+    --nks-navy:        #26324A;
+    --nks-body:        #4A5568;
+    --nks-muted:       #8C8C8C;
+    --nks-page:        #F4F4F4;
+    --nks-surface:     #FFFFFF;
+    --nks-border:      #E5E5E5;
+    --nks-accent:      #F1F1F1;
+    --nks-mint:        #B8E6D0;
+    --nks-success:     #4CAF7A;
+    --nks-purple:      #C5AEE8;
+    --nks-red:         #F5B5B5;
+    --nks-blue:        #A8CFEA;
+    --nks-radius:      8px;
+    --nks-radius-sm:   5px;
+    --nks-radius-pill: 999px;
+}
+
+// base
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    background: var(--nks-page);
+    color: var(--nks-navy);
+    font-family: 'Roboto', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+    color: inherit;
+}
+
+h1, h2, h3, h4, h5, h6, p { margin: 0; }
+
+h1 { font-size: 18px; font-weight: 700; }
+h2 { font-size: 15px; font-weight: 700; }
+h3 { font-size: 14px; font-weight: 700; }
+
+small { font-size: 11px; }
+
+// text helpers used across pages
+.text-muted  { color: var(--nks-muted) !important; }
+.text-body   { color: var(--nks-body) !important; }
+.text-navy   { color: var(--nks-navy) !important; }
+.text-gold   { color: var(--nks-gold) !important; }
+.text-success{ color: var(--nks-success) !important; }
+
+// icon sizes
+.icon-sm { font-size: 12px; }
+.icon-md { font-size: 16px; }
+.icon-lg { font-size: 20px; }
+.icon-xl { font-size: 28px; }
+
+// scrollbars
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: var(--nks-border);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--nks-muted); }

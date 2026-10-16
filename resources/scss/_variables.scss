@@ -1,0 +1,34 @@
+// Bootstrap variable overrides
+$font-family-sans-serif: 'Roboto', Arial, sans-serif;
+$font-size-base:         0.875rem;
+$line-height-base:       1.4;
+
+// NKS palette
+$nks-gold:       #C8A951;
+$nks-gold-soft:  #E5D9A8;
+$nks-gold-tint:  #F0E9D5;
+$nks-navy:       #26324A;
+$nks-body:       #4A5568;
+$nks-muted:      #8C8C8C;
+$nks-page:       #F4F4F4;
+$nks-surface:    #FFFFFF;
+$nks-border:     #E5E5E5;
+$nks-accent:     #F1F1F1;
+$nks-mint:       #B8E6D0;
+$nks-success:    #4CAF7A;
+$nks-purple:     #C5AEE8;
+$nks-red:        #F5B5B5;
+$nks-blue:       #A8CFEA;
+
+// Bootstrap theme
+$primary:           $nks-gold;
+$body-bg:           $nks-page;
+$body-color:        $nks-navy;
+$border-color:      $nks-border;
+$border-radius:     5px;
+$btn-border-radius: 5px;
+$spacer:            0.875rem;
+
+// minimal reset touches
+$enable-shadows:    false;
+$enable-gradients:  false;

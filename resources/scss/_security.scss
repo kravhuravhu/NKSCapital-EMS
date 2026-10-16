@@ -1,0 +1,147 @@
+// security page only
+.page-security {
+
+    .security-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 0;
+        border-bottom: 1px solid var(--nks-accent);
+
+        &:last-child { border-bottom: 0; }
+
+        .security-row-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--nks-radius-sm);
+            background: var(--nks-accent);
+            color: var(--nks-gold);
+            display: grid;
+            place-items: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .security-row-text {
+            flex: 1;
+
+            .security-row-title {
+                font-size: 13px;
+                font-weight: 700;
+                color: var(--nks-navy);
+            }
+
+            .security-row-desc {
+                font-size: 12px;
+                color: var(--nks-muted);
+                margin-top: 2px;
+            }
+        }
+
+        .nks-btn { margin-left: auto; }
+    }
+
+    .password-info {
+        .password-date {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--nks-accent);
+
+            i {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: var(--nks-accent);
+                color: var(--nks-gold);
+                display: grid;
+                place-items: center;
+                font-size: 14px;
+            }
+
+            .password-date-text {
+                .password-date-label {
+                    font-size: 11px;
+                    color: var(--nks-muted);
+                }
+
+                .password-date-value {
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: var(--nks-navy);
+                    margin-top: 2px;
+                }
+            }
+        }
+
+        .password-strength {
+            padding: 14px 0;
+            border-bottom: 1px solid var(--nks-accent);
+
+            .password-strength-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+                font-size: 12px;
+            }
+
+            .password-strength-bars {
+                display: flex;
+                gap: 4px;
+                margin-bottom: 6px;
+
+                i {
+                    flex: 1;
+                    height: 6px;
+                    border-radius: 3px;
+                    background: var(--nks-success);
+
+                    &:last-child { background: var(--nks-gold); }
+                }
+            }
+
+            .password-strength-hint {
+                font-size: 11px;
+                color: var(--nks-muted);
+            }
+        }
+
+        .security-tips {
+            padding-top: 14px;
+
+            .security-tips-title {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+                font-weight: 700;
+                color: var(--nks-navy);
+                margin-bottom: 10px;
+
+                i { color: var(--nks-gold); }
+            }
+
+            ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+
+                li {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 6px 0;
+                    font-size: 12px;
+                    color: var(--nks-body);
+
+                    i {
+                        color: var(--nks-gold);
+                        font-size: 12px;
+                    }
+                }
+            }
+        }
+    }
+}

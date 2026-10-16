@@ -1,0 +1,166 @@
+// leave page only
+.page-leave {
+
+    .leave-form {
+        .leave-form-section {
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--nks-border);
+
+            &:last-child { border-bottom: 0; }
+        }
+
+        .leave-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 20px;
+        }
+
+        .leave-form-full { grid-column: 1 / -1; }
+
+        .leave-half {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+
+            .nks-field { flex: 1; }
+        }
+
+        .leave-char-count {
+            font-size: 10px;
+            color: var(--nks-muted);
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        .leave-upload {
+            border: 1px dashed var(--nks-border);
+            border-radius: var(--nks-radius-sm);
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: border-color 0.15s ease;
+            background: var(--nks-surface);
+
+            &:hover { border-color: var(--nks-gold); }
+
+            i {
+                color: var(--nks-gold);
+                font-size: 18px;
+            }
+
+            .leave-upload-text {
+                flex: 1;
+                font-size: 12px;
+                color: var(--nks-muted);
+
+                em {
+                    font-style: normal;
+                    color: var(--nks-gold);
+                    font-weight: 500;
+                }
+
+                small {
+                    display: block;
+                    font-size: 10px;
+                    margin-top: 2px;
+                }
+            }
+        }
+
+        .leave-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--nks-border);
+        }
+    }
+
+    .leave-balance-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--nks-accent);
+
+        &:last-child { border-bottom: 0; }
+
+        .leave-balance-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--nks-radius-sm);
+            background: var(--nks-gold-tint);
+            color: var(--nks-gold);
+            display: grid;
+            place-items: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .leave-balance-info {
+            flex: 1;
+
+            .leave-balance-name {
+                font-size: 12px;
+                color: var(--nks-muted);
+            }
+
+            .leave-balance-days {
+                font-size: 15px;
+                font-weight: 700;
+                color: var(--nks-navy);
+                margin-top: 2px;
+            }
+        }
+
+        .leave-balance-entitlement {
+            text-align: right;
+
+            .leave-balance-total {
+                font-size: 14px;
+                font-weight: 700;
+                color: var(--nks-navy);
+            }
+
+            .leave-balance-label {
+                font-size: 10px;
+                color: var(--nks-muted);
+            }
+        }
+    }
+
+    .leave-policy-row {
+        display: flex;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--nks-accent);
+
+        &:last-child { border-bottom: 0; }
+
+        i {
+            color: var(--nks-gold);
+            font-size: 13px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .leave-policy-text {
+            .leave-policy-title {
+                font-size: 12px;
+                font-weight: 700;
+                color: var(--nks-navy);
+            }
+
+            .leave-policy-desc {
+                font-size: 11px;
+                color: var(--nks-muted);
+                margin-top: 2px;
+                line-height: 1.4;
+            }
+        }
+    }
+}

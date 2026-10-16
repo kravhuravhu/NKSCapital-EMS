@@ -1,48 +1,53 @@
 <x-guest-layout>
-    <x-authentication-card>
-        <x-slot name="logo">
-            <x-authentication-card-logo />
-        </x-slot>
+    <x-validation-errors class="mb-4" />
 
-        <x-validation-errors class="mb-4" />
-
-        @session('status')
-            <div class="mb-4 font-medium text-sm text-green-600">
-                {{ $value }}
+    @if (session('status'))
+        <div class="nks-notice" style="margin-bottom: 16px;">
+            <i class="fa-solid fa-circle-check"></i>
+            <div class="nks-notice-body">
+                {{ session('status') }}
             </div>
-        @endsession
+        </div>
+    @endif
 
-        <form method="POST" action="{{ route('login') }}">
-            @csrf
+    <form method="POST" action="{{ route('login') }}" class="nks-auth-form">
+        @csrf
 
-            <div>
-                <x-label for="email" value="{{ __('Email') }}" />
-                <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            </div>
+        <div class="nks-auth-field">
+            <label for="email">Email</label>
+            <input id="email" type="email" name="email" value="{{ old('email') }}"
+                   required autofocus autocomplete="username"
+                   placeholder="your.name@nkscapital.co.za">
+            @error('email')
+                <small class="nks-auth-error">{{ $message }}</small>
+            @enderror
+        </div>
 
-            <div class="mt-4">
-                <x-label for="password" value="{{ __('Password') }}" />
-                <x-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="current-password" />
-            </div>
+        <div class="nks-auth-field">
+            <label for="password">Password</label>
+            <input id="password" type="password" name="password"
+                   required autocomplete="current-password"
+                   placeholder="Enter your password">
+            @error('password')
+                <small class="nks-auth-error">{{ $message }}</small>
+            @enderror
+        </div>
 
-            <div class="block mt-4">
-                <label for="remember_me" class="flex items-center">
-                    <x-checkbox id="remember_me" name="remember" />
-                    <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-                </label>
-            </div>
+        <div class="nks-auth-row">
+            <label class="nks-auth-checkbox">
+                <input type="checkbox" name="remember">
+                <span>Remember me</span>
+            </label>
 
-            <div class="flex items-center justify-end mt-4">
-                @if (Route::has('password.request'))
-                    <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                        {{ __('Forgot your password?') }}
-                    </a>
-                @endif
+            @if (Route::has('password.request'))
+                <a href="{{ route('password.request') }}" class="nks-auth-link">
+                    Forgot your password?
+                </a>
+            @endif
+        </div>
 
-                <x-button class="ms-4">
-                    {{ __('Log in') }}
-                </x-button>
-            </div>
-        </form>
-    </x-authentication-card>
+        <button type="submit" class="nks-auth-submit">
+            Log in
+        </button>
+    </form>
 </x-guest-layout>
