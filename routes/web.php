@@ -7,6 +7,7 @@ use App\Livewire\Manager\Dashboard  as ManagerDashboard;
 use App\Livewire\Director\Dashboard as DirectorDashboard;
 use App\Livewire\Admin\Dashboard    as AdminDashboard;
 use App\Livewire\Recruiter\Dashboard as RecruiterDashboard;
+use App\Livewire\Employee\Timesheet;
 
 Route::get('/', function () {
     return auth()->check()
@@ -31,6 +32,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
         ->prefix('employee')->name('employee.')->group(function () {
             Route::get('/dashboard',     EmployeeDashboard::class)->name('dashboard');
             Route::get('/timesheet',     SmokeTest::class)->name('timesheet');
+            Route::get('/timesheet', Timesheet::class)->name('timesheet');
             Route::get('/projects',      SmokeTest::class)->name('projects');
             Route::get('/leave',         SmokeTest::class)->name('leave');
             Route::get('/assets',        SmokeTest::class)->name('assets');
