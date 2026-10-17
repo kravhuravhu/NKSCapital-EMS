@@ -183,8 +183,8 @@ class DashboardService
             $pendingL2 = PRTimesheet::where('status', 'pending_l2')->count();
 
             $totalEmployees = User::where('is_active', true)->count();
-            $psCount = User::where('is_active', true)->employee_type('ps')->count();
-            $prCount = User::where('is_active', true)->employee_type('pr')->count();
+            $psCount = User::where('is_active', true)->where('employee_type', 'ps')->count();
+            $prCount = User::where('is_active', true)->where('employee_type', 'pr')->count();
 
             $monthlyApproved = PRTimesheet::where('status', 'approved')
                 ->where('month_year', $month)->count();
