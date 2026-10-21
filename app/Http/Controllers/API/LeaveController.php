@@ -224,9 +224,7 @@ class LeaveController extends Controller
 
     public function balance()
     {
-        $user = Auth::user();
-
-        // Get configs
+        $user    = Auth::user();
         $configs = LeaveConfig::all()->keyBy('leave_type');
 
         // Get recent balance history
@@ -235,9 +233,25 @@ class LeaveController extends Controller
             ->limit(20)
             ->get();
 
+        $policies = LeaveConfig::whereNotNull('description')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($c) => [
+                'leave_type' => $c->leave_type,
+                'title' => ucfirst($c->leave_type) . ' Leave',
+                'description' => $c->description,
+                'default_entitlement' => (float) $c->default_entitlement,
+                'accrual_rate' => (float) $c->accrual_rate,
+                'min_service_months' => (float) $c->min_service_months,
+                'requires_attachment' => (bool)  $c->requires_attachment,
+                'auto_approve' => (bool)  $c->auto_approve,
+                'is_infinite_balance' => (bool)  $c->is_infinite_balance,
+            ])
+            ->values();
+
         return response()->json([
             'status' => 'success',
-            'data' => [
+            'data'   => [
                 'balances' => [
                     'annual' => [
                         'available' => (float) $user->leave_balance_annual,
@@ -282,7 +296,8 @@ class LeaveController extends Controller
                     ],
                 ],
                 'history' => $history,
-                'months_of_service' => $user->getMonthsOfService(),
+                'months_of_service'  => $user->getMonthsOfService(),
+                'policies' => $policies,
             ]
         ], 200);
     }

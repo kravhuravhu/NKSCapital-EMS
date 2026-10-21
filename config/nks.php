@@ -15,4 +15,23 @@ return [
 
     'notification_poll_seconds' => 60,
     'dashboard_cache_seconds'   => 60,
+
+    'leave_policy' => [
+        [
+            'title' => 'Annual Leave',
+            'desc'  => 'Accrued at 1.5 days per month',
+        ],
+        [
+            'title' => 'Sick Leave',
+            'desc'  => "Up to 30 days per 12 months, doctor's note required",
+        ],
+        [
+            'title' => 'Family Leave',
+            'desc'  => '3 days per year after 4 months of service',
+        ],
+        [
+            'title' => 'Unpaid Leave',
+            'desc'  => 'Subject to management approval',
+        ],
+    ],
 ];
