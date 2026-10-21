@@ -81,4 +81,32 @@ class Api
             'raw'     => $json,
         ];
     }
+
+    public static function upload(string $path, array $body = [], array $files = []): array
+    {
+        $uri = self::API_PREFIX . '/' . ltrim($path, '/');
+
+        $request = Request::create($uri, 'POST', $body);
+
+        $request->headers->set('Accept', 'application/json');
+
+        if ($token = self::token()) {
+            $request->headers->set('Authorization', 'Bearer ' . $token);
+        }
+
+        $request->files->replace($files);
+
+        $response = app()->handle($request);
+        $status   = $response->getStatusCode();
+        $json     = json_decode($response->getContent(), true) ?? [];
+
+        return [
+            'ok'      => $status >= 200 && $status < 300,
+            'status'  => $status,
+            'data'    => $json['data']    ?? null,
+            'errors'  => $json['errors']  ?? null,
+            'message' => $json['message'] ?? null,
+            'raw'     => $json,
+        ];
+    }
 }
