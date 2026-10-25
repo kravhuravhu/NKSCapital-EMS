@@ -1,0 +1,276 @@
+// manager portal pages
+.page-pending-l1 {
+    .l1-panel {
+        padding: 20px 22px;
+    }
+
+    .l1-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--nks-gold);
+        margin-bottom: 18px;
+
+        .l1-header-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            background: var(--nks-gold-soft);
+            color: var(--nks-gold);
+            font-size: 15px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+        }
+
+        h2 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--nks-navy);
+            margin: 0;
+        }
+
+        p {
+            font-size: 12px;
+            color: var(--nks-muted);
+            margin-top: 2px;
+        }
+    }
+
+    .l1-table-wrapper {
+        background: var(--nks-surface);
+        border: 1px solid var(--nks-border);
+        border-radius: var(--nks-radius-sm);
+        overflow: hidden;
+    }
+
+    .l1-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+
+        thead th {
+            background: var(--nks-accent);
+            color: var(--nks-navy);
+            font-size: 11px;
+            font-weight: 700;
+            text-align: left;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--nks-border);
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--nks-accent);
+            color: var(--nks-body);
+            vertical-align: middle;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        tbody tr:hover td {
+            background: rgba(0, 0, 0, 0.015);
+        }
+    }
+
+    .l1-employee {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .l1-employee-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--nks-gold-soft);
+            color: var(--nks-gold);
+            display: grid;
+            place-items: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .l1-employee-name {
+            font-weight: 600;
+            color: var(--nks-navy);
+            font-size: 13px;
+        }
+
+        .l1-employee-number {
+            font-size: 11px;
+            color: var(--nks-muted);
+            margin-top: 1px;
+        }
+    }
+
+    .l1-total {
+        font-weight: 700;
+        color: var(--nks-navy);
+    }
+
+    .l1-actions {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .l1-empty {
+        text-align: center;
+        padding: 40px 24px;
+        color: var(--nks-muted);
+
+        i {
+            display: block;
+            font-size: 36px;
+            color: var(--nks-border);
+            margin-bottom: 10px;
+        }
+
+        strong {
+            display: block;
+            font-size: 14px;
+            color: var(--nks-navy);
+            margin-bottom: 6px;
+        }
+
+        span {
+            font-size: 12px;
+            max-width: 360px;
+            margin: 0 auto;
+            display: block;
+            line-height: 1.5;
+        }
+    }
+
+    .l1-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(38, 50, 74, 0.4);
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        z-index: 200;
+    }
+
+    .l1-modal {
+        background: var(--nks-surface);
+        border-radius: var(--nks-radius);
+        width: 100%;
+        max-width: 480px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+
+        &--lg {
+            max-width: 720px;
+        }
+    }
+
+    .l1-modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--nks-border);
+
+        h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--nks-navy);
+            margin: 0;
+        }
+
+        .l1-modal-close {
+            background: none;
+            border: 0;
+            color: var(--nks-muted);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+
+            &:hover {
+                color: var(--nks-navy);
+            }
+        }
+    }
+
+    .l1-modal-body {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .l1-modal-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 16px 20px;
+        border-top: 1px solid var(--nks-border);
+        background: var(--nks-accent);
+    }
+
+    .l1-detail-meta {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--nks-border);
+
+        & > div {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .l1-detail-label {
+            font-size: 10px;
+            color: var(--nks-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .l1-detail-value {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--nks-navy);
+        }
+    }
+
+    .l1-detail-table-wrapper {
+        border: 1px solid var(--nks-border);
+        border-radius: var(--nks-radius-sm);
+        overflow: hidden;
+    }
+
+    .l1-detail-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+
+        thead th {
+            background: var(--nks-accent);
+            color: var(--nks-navy);
+            font-size: 11px;
+            font-weight: 700;
+            text-align: left;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--nks-border);
+        }
+
+        tbody td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--nks-accent);
+            color: var(--nks-body);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+    }
+}

@@ -16,6 +16,7 @@ use App\Livewire\Employee\Projects;
 use App\Livewire\Employee\Profile;
 use App\Livewire\Employee\Security;
 use App\Livewire\Employee\Notifications;
+use App\Livewire\Manager\PendingL1;
 
 Route::get('/', function () {
     return auth()->check()
@@ -58,8 +59,8 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     // manager
     Route::middleware('role:manager,director,admin,super_admin')
         ->prefix('manager')->name('manager.')->group(function () {
-            Route::get('/dashboard',       ManagerDashboard::class)->name('dashboard');
-            Route::get('/pending-l1',      SmokeTest::class)->name('pending-l1');
+            Route::get('/dashboard', ManagerDashboard::class)->name('dashboard');
+            Route::get('/pending-l1', PendingL1::class)->name('pending-l1');
             Route::get('/team-timesheets', SmokeTest::class)->name('team-timesheets');
             Route::get('/pending-leave',   SmokeTest::class)->name('pending-leave');
             Route::get('/team-calendar',   SmokeTest::class)->name('team-calendar');
