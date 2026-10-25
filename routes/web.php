@@ -21,6 +21,7 @@ use App\Livewire\Manager\TeamTimesheets;
 use App\Livewire\Manager\PendingLeave;
 use App\Livewire\Manager\TeamCalendar;
 use App\Livewire\Manager\TeamAssets;
+use App\Livewire\Manager\Meetings;
 
 Route::get('/', function () {
     return auth()->check()
@@ -69,7 +70,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/pending-leave', PendingLeave::class)->name('pending-leave');
             Route::get('/team-calendar', TeamCalendar::class)->name('team-calendar');
             Route::get('/team-assets', TeamAssets::class)->name('team-assets');
-            Route::get('/meetings',        SmokeTest::class)->name('meetings');
+            Route::get('/meetings', Meetings::class)->name('meetings');
             Route::get('/team-reports',    SmokeTest::class)->name('team-reports');
             Route::get('/projects',        SmokeTest::class)->name('projects');
         });
