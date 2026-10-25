@@ -1,7 +1,41 @@
-// profile page only
+// profile page
 .page-profile {
+    padding: 0;
 
-    .profile-overview {
+    .pf-flash {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: var(--nks-radius);
+        margin-bottom: 14px;
+        font-size: 13px;
+
+        &--success { background: var(--nks-mint); color: #1F6B45; }
+        &--error   { background: var(--nks-red);  color: #8A2A2A; }
+
+        i { font-size: 15px; }
+    }
+
+    .pf-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.9fr) minmax(300px, 1fr);
+        gap: 20px;
+        align-items: start;
+    }
+
+    .pf-left,
+    .pf-right {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .pf-tabs { margin-bottom: 0; }
+
+    .pf-panel { padding: 24px 22px; }
+
+    .pf-overview {
         display: grid;
         grid-template-columns: 180px 1fr;
         gap: 24px;
@@ -10,10 +44,10 @@
         margin-bottom: 20px;
     }
 
-    .profile-photo {
+    .pf-photo {
         text-align: center;
 
-        .profile-avatar {
+        .pf-avatar {
             width: 128px;
             height: 128px;
             border-radius: 50%;
@@ -22,13 +56,18 @@
             display: grid;
             place-items: center;
             margin: 0 auto 12px;
+            overflow: hidden;
 
             i { font-size: 56px; }
+            img { width: 100%; height: 100%; object-fit: cover; }
         }
 
-        .nks-btn { margin-top: 6px; }
+        .pf-photo-btn {
+            display: inline-flex;
+            cursor: pointer;
+        }
 
-        .profile-photo-hint {
+        .pf-photo-hint {
             display: block;
             font-size: 10px;
             color: var(--nks-muted);
@@ -36,71 +75,125 @@
         }
     }
 
-    .profile-details {
+    .pf-details {
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 12px;
+        margin: 0;
 
-        .profile-detail-row {
+        & > div {
             display: grid;
             grid-template-columns: 140px 1fr;
-            gap: 10px;
+            gap: 12px;
             font-size: 13px;
 
-            .profile-detail-label { color: var(--nks-muted); }
-            .profile-detail-value { font-weight: 500; color: var(--nks-navy); }
+            dt {
+                color: var(--nks-muted);
+            }
+
+            dd {
+                margin: 0;
+                font-weight: 500;
+                color: var(--nks-navy);
+            }
         }
     }
 
-    .profile-personal-grid {
+    .pf-personal-head {
+        margin-bottom: 12px;
+
+        h2 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--nks-navy);
+            margin: 0;
+        }
+    }
+
+    .pf-personal-grid {
         display: grid;
         grid-template-columns: 1fr 1fr 1.5fr;
         gap: 16px 24px;
 
-        .profile-detail-row {
+        & > div {
             display: flex;
             flex-direction: column;
             gap: 4px;
 
-            .profile-detail-label { font-size: 11px; color: var(--nks-muted); }
-            .profile-detail-value { font-size: 13px; font-weight: 500; color: var(--nks-navy); }
+            .pf-detail-label {
+                font-size: 11px;
+                color: var(--nks-muted);
+            }
+
+            .pf-detail-value {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--nks-navy);
+            }
         }
     }
 
-    .profile-info-row {
+    .pf-notice {
         display: flex;
         align-items: center;
         gap: 10px;
+        padding: 12px 16px;
+        background: var(--nks-gold-tint);
+        border-radius: var(--nks-radius);
+        font-size: 11px;
+        color: var(--nks-body);
+
+        i { color: var(--nks-gold); font-size: 14px; flex-shrink: 0; }
+    }
+
+    .pf-info-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
         padding: 11px 0;
         border-bottom: 1px solid var(--nks-accent);
         font-size: 13px;
 
         &:last-child { border-bottom: 0; }
 
-        .profile-info-label { color: var(--nks-body); }
+        .pf-info-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--nks-accent);
+            color: var(--nks-gold);
+            display: grid;
+            place-items: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
 
-        .profile-info-value {
-            margin-left: auto;
+        .pf-info-label {
+            flex: 1;
+            color: var(--nks-body);
+        }
+
+        .pf-info-value {
             font-weight: 700;
             color: var(--nks-navy);
         }
     }
 
-    .profile-contract-note {
+    .pf-contract-note {
         background: var(--nks-gold-tint);
-        padding: 8px 10px;
+        padding: 8px 12px;
         border-radius: var(--nks-radius-sm);
         font-size: 11px;
         color: var(--nks-body);
         line-height: 1.4;
-        margin-bottom: 6px;
+        margin-bottom: 10px;
     }
 
-    .profile-account-link {
+    .pf-account-link {
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 12px 14px;
+        padding: 14px 16px;
         background: var(--nks-surface);
         border: 1px solid var(--nks-border);
         border-radius: var(--nks-radius);
@@ -108,7 +201,7 @@
 
         &:hover { border-color: var(--nks-gold); }
 
-        .profile-account-icon {
+        .pf-account-icon {
             width: 32px;
             height: 32px;
             border-radius: var(--nks-radius-sm);
@@ -117,18 +210,19 @@
             display: grid;
             place-items: center;
             font-size: 14px;
+            flex-shrink: 0;
         }
 
-        .profile-account-text {
+        .pf-account-text {
             flex: 1;
 
-            .profile-account-title {
+            .pf-account-title {
                 font-size: 13px;
                 font-weight: 700;
                 color: var(--nks-navy);
             }
 
-            .profile-account-desc {
+            .pf-account-desc {
                 font-size: 11px;
                 color: var(--nks-muted);
                 margin-top: 2px;
