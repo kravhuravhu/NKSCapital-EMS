@@ -28,6 +28,7 @@ use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\IntegrationController;
 use App\Http\Controllers\API\HealthController;
 use App\Http\Controllers\API\DocumentController;
+use App\Http\Controllers\API\SecurityController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -437,6 +438,15 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::prefix('documents')->group(function () {
         Route::get('list', [DocumentController::class, 'list']);
         Route::post('upload', [DocumentController::class, 'upload']);
+    });
+
+    Route::prefix('security')->group(function () {
+        Route::get('sessions', [SecurityController::class, 'sessions']);
+        Route::get('password-info', [SecurityController::class, 'passwordInfo']);
+        Route::get('activity', [SecurityController::class, 'activity']);
+        Route::post('password/change', [SecurityController::class, 'changePassword']);
+        Route::post('2fa/enable', [SecurityController::class, 'enableTwoFactor']);
+        Route::post('2fa/disable', [SecurityController::class, 'disableTwoFactor']);
     });
 
     // Payroll webhook (external system) — no auth, separate group

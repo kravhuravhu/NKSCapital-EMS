@@ -13,6 +13,8 @@ use App\Livewire\Employee\Assets;
 use App\Livewire\Employee\Documents;
 use App\Http\Controllers\API\DocumentController;
 use App\Livewire\Employee\Projects;
+use App\Livewire\Employee\Profile;
+use App\Livewire\Employee\Security;
 
 Route::get('/', function () {
     return auth()->check()
@@ -41,14 +43,14 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     // employee
     Route::middleware('role:employee,manager,director,admin,super_admin')
         ->prefix('employee')->name('employee.')->group(function () {
-            Route::get('/dashboard',     EmployeeDashboard::class)->name('dashboard');
-            Route::get('/timesheet',     SmokeTest::class)->name('timesheet');
+            Route::get('/dashboard', EmployeeDashboard::class)->name('dashboard');
             Route::get('/timesheet', Timesheet::class)->name('timesheet');
             Route::get('/projects', Projects::class)->name('projects');
             Route::get('/leave', Leave::class)->name('leave');
             Route::get('/assets', Assets::class)->name('assets');
             Route::get('/documents', Documents::class)->name('documents');
-            Route::get('/profile',       SmokeTest::class)->name('profile');
+            Route::get('/profile', Profile::class)->name('profile');
+            Route::get('/security', Security::class)->name('security');
             Route::get('/notifications', SmokeTest::class)->name('notifications');
         });
 
