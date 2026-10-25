@@ -15,6 +15,7 @@ use App\Http\Controllers\API\DocumentController;
 use App\Livewire\Employee\Projects;
 use App\Livewire\Employee\Profile;
 use App\Livewire\Employee\Security;
+use App\Livewire\Employee\Notifications;
 
 Route::get('/', function () {
     return auth()->check()
@@ -51,7 +52,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/documents', Documents::class)->name('documents');
             Route::get('/profile', Profile::class)->name('profile');
             Route::get('/security', Security::class)->name('security');
-            Route::get('/notifications', SmokeTest::class)->name('notifications');
+            Route::get('/notifications', Notifications::class)->name('notifications');
         });
 
     // manager
