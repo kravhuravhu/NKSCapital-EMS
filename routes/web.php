@@ -10,6 +10,8 @@ use App\Livewire\Recruiter\Dashboard as RecruiterDashboard;
 use App\Livewire\Employee\Timesheet;
 use App\Livewire\Employee\Leave;
 use App\Livewire\Employee\Assets;
+use App\Livewire\Employee\Documents;
+use App\Http\Controllers\API\DocumentController;
 
 Route::get('/', function () {
     return auth()->check()
@@ -20,6 +22,12 @@ Route::get('/', function () {
 Route::middleware(['auth'])->get('/dashboard', function () {
     return redirect()->route('portal.dashboard');
 })->name('dashboard');
+
+Route::middleware(['auth'])->prefix('portal/documents')->name('portal.documents.')->group(function () {
+    Route::get('/{type}/{id}', [DocumentController::class, 'stream'])
+        ->where('type', 'document|contract')
+        ->name('stream');
+});
 
 Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->group(function () {
 
@@ -38,7 +46,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/projects',      SmokeTest::class)->name('projects');
             Route::get('/leave', Leave::class)->name('leave');
             Route::get('/assets', Assets::class)->name('assets');
-            Route::get('/documents',     SmokeTest::class)->name('documents');
+            Route::get('/documents', Documents::class)->name('documents');
             Route::get('/profile',       SmokeTest::class)->name('profile');
             Route::get('/notifications', SmokeTest::class)->name('notifications');
         });

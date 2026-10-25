@@ -27,6 +27,7 @@ use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\IntegrationController;
 use App\Http\Controllers\API\HealthController;
+use App\Http\Controllers\API\DocumentController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -431,6 +432,11 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('health', [HealthController::class, 'check']);
         Route::get('queue/stats', [HealthController::class, 'queueStats']);
         Route::post('backup/trigger', [HealthController::class, 'triggerBackup']);
+    });
+
+    Route::prefix('documents')->group(function () {
+        Route::get('list', [DocumentController::class, 'list']);
+        Route::post('upload', [DocumentController::class, 'upload']);
     });
 
     // Payroll webhook (external system) — no auth, separate group
