@@ -12,6 +12,7 @@ use App\Livewire\Employee\Leave;
 use App\Livewire\Employee\Assets;
 use App\Livewire\Employee\Documents;
 use App\Http\Controllers\API\DocumentController;
+use App\Livewire\Employee\Projects;
 
 Route::get('/', function () {
     return auth()->check()
@@ -43,7 +44,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/dashboard',     EmployeeDashboard::class)->name('dashboard');
             Route::get('/timesheet',     SmokeTest::class)->name('timesheet');
             Route::get('/timesheet', Timesheet::class)->name('timesheet');
-            Route::get('/projects',      SmokeTest::class)->name('projects');
+            Route::get('/projects', Projects::class)->name('projects');
             Route::get('/leave', Leave::class)->name('leave');
             Route::get('/assets', Assets::class)->name('assets');
             Route::get('/documents', Documents::class)->name('documents');
