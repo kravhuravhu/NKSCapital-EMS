@@ -289,6 +289,12 @@ class TimesheetReportController extends Controller
             'level2Approver:id,first_name,last_name',
         ]);
 
+        if ($user->role === 'manager') {
+            $query->whereHas('user', function ($q) use ($user) {
+                $q->where('manager_id', $user->id);
+            });
+        }
+
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
