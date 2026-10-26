@@ -53,12 +53,10 @@ class Api
     {
         $uri = self::API_PREFIX . '/' . ltrim($path, '/');
 
-        $request = Request::create($uri, $method, $method === 'GET' ? $payload : []);
-
-        if ($method !== 'GET') {
-            $request->headers->set('Content-Type', 'application/json');
-            $request->setContent(json_encode($payload));
-        }
+        // create() routes GET payloads into the query string and non-GET payloads into
+        // the request body — no manual setContent() call needed, which is what fails
+        // on this Laravel build
+        $request = Request::create($uri, $method, $payload);
 
         $request->headers->set('Accept', 'application/json');
 
