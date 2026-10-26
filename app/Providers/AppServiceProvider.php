@@ -24,12 +24,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // local: keep generated URLs on the current host + port
-        // prevents route() from dropping :8000 during redirects
+        // URL::forceRootUrl() covers route() / redirect() / asset()
+        // the config line below covers Storage::url() which reads the disk config directly
         if (!$this->app->runningInConsole() && $this->app->environment('local')) {
             $host = request()->getSchemeAndHttpHost();
 
             if ($host) {
                 URL::forceRootUrl($host);
+                config(['filesystems.disks.public.url' => rtrim($host, '/') . '/storage']);
             }
         }
     }
