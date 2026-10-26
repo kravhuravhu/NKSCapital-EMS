@@ -34,7 +34,11 @@ class DelegationController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['status' => 'error', 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
         $query = ApprovalDelegation::with([
@@ -45,16 +49,36 @@ class DelegationController extends Controller
         ]);
 
         $status = $request->status ?? 'all';
-        if ($status === 'active')   $query->active();
-        if ($status === 'upcoming') $query->upcoming();
-        if ($status === 'expired')  $query->expired();
 
-        if ($request->filled('original_approver_id')) $query->where('original_approver_id', $request->original_approver_id);
-        if ($request->filled('delegate_id')) $query->where('delegate_id', $request->delegate_id);
+        if ($status === 'active') {
+            $query->active();
+        } elseif ($status === 'upcoming') {
+            $query->upcoming();
+        } elseif ($status === 'expired') {
+            $query->expired();
+        } elseif ($status === 'revoked') {
+            $query->whereNotNull('revoked_at');
+        }
 
-        $items = $query->orderBy('start_date', 'desc')->paginate($request->per_page ?? 20);
+        if ($request->filled('original_approver_id')) {
+            $query->where(
+                'original_approver_id',
+                $request->original_approver_id
+            );
+        }
 
-        return response()->json(['status' => 'success', 'data' => $items], 200);
+        if ($request->filled('delegate_id')) {
+            $query->where('delegate_id', $request->delegate_id);
+        }
+
+        $items = $query
+            ->orderBy('start_date', 'desc')
+            ->paginate($request->per_page ?? 20);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $items,
+        ], 200);
     }
 
     /**
