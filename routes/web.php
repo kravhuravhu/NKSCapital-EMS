@@ -25,6 +25,7 @@ use App\Livewire\Manager\Meetings;
 use App\Livewire\Manager\TeamReports;
 use App\Livewire\Manager\Projects as ManagerProjects;
 use App\Livewire\Director\PendingL2;
+use App\Livewire\Director\AuditLog;
 
 Route::get('/', function () {
     return auth()->check()
@@ -83,7 +84,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
         ->prefix('director')->name('director.')->group(function () {
             Route::get('/dashboard',          DirectorDashboard::class)->name('dashboard');
             Route::get('/pending-l2', PendingL2::class)->name('pending-l2');
-            Route::get('/audit-log',          SmokeTest::class)->name('audit-log');
+            Route::get('/audit-log', AuditLog::class)->name('audit-log');
             Route::get('/delegation',         SmokeTest::class)->name('delegation');
             Route::get('/payroll-export',     SmokeTest::class)->name('payroll-export');
             Route::get('/company-reports',    SmokeTest::class)->name('company-reports');
