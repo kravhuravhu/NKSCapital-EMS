@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', 'Portal') | {{ config('nks.brand_name') }}</title>
+    <title>{{ auth()->user()?->first_name ?? 'Portal' }}{{ auth()->user()?->last_name ? ' ' . auth()->user()->last_name : '' }} | {{ config('nks.brand_name') }}</title>
 
     @vite(['resources/scss/app.scss', 'resources/js/app.js'])
     @livewireStyles
