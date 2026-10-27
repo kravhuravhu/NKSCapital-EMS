@@ -31,7 +31,7 @@ use App\Livewire\Director\PayrollExport;
 use App\Livewire\Director\CompanyReports;
 use App\Livewire\Director\OverrideApprovals;
 use App\Livewire\Director\LeaveConfigPage;
-use App\Livewire\Admin\Employees;
+use App\Livewire\Admin\EmployeeManagement;
 
 Route::get('/', function () {
     return auth()->check()
@@ -102,7 +102,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     Route::middleware('role:admin,super_admin')
         ->prefix('admin')->name('admin.')->group(function () {
             Route::get('/dashboard',        AdminDashboard::class)->name('dashboard');
-            Route::get('/employees', Employees::class)->name('employees');
+            Route::get('/employees', EmployeesManagement::class)->name('employees');
             Route::get('/employee-types',   SmokeTest::class)->name('employee-types');
             Route::get('/roles',            SmokeTest::class)->name('roles');
             Route::get('/clients',          SmokeTest::class)->name('clients');
