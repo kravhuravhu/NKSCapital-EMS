@@ -145,6 +145,110 @@ class EmployeeTypeController extends Controller
     }
 
     /**
+     * PUT /api/v1/admin/employee-type/update/{id}
+     * Update an existing employee type's workflow flags.
+     */
+    public function updateEmployeeType(Request $request, $id)
+    {
+        $user = Auth::user();
+
+        if (!in_array($user->role, ['admin', 'super_admin'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized - Only admins can update employee types',
+            ], 403);
+        }
+
+        $type = EmployeeType::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'type_name' => 'sometimes|string|max:255',
+            'workflow_type' => 'sometimes|in:PS_EXTERNAL,PR_INTERNAL',
+            'has_external_approval' => 'nullable|boolean',
+            'has_internal_approval' => 'nullable|boolean',
+            'description' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $old = $type->toArray();
+        $type->fill($request->only([
+            'type_name',
+            'workflow_type',
+            'has_external_approval',
+            'has_internal_approval',
+            'description',
+        ]));
+        $type->save();
+
+        AuditService::log(
+            action: 'EMPLOYEE_TYPE_UPDATED',
+            tableName: 'employee_types',
+            recordId: $type->id,
+            oldValues: $old,
+            newValues: $type->fresh()->toArray(),
+            logType: 'success'
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Employee type updated',
+            'data' => $type->fresh(),
+        ], 200);
+    }
+
+    /**
+     * DELETE /api/v1/admin/employee-type/delete/{id}
+     * Soft-delete an employee type by marking it inactive (adds is_active to model).
+     */
+    public function deleteEmployeeType($id)
+    {
+        $user = Auth::user();
+
+        if (!in_array($user->role, ['admin', 'super_admin'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized - Only admins can delete employee types',
+            ], 403);
+        }
+
+        $type = EmployeeType::findOrFail($id);
+
+        // do not delete a type that still has active employees assigned
+        $inUse = User::where('employee_type', $type->type_code)
+            ->where('is_active', true)
+            ->exists();
+
+        if ($inUse) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Cannot delete an employee type that is still assigned to active employees.',
+            ], 422);
+        }
+
+        AuditService::log(
+            action: 'EMPLOYEE_TYPE_DELETED',
+            tableName: 'employee_types',
+            recordId: $type->id,
+            oldValues: $type->toArray(),
+            logType: 'warning'
+        );
+
+        $type->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Employee type deleted',
+        ], 200);
+    }
+
+    /**
      * GET /api/v1/admin/service-type/list
      * List all service types (Admin only)
      */
