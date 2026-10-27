@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use App\Services\AuditService; 
 
 class EmployeeController extends Controller
 {
@@ -198,6 +199,59 @@ class EmployeeController extends Controller
     }
 
     /**
+     * GET /api/v1/employee/show/{id}
+     *
+     * Full editable snapshot used by the Admin edit modal.
+     * Unlike /employee/profile/{id}, this returns everything the edit form
+     * binds, including admin-only fields like is_active and manager/client/project.
+     */
+    public function showProfile($id)
+    {
+        $authUser = Auth::user();
+
+        if (!in_array($authUser->role, ['admin', 'super_admin', 'director'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized to view this profile.'
+            ], 403);
+        }
+
+        $user = User::with(['manager:id,first_name,last_name', 'client:id,company_name', 'project:id,name'])
+            ->findOrFail($id);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'id' => $user->id,
+                'employee_number' => $user->employee_number,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'id_number' => $user->id_number,
+                'department' => $user->department,
+                'position' => $user->position,
+                'role' => $user->role,
+                'employee_type' => $user->employee_type,
+                'service_type' => $user->service_type,
+                'manager_id' => $user->manager_id,
+                'manager_name' => $user->manager?->full_name,
+                'client_id' => $user->client_id,
+                'client_name' => $user->client?->company_name,
+                'project_id' => $user->project_id,
+                'project_name' => $user->project?->name,
+                'hire_date' => $user->hire_date?->format('Y-m-d'),
+                'termination_date' => $user->termination_date?->format('Y-m-d'),
+                'is_active' => (bool) $user->is_active,
+                'address' => $user->address,
+                'emergency_contact_name' => $user->emergency_contact_name,
+                'emergency_contact_phone' => $user->emergency_contact_phone,
+                'profile_photo_url' => $user->profile_photo_url,
+            ]
+        ], 200);
+    }
+
+    /**
      * PUT /api/v1/employee/update-full/{id}
      * Full profile update (Admin/Manager)
      */
@@ -238,6 +292,32 @@ class EmployeeController extends Controller
             ], 422);
         }
 
+        // capture old values before mutating for the audit trail
+        $oldValues = $user->only([
+            'first_name', 'last_name', 'email', 'department', 'position',
+            'role', 'employee_type', 'service_type', 'manager_id',
+            'client_id', 'project_id', 'hire_date', 'is_active',
+        ]);
+
+        // merge incoming values over the current row for rule-checking
+        $nextType = $request->input('employee_type', $user->employee_type);
+        $nextClient = $request->input('client_id', $user->client_id);
+        $nextProject = $request->input('project_id', $user->project_id);
+
+        if ($nextType === 'ps' && !$nextClient) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'PS employee must have a client assigned.'
+            ], 422);
+        }
+
+        if ($nextType === 'pr' && !$nextProject) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'PR employee must have a project assigned.'
+            ], 422);
+        }
+
         $user->update($request->all());
 
         // If role changed, update Spatie role
@@ -245,10 +325,19 @@ class EmployeeController extends Controller
             $user->syncRoles([$request->role]);
         }
 
+        AuditService::log(
+            action: 'EMPLOYEE_PROFILE_UPDATED',
+            tableName: 'users',
+            recordId: $user->id,
+            oldValues: $oldValues,
+            newValues: $user->only(array_keys($oldValues)),
+            logType: 'success'
+        );
+
         return response()->json([
             'status' => 'success',
             'message' => 'Employee profile updated successfully',
-            'data' => $user
+            'data' => $user->fresh()
         ], 200);
     }
 
@@ -280,6 +369,56 @@ class EmployeeController extends Controller
                 'name' => $user->full_name,
                 'is_active' => $user->is_active,
                 'termination_date' => $user->termination_date,
+            ]
+        ], 200);
+    }
+
+    /**
+     * POST /api/v1/employee/reactivate/{id}
+     *
+     * Reverse of deactivateEmployee, clears termination_date and re-enables login.
+     */
+    public function reactivateEmployee($id)
+    {
+        $authUser = Auth::user();
+
+        if (!in_array($authUser->role, ['admin', 'super_admin', 'director'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized to reactivate employees.'
+            ], 403);
+        }
+
+        $user = User::findOrFail($id);
+
+        if ($user->is_active) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Employee is already active.'
+            ], 422);
+        }
+
+        $user->is_active = true;
+        $user->termination_date = null;
+        $user->save();
+
+        AuditService::log(
+            action: 'EMPLOYEE_REACTIVATED',
+            tableName: 'users',
+            recordId: $user->id,
+            oldValues: ['is_active' => false],
+            newValues: ['is_active' => true, 'termination_date' => null],
+            logType: 'success'
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Employee reactivated successfully.',
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->full_name,
+                'is_active' => true,
+                'termination_date' => null,
             ]
         ], 200);
     }
