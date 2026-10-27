@@ -30,6 +30,7 @@ use App\Livewire\Director\Delegations;
 use App\Livewire\Director\PayrollExport;
 use App\Livewire\Director\CompanyReports;
 use App\Livewire\Director\OverrideApprovals;
+use App\Livewire\Director\LeaveConfigPage;
 
 Route::get('/', function () {
     return auth()->check()
@@ -93,7 +94,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/payroll-export', PayrollExport::class)->name('payroll-export');
             Route::get('/company-reports', CompanyReports::class)->name('company-reports');
             Route::get('/override-approvals', OverrideApprovals::class)->name('override-approvals');
-            Route::get('/leave-config',       SmokeTest::class)->name('leave-config');
+            Route::get('/leave-config', LeaveConfigPage::class)->name('leave-config');
         });
 
     // admin
