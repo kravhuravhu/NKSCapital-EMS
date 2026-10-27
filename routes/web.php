@@ -34,6 +34,7 @@ use App\Livewire\Director\LeaveConfigPage;
 use App\Livewire\Admin\EmployeeManagement;
 use App\Livewire\Admin\EmployeeTypes;
 use App\Livewire\Admin\Roles;
+use App\Livewire\Admin\Clients;
 
 Route::get('/', function () {
     return auth()->check()
@@ -107,7 +108,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/employees', EmployeeManagement::class)->name('employees');
             Route::get('/employee-types', EmployeeTypes::class)->name('employee-types');
             Route::get('/roles', Roles::class)->name('roles');
-            Route::get('/clients',          SmokeTest::class)->name('clients');
+            Route::get('/clients', Clients::class)->name('clients');
             Route::get('/client-templates', SmokeTest::class)->name('client-templates');
             Route::get('/projects',         SmokeTest::class)->name('projects');
             Route::get('/assets',           SmokeTest::class)->name('assets');
