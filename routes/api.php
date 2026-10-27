@@ -98,9 +98,11 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::put('update', [EmployeeController::class, 'updateProfile']);
         Route::put('update-full/{id}', [EmployeeController::class, 'updateFullProfile'])->middleware('role:admin,manager,director');
         Route::post('deactivate/{id}', [EmployeeController::class, 'deactivateEmployee'])->middleware('role:admin,super_admin');
+        Route::post('reactivate/{id}', [EmployeeController::class, 'reactivateEmployee']);
         Route::post('upload-photo', [EmployeeController::class, 'uploadPhoto']);
         Route::get('list', [EmployeeController::class, 'listEmployees']);
         Route::get('history/{id}', [EmployeeController::class, 'getHistory']);
+        Route::get('show/{id}', [EmployeeController::class, 'showProfile']);
     });
 
     // ========================================
