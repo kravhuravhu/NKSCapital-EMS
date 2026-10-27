@@ -89,6 +89,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('employee-type/create', [EmployeeTypeController::class, 'createEmployeeType']);
         Route::get('service-type/list', [EmployeeTypeController::class, 'listServiceTypes']);
         Route::post('workflow/assign', [EmployeeTypeController::class, 'assignWorkflow']);
+        Route::put('employee-type/update/{id}', [EmployeeTypeController::class, 'updateEmployeeType']);
+        Route::delete('employee-type/delete/{id}', [EmployeeTypeController::class, 'deleteEmployeeType']);
     });
 
     // Employee Management
