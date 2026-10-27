@@ -27,6 +27,7 @@ use App\Livewire\Manager\Projects as ManagerProjects;
 use App\Livewire\Director\PendingL2;
 use App\Livewire\Director\AuditLog;
 use App\Livewire\Director\Delegations;
+use App\Livewire\Director\PayrollExport;
 
 Route::get('/', function () {
     return auth()->check()
@@ -87,7 +88,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/pending-l2', PendingL2::class)->name('pending-l2');
             Route::get('/audit-log', AuditLog::class)->name('audit-log');
             Route::get('/delegation', Delegations::class)->name('delegation');
-            Route::get('/payroll-export',     SmokeTest::class)->name('payroll-export');
+            Route::get('/payroll-export', PayrollExport::class)->name('payroll-export');
             Route::get('/company-reports',    SmokeTest::class)->name('company-reports');
             Route::get('/override-approvals', SmokeTest::class)->name('override-approvals');
             Route::get('/leave-config',       SmokeTest::class)->name('leave-config');
