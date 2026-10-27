@@ -844,4 +844,153 @@ class PRTimesheetController extends Controller
             ]);
         }
     }
+
+    /**
+     * POST /api/v1/timesheet/pr/override/l2
+     *
+     * Director-only override that transitions a rejected timesheet to approved.
+     * Requires 2FA and a written justification. Writes a critical-severity
+     * audit entry distinct from the normal L2 approval path.
+     */
+    public function overrideL2(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'timesheet_id' => 'required|exists:pr_timesheets,id',
+            '2fa_code' => 'required|string|size:6',
+            'comment' => 'required|string|min:10|max:2000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = Auth::user();
+
+        // role gate — only director or super_admin may override
+        if (!in_array($user->role, ['director', 'super_admin'])) {
+            AuditService::logWarning('PR_OVERRIDE_UNAUTHORIZED', 'pr_timesheets', 0, [
+                'actor_id' => $user->id,
+                'actor_role' => $user->role,
+                'timesheet_id' => $request->timesheet_id,
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Only a Director may override a rejection.'
+            ], 403);
+        }
+
+        // 2FA gate — same requirement as approveL2
+        if (!$user->two_factor_secret) {
+            return response()->json([
+                'status' => 'error',
+                'message' => '2FA is not enabled. Please enable 2FA first.'
+            ], 403);
+        }
+
+        $secret = decrypt($user->two_factor_secret);
+        $google2fa = new \PragmaRX\Google2FA\Google2FA();
+
+        if (!$google2fa->verifyKey($secret, $request->input('2fa_code'))) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid 2FA code'
+            ], 422);
+        }
+
+        $timesheet = PRTimesheet::findOrFail($request->timesheet_id);
+
+        // must be currently rejected — cannot override anything else
+        if ($timesheet->status !== 'rejected') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Only rejected timesheets can be overridden.',
+                'current_status' => $timesheet->status
+            ], 422);
+        }
+
+        // capture the original rejection reason before overwriting anything
+        $originalReason = $timesheet->level2_rejection_reason
+            ?? $timesheet->level1_rejection_reason
+            ?? null;
+
+        // regenerate the PDF — the same view used by the normal L2 approval
+        $pdf = Pdf::loadView('pdf.pr-timesheet', [
+            'timesheet' => $timesheet,
+            'user' => $timesheet->user,
+            'details' => $timesheet->details,
+            'generated_at' => now()->format('d M Y H:i'),
+        ]);
+        $filename = 'pr-timesheet-' . $timesheet->user_id . '-' . $timesheet->month_year->format('Y-m') . '.pdf';
+        $path = 'pr-timesheets/' . $filename;
+        Storage::disk('public')->put($path, $pdf->output());
+        $pdfHash = hash('sha256', $pdf->output());
+
+        // transition to approved — preserve the L1 approval that already happened
+        $timesheet->status = 'approved';
+        $timesheet->level2_approver_id = $user->id;
+        $timesheet->level2_approved_at = now();
+        $timesheet->level2_rejection_reason = null;
+        $timesheet->pdf_path = $path;
+        $timesheet->pdf_hash = $pdfHash;
+        $timesheet->save();
+
+        // audit as a distinct, critical event
+        AuditService::log(
+            action: 'PR_OVERRIDE_APPROVED',
+            tableName: 'pr_timesheets',
+            recordId: $timesheet->id,
+            oldValues: [
+                'status' => 'rejected',
+                'rejection_reason' => $originalReason,
+            ],
+            newValues: [
+                'status' => 'approved',
+                'overridden_by' => $user->id,
+                'override_comment' => $request->comment,
+                'pdf_hash' => $pdfHash,
+            ],
+            logType: 'warning',
+            severity: 'critical'
+        );
+
+        // notify the employee
+        Notification::create([
+            'user_id' => $timesheet->user_id,
+            'type' => 'TIMESHEET_OVERRIDE_APPROVED',
+            'title' => 'Timesheet Approved (Director Override)',
+            'message' => "Your timesheet for {$timesheet->month_year->format('F Y')} has been approved by the Director. Note: {$request->comment}",
+            'reference_id' => $timesheet->id,
+            'reference_type' => PRTimesheet::class,
+        ]);
+
+        // notify payroll so it can be picked up by the next export
+        $financeUsers = User::where('role', 'finance')->orWhere('role', 'admin')->get();
+        foreach ($financeUsers as $finance) {
+            Notification::create([
+                'user_id' => $finance->id,
+                'type' => 'PAYROLL_READY',
+                'title' => 'Timesheet Ready for Payroll (Override)',
+                'message' => "Timesheet for {$timesheet->user->full_name} ({$timesheet->month_year->format('F Y')}) was approved via Director override.",
+                'reference_id' => $timesheet->id,
+                'reference_type' => PRTimesheet::class,
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Rejection overridden — timesheet approved.',
+            'data' => [
+                'timesheet_id' => $timesheet->id,
+                'status' => $timesheet->status,
+                'level2_approved_at' => $timesheet->level2_approved_at,
+                'pdf_url' => Storage::url($path),
+                'pdf_hash' => $pdfHash,
+                'original_rejection_reason' => $originalReason,
+            ]
+        ], 200);
+    }
 }
