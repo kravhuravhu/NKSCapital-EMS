@@ -159,6 +159,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('reject/l1', [PRTimesheetController::class, 'rejectL1']);
         Route::post('approve/l2', [PRTimesheetController::class, 'approveL2']);
         Route::post('reject/l2', [PRTimesheetController::class, 'rejectL2']);
+        Route::post('override/l2', [PRTimesheetController::class, 'overrideL2']);
         Route::post('recall', [PRTimesheetController::class, 'recall']);
         Route::get('pending/l1', [PRTimesheetController::class, 'pendingL1']);
         Route::get('pending/l2', [PRTimesheetController::class, 'pendingL2']);
