@@ -50,6 +50,9 @@ class ClientTemplates extends Component
 
         if ($response['ok']) {
             $this->clients = $response['data']['data'] ?? [];
+        } else {
+            $this->clients = [];
+            $this->error = $response['message'] ?? 'Unable to load clients for the template picker.';
         }
     }
 
@@ -146,6 +149,13 @@ class ClientTemplates extends Component
             return;
         }
 
+        // verify the selected client still exists in the loaded list — stale ids cannot slip through
+        if (!collect($this->clients)->contains('id', (int) $this->uploadForm['client_id'])) {
+            $this->error = 'The selected client no longer exists. Refresh and try again.';
+            $this->loadClients();
+            return;
+        }
+
         $payload = [
             'client_id' => $this->uploadForm['client_id'],
             'template_name' => $this->uploadForm['template_name'],
@@ -177,7 +187,7 @@ class ClientTemplates extends Component
         $row = collect($this->templates)->firstWhere('id', $id);
 
         if (!$row) {
-            $this->error = 'Template not found.';
+            $this->error = 'Template not found, it may have been removed. Refresh and try again.';
             return;
         }
 

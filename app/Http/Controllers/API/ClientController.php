@@ -259,7 +259,15 @@ class ClientController extends Controller
      */
     public function listClientManagers($clientId)
     {
-        $client = Client::findOrFail($clientId);
+        $client = Client::find($clientId);
+
+        if (!$client) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Client not found',
+            ], 404);
+        }
+
         $managers = ClientManager::where('client_id', $clientId)->get();
 
         return response()->json([
@@ -268,7 +276,7 @@ class ClientController extends Controller
                 'client_id' => $client->id,
                 'company_name' => $client->company_name,
                 'managers' => $managers,
-            ]
+            ],
         ], 200);
     }
 
@@ -278,18 +286,17 @@ class ClientController extends Controller
      */
     public function uploadClientTemplate(Request $request)
     {
-        // Check permission
         if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized to upload templates'
+                'message' => 'Unauthorized to upload templates',
             ], 403);
         }
 
         $validator = Validator::make($request->all(), [
             'client_id' => 'required|exists:clients,id',
             'template_name' => 'required|string|max:255',
-            'template_file' => 'required|file|mimes:pdf,doc,docx|max:10240', // 10MB
+            'template_file' => 'required|file|mimes:pdf,doc,docx|max:10240',
             'branding_settings' => 'nullable|json',
             'template_content' => 'nullable|string',
         ]);
@@ -298,24 +305,31 @@ class ClientController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
-        // Store file
+        // resolve the client up-front, a race between exists and the find is possible
+        $client = Client::find($request->client_id);
+
+        if (!$client) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Client not found',
+            ], 404);
+        }
+
         $file = $request->file('template_file');
-        $filename = 'client-' . $request->client_id . '-template-' . time() . '.' . $file->getClientOriginalExtension();
+        $filename = 'client-' . $client->id . '-template-' . time() . '.' . $file->getClientOriginalExtension();
         $path = $file->storeAs('client-templates', $filename, 'public');
         $fileHash = hash_file('sha256', $file->getRealPath());
 
-        // Deactivate existing active templates for this client
-        ClientTemplate::where('client_id', $request->client_id)
+        ClientTemplate::where('client_id', $client->id)
             ->where('is_active', true)
             ->update(['is_active' => false]);
 
-        // Create new template
         $template = ClientTemplate::create([
-            'client_id' => $request->client_id,
+            'client_id' => $client->id,
             'template_name' => $request->template_name,
             'template_content' => $request->template_content,
             'branding_settings' => $request->branding_settings ? json_decode($request->branding_settings, true) : null,
@@ -325,15 +339,14 @@ class ClientController extends Controller
             'updated_by' => Auth::id(),
         ]);
 
-        // Update client's template_id
-        $client = Client::find($request->client_id);
+        // client was already resolved, no dereference of a possibly-null model
         $client->template_id = $template->id;
         $client->save();
 
         return response()->json([
             'status' => 'success',
             'message' => 'Client template uploaded successfully',
-            'data' => $template
+            'data' => $template,
         ], 201);
     }
 
@@ -387,14 +400,20 @@ class ClientController extends Controller
      */
     public function updateClientTemplate(Request $request, $id)
     {
-        $template = ClientTemplate::findOrFail($id);
-
-        // Check permission
         if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized to update templates'
+                'message' => 'Unauthorized to update templates',
             ], 403);
+        }
+
+        $template = ClientTemplate::find($id);
+
+        if (!$template) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Template not found',
+            ], 404);
         }
 
         $validator = Validator::make($request->all(), [
@@ -408,21 +427,19 @@ class ClientController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
-        // Update file if provided
         if ($request->hasFile('template_file')) {
-            // Delete old file
             if ($template->file_path) {
                 Storage::disk('public')->delete($template->file_path);
             }
-            
+
             $file = $request->file('template_file');
             $filename = 'client-' . $template->client_id . '-template-' . time() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('client-templates', $filename, 'public');
-            
+
             $template->file_path = $path;
             $template->file_hash = hash_file('sha256', $file->getRealPath());
         }
@@ -443,7 +460,7 @@ class ClientController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Client template updated successfully',
-            'data' => $template
+            'data' => $template,
         ], 200);
     }
 
