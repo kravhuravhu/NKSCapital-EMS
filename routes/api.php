@@ -115,6 +115,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::prefix('client')->group(function () {
         Route::get('list', [ClientController::class, 'listClients']);
         Route::post('create', [ClientController::class, 'createClient']);
+        Route::get('/client/{id}', [ClientController::class, 'showClient']);
         Route::put('update/{id}', [ClientController::class, 'updateClient']);
         Route::post('deactivate/{id}', [ClientController::class, 'deactivateClient']);
         Route::post('manager/add', [ClientController::class, 'addClientManager']);

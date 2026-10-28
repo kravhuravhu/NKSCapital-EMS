@@ -41,7 +41,7 @@ class ClientController extends Controller
         }
 
         // Load relationships
-        $query->with(['managers', 'projects']);
+        $query->with(['managers']);
         $query->withCount('projects', 'users');
 
         $clients = $query->paginate($request->per_page ?? 15);
@@ -113,13 +113,20 @@ class ClientController extends Controller
      */
     public function updateClient(Request $request, $id)
     {
-        $client = Client::findOrFail($id);
+        $client = Client::find($id);
 
-        // Check permission
+        if (!$client) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Client not found',
+            ], 404);
+        }
+
+        // permission check
         if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized to update clients'
+                'message' => 'Unauthorized to update clients',
             ], 403);
         }
 
@@ -141,7 +148,7 @@ class ClientController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -150,7 +157,7 @@ class ClientController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Client updated successfully',
-            'data' => $client
+            'data' => $client,
         ], 200);
     }
 
@@ -160,13 +167,19 @@ class ClientController extends Controller
      */
     public function deactivateClient($id)
     {
-        $client = Client::findOrFail($id);
+        $client = Client::find($id);
 
-        // Check permission
+        if (!$client) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Client not found',
+            ], 404);
+        }
+
         if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized to deactivate clients'
+                'message' => 'Unauthorized to deactivate clients',
             ], 403);
         }
 
@@ -174,8 +187,7 @@ class ClientController extends Controller
         $client->status = 'inactive';
         $client->save();
 
-        // Archive associated projects
-        Project::where('client_id', $id)->update(['status' => 'archived']);
+        $archived = Project::where('client_id', $id)->update(['status' => 'archived']);
 
         return response()->json([
             'status' => 'success',
@@ -185,8 +197,8 @@ class ClientController extends Controller
                 'company_name' => $client->company_name,
                 'is_active' => $client->is_active,
                 'status' => $client->status,
-                'archived_projects' => Project::where('client_id', $id)->count(),
-            ]
+                'archived_projects' => $archived,
+            ],
         ], 200);
     }
 
@@ -331,7 +343,17 @@ class ClientController extends Controller
      */
     public function getClientTemplate($clientId)
     {
-        $client = Client::findOrFail($clientId);
+        // guarded lookup 
+        // client may not exist or may have no template
+        $client = Client::find($clientId);
+
+        if (!$client) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Client not found',
+            ], 404);
+        }
+
         $template = ClientTemplate::where('client_id', $clientId)
             ->where('is_active', true)
             ->first();
@@ -339,9 +361,14 @@ class ClientController extends Controller
         if (!$template) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'No active template found for this client'
+                'message' => 'No active template found for this client',
             ], 404);
         }
+
+        // file_path may be null for templates that only carry template_content
+        $downloadUrl = $template->file_path
+            ? Storage::url($template->file_path)
+            : null;
 
         return response()->json([
             'status' => 'success',
@@ -349,8 +376,8 @@ class ClientController extends Controller
                 'client_id' => $client->id,
                 'company_name' => $client->company_name,
                 'template' => $template,
-                'download_url' => Storage::url($template->file_path),
-            ]
+                'download_url' => $downloadUrl,
+            ],
         ], 200);
     }
 
