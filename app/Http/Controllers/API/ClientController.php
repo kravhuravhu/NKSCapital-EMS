@@ -419,4 +419,39 @@ class ClientController extends Controller
             'data' => $template
         ], 200);
     }
+
+    /**
+     * GET /api/v1/client/template/list
+     * Return a paginated list of every active template with its client attached.
+     */
+    public function listTemplates(Request $request)
+    {
+        $query = ClientTemplate::with([
+            'client:id,company_name,registration_number',
+            'updatedBy:id,first_name,last_name',
+        ]);
+
+        if ($request->filled('client_id')) {
+            $query->where('client_id', $request->client_id);
+        }
+
+        if ($request->has('is_active')) {
+            $query->where('is_active', (bool) $request->is_active);
+        }
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('template_name', 'like', "%{$s}%")
+                ->orWhereHas('client', fn ($qq) => $qq->where('company_name', 'like', "%{$s}%"));
+            });
+        }
+
+        $items = $query->orderByDesc('created_at')->paginate($request->per_page ?? 20);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $items,
+        ], 200);
+    }
 }
