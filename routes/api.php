@@ -122,6 +122,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('template/upload', [ClientController::class, 'uploadClientTemplate']);
         Route::get('template/{clientId}', [ClientController::class, 'getClientTemplate']);
         Route::put('template/update/{id}', [ClientController::class, 'updateClientTemplate']);
+        Route::get('/template/list', [ClientController::class, 'listTemplates']);
     });
 
     // Project Management
