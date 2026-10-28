@@ -309,7 +309,6 @@ class ClientController extends Controller
             ], 422);
         }
 
-        // resolve the client up-front, a race between exists and the find is possible
         $client = Client::find($request->client_id);
 
         if (!$client) {
@@ -339,7 +338,6 @@ class ClientController extends Controller
             'updated_by' => Auth::id(),
         ]);
 
-        // client was already resolved, no dereference of a possibly-null model
         $client->template_id = $template->id;
         $client->save();
 

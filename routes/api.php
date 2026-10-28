@@ -115,15 +115,14 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::prefix('client')->group(function () {
         Route::get('list', [ClientController::class, 'listClients']);
         Route::post('create', [ClientController::class, 'createClient']);
-        Route::get('/client/{id}', [ClientController::class, 'showClient']);
-        Route::put('update/{id}', [ClientController::class, 'updateClient']);
-        Route::post('deactivate/{id}', [ClientController::class, 'deactivateClient']);
+        Route::put('update/{id}', [ClientController::class, 'updateClient'])->whereNumber('id');
+        Route::post('deactivate/{id}', [ClientController::class, 'deactivateClient'])->whereNumber('id');
         Route::post('manager/add', [ClientController::class, 'addClientManager']);
-        Route::get('manager/list/{clientId}', [ClientController::class, 'listClientManagers']);
+        Route::get('manager/list/{clientId}', [ClientController::class, 'listClientManagers'])->whereNumber('clientId');
+        Route::get('template/list', [ClientController::class, 'listTemplates']);
         Route::post('template/upload', [ClientController::class, 'uploadClientTemplate']);
-        Route::get('template/{clientId}', [ClientController::class, 'getClientTemplate']);
-        Route::put('template/update/{id}', [ClientController::class, 'updateClientTemplate']);
-        Route::get('/template/list', [ClientController::class, 'listTemplates']);
+        Route::put('template/update/{id}', [ClientController::class, 'updateClientTemplate'])->whereNumber('id');
+        Route::get('template/{clientId}', [ClientController::class, 'getClientTemplate'])->whereNumber('clientId');
     });
 
     // Project Management
