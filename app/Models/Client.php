@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Client extends Model
 {
@@ -28,9 +29,9 @@ class Client extends Model
         'is_active' => 'boolean',
     ];
 
-    public function template(): HasOne
+    public function template(): BelongsTo
     {
-        return $this->hasOne(ClientTemplate::class, 'id', 'template_id');
+        return $this->belongsTo(ClientTemplate::class, 'template_id')->withDefault();
     }
 
     public function managers(): HasMany
