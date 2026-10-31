@@ -37,20 +37,22 @@ class ProjectController extends Controller
         }
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('project_code', 'LIKE', "%{$search}%");
+                ->orWhere('project_code', 'LIKE', "%{$search}%");
             });
         }
 
-        // Load counts
-        $query->withCount('assignments');
+        // count only active assignments — removed team members should not inflate the count
+        $query->withCount([
+            'assignments' => fn ($q) => $q->where('is_active', true),
+        ]);
 
         $projects = $query->paginate($request->per_page ?? 15);
 
         return response()->json([
             'status' => 'success',
-            'data' => $projects
+            'data' => $projects,
         ], 200);
     }
 
@@ -63,8 +65,9 @@ class ProjectController extends Controller
         $project = Project::with([
             'client',
             'projectManager',
+            'assignments' => fn ($q) => $q->where('is_active', true),
             'assignments.user',
-            'timesheetDetails'
+            'timesheetDetails',
         ])->findOrFail($id);
 
         // Calculate total hours logged
@@ -76,7 +79,7 @@ class ProjectController extends Controller
                 'project' => $project,
                 'total_hours_logged' => $totalHours,
                 'remaining_hours' => $project->budgeted_hours - $totalHours,
-                'assigned_employees' => $project->assignments->map(function($assignment) {
+                'assigned_employees' => $project->assignments->map(function ($assignment) {
                     return [
                         'user' => $assignment->user,
                         'role' => $assignment->role,
@@ -84,7 +87,7 @@ class ProjectController extends Controller
                         'assigned_date' => $assignment->assigned_date,
                     ];
                 }),
-            ]
+            ],
         ], 200);
     }
 
@@ -150,14 +153,21 @@ class ProjectController extends Controller
      */
     public function updateProject(Request $request, $id)
     {
-        $project = Project::findOrFail($id);
-
         // Check permission
         if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized to update projects'
+                'message' => 'Unauthorized to update projects',
             ], 403);
+        }
+
+        $project = Project::find($id);
+
+        if (!$project) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Project not found',
+            ], 404);
         }
 
         $validator = Validator::make($request->all(), [
@@ -178,7 +188,7 @@ class ProjectController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -187,7 +197,7 @@ class ProjectController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Project updated successfully',
-            'data' => $project
+            'data' => $project->fresh(),
         ], 200);
     }
 
@@ -197,14 +207,20 @@ class ProjectController extends Controller
      */
     public function archiveProject($id)
     {
-        $project = Project::findOrFail($id);
-
-        // Check permission
         if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized to archive projects'
+                'message' => 'Unauthorized to archive projects',
             ], 403);
+        }
+
+        $project = Project::find($id);
+
+        if (!$project) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Project not found',
+            ], 404);
         }
 
         $project->status = 'archived';
@@ -217,7 +233,7 @@ class ProjectController extends Controller
                 'project_id' => $project->id,
                 'name' => $project->name,
                 'status' => $project->status,
-            ]
+            ],
         ], 200);
     }
 
@@ -231,7 +247,7 @@ class ProjectController extends Controller
         if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized to assign employees'
+                'message' => 'Unauthorized to assign employees',
             ], 403);
         }
 
@@ -248,12 +264,20 @@ class ProjectController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
-        // Check if already assigned
-        $existing = ProjectAssignment::where('project_id', $request->project_id)
+        $project = Project::find($request->project_id);
+
+        if (!$project) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Project not found',
+            ], 404);
+        }
+
+        $existing = ProjectAssignment::where('project_id', $project->id)
             ->where('user_id', $request->user_id)
             ->where('is_active', true)
             ->first();
@@ -261,12 +285,12 @@ class ProjectController extends Controller
         if ($existing) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Employee is already assigned to this project'
+                'message' => 'Employee is already assigned to this project',
             ], 409);
         }
 
         $assignment = ProjectAssignment::create([
-            'project_id' => $request->project_id,
+            'project_id' => $project->id,
             'user_id' => $request->user_id,
             'role' => $request->role ?? 'team_member',
             'allocation_percentage' => $request->allocation_percentage ?? 100,
@@ -277,8 +301,9 @@ class ProjectController extends Controller
 
         // Update user's project_id if not set
         $user = User::find($request->user_id);
-        if (!$user->project_id) {
-            $user->project_id = $request->project_id;
+
+        if ($user && !$user->project_id) {
+            $user->project_id = $project->id;
             $user->employee_type = 'pr';
             $user->save();
         }
@@ -290,7 +315,7 @@ class ProjectController extends Controller
                 'assignment' => $assignment,
                 'user' => $user->only(['id', 'first_name', 'last_name', 'email']),
                 'project' => $project->only(['id', 'name', 'project_code']),
-            ]
+            ],
         ], 201);
     }
 
@@ -358,7 +383,7 @@ class ProjectController extends Controller
         if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized to assign project managers'
+                'message' => 'Unauthorized to assign project managers',
             ], 403);
         }
 
@@ -371,15 +396,30 @@ class ProjectController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
-        $project = Project::findOrFail($request->project_id);
-        $project->project_manager_id = $request->project_manager_id;
-        $project->save();
+        $project = Project::find($request->project_id);
+
+        if (!$project) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Project not found',
+            ], 404);
+        }
 
         $manager = User::find($request->project_manager_id);
+
+        if (!$manager) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Manager not found',
+            ], 404);
+        }
+
+        $project->project_manager_id = $manager->id;
+        $project->save();
 
         return response()->json([
             'status' => 'success',
@@ -393,7 +433,7 @@ class ProjectController extends Controller
                     'email' => $manager->email,
                 ],
                 'is_l1_approver' => true,
-            ]
+            ],
         ], 200);
     }
 
