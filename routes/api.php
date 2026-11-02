@@ -303,11 +303,11 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
 
         // Candidates
         Route::get('candidate/list', [RecruitmentController::class, 'listCandidates']);
-        Route::get('candidate/{id}', [RecruitmentController::class, 'showCandidate']);
         Route::post('candidate/add', [RecruitmentController::class, 'addCandidate']);
         Route::post('candidate/parse-resume', [RecruitmentController::class, 'parseResume']);
         Route::post('candidate/reject', [RecruitmentController::class, 'rejectCandidate']);
         Route::put('candidate/stage', [RecruitmentController::class, 'advanceStage']);
+        Route::get('candidate/{id}', [RecruitmentController::class, 'showCandidate'])->whereNumber('id');
 
         // Interviews
         Route::get('interview/list', [RecruitmentController::class, 'listInterviews']);
