@@ -446,10 +446,10 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('backup/trigger', [HealthController::class, 'triggerBackup']);
 
         // System configurations
-        Route::get('/system-config', [SystemConfigController::class, 'index']);
-        Route::put('/system-config/update', [SystemConfigController::class, 'update']);
-        Route::post('/system-config/verify-password', [SystemConfigController::class, 'verifyPassword']);
-        Route::delete('/system-config/delete/{key}', [SystemConfigController::class, 'destroy']);
+        Route::get('system-config', [SystemConfigController::class, 'index']);
+        Route::put('system-config/update', [SystemConfigController::class, 'update']);
+        Route::post('system-config/verify-password', [SystemConfigController::class, 'verifyPassword']);
+        Route::delete('system-config/delete/{key}', [SystemConfigController::class, 'destroy']);
     });
 
     Route::prefix('documents')->group(function () {
