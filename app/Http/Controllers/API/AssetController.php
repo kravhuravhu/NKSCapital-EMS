@@ -410,4 +410,156 @@ class AssetController extends Controller
 
         return response()->json(['status' => 'success', 'data' => $data], 200);
     }
+
+    /**
+     * GET /api/v1/asset/list
+     * Paginated inventory listing with filters. Admin/manager read access.
+     */
+    public function listAssets(Request $request)
+    {
+        $user = Auth::user();
+        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+        }
+
+        $query = Asset::with([
+            'currentAssignee:id,first_name,last_name,employee_number,email,department',
+            'activeLoan' => fn ($q) => $q->orderBy('checkout_date', 'desc'),
+        ]);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('condition')) {
+            $query->where('condition', $request->condition);
+        }
+        if ($request->boolean('is_overdue')) {
+            $query->overdue();
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('asset_tag', 'like', "%{$s}%")
+                ->orWhere('serial_number', 'like', "%{$s}%")
+                ->orWhere('model', 'like', "%{$s}%")
+                ->orWhere('manufacturer', 'like', "%{$s}%")
+                ->orWhereHas('currentAssignee', function ($qq) use ($s) {
+                    $qq->where('first_name', 'like', "%{$s}%")
+                        ->orWhere('last_name', 'like', "%{$s}%")
+                        ->orWhere('employee_number', 'like', "%{$s}%");
+                });
+            });
+        }
+
+        $assets = $query->orderByDesc('created_at')->paginate($request->per_page ?? 20);
+
+        // decorate each row with the computed days-overdue so the UI does not re-derive it
+        $assets->getCollection()->transform(function ($asset) {
+            $asset->days_overdue = $asset->daysOverdue();
+            $asset->is_overdue = $asset->days_overdue > 0;
+            return $asset;
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $assets,
+        ], 200);
+    }
+
+    /**
+     * PUT /api/v1/asset/update/{id}
+     * Admin correction of asset metadata (not loan state — use loan/return).
+     */
+    public function updateAsset(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!in_array($user->role, ['admin', 'super_admin', 'director'])) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+        }
+
+        $asset = Asset::find($id);
+        if (!$asset) {
+            return response()->json(['status' => 'error', 'message' => 'Asset not found'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'model' => 'sometimes|string|max:255',
+            'manufacturer' => 'nullable|string|max:255',
+            'serial_number' => 'nullable|string|max:255',
+            'condition' => 'sometimes|in:new,good,fair,poor,damaged,obsolete,refurbished,for_repair',
+            'location' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+            'purchase_date' => 'nullable|date',
+            'purchase_price' => 'nullable|numeric|min:0',
+            'warranty_expiry' => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+        }
+
+        $old = $asset->toArray();
+        $asset->update($request->only([
+            'model', 'manufacturer', 'serial_number', 'condition',
+            'location', 'notes', 'purchase_date', 'purchase_price', 'warranty_expiry',
+        ]));
+
+        AuditService::log(
+            action: 'ASSET_UPDATED',
+            tableName: 'assets',
+            recordId: $asset->id,
+            oldValues: $old,
+            newValues: $asset->fresh()->toArray(),
+            logType: 'success'
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Asset updated',
+            'data' => $asset->fresh(),
+        ], 200);
+    }
+
+    /**
+     * POST /api/v1/asset/retire/{id}
+     * Soft-delete via status=retired. Refuses if the asset is on loan.
+     */
+    public function retireAsset(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!in_array($user->role, ['admin', 'super_admin', 'director'])) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+        }
+
+        $asset = Asset::find($id);
+        if (!$asset) {
+            return response()->json(['status' => 'error', 'message' => 'Asset not found'], 404);
+        }
+
+        if ($asset->activeLoan()->exists()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Cannot retire an asset that is still on loan. Return it first.',
+            ], 422);
+        }
+
+        $old = $asset->toArray();
+        $asset->status = 'retired';
+        $asset->current_assignee_id = null;
+        $asset->save();
+
+        AuditService::log(
+            action: 'ASSET_RETIRED',
+            tableName: 'assets',
+            recordId: $asset->id,
+            oldValues: $old,
+            newValues: ['status' => 'retired'],
+            logType: 'warning'
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Asset retired',
+        ], 200);
+    }
 }
