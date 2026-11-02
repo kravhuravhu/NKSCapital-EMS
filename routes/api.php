@@ -450,6 +450,15 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::put('system-config/update', [SystemConfigController::class, 'update']);
         Route::post('system-config/verify-password', [SystemConfigController::class, 'verifyPassword']);
         Route::delete('system-config/delete/{key}', [SystemConfigController::class, 'destroy']);
+    
+        // Queue management
+        Route::get('queue/pending', [QueueController::class, 'pending']);
+        Route::get('queue/failed', [QueueController::class, 'failed']);
+        Route::post('queue/failed/retry-all', [QueueController::class, 'retryAllFailed']);
+        Route::post('queue/failed/flush', [QueueController::class, 'flushFailed']);
+        Route::post('queue/pending/flush', [QueueController::class, 'flushPending']);
+        Route::post('queue/failed/retry/{id}', [QueueController::class, 'retryFailed'])->whereNumber('id');
+        Route::post('queue/failed/forget/{id}', [QueueController::class, 'forgetFailed'])->whereNumber('id');
     });
 
     Route::prefix('documents')->group(function () {

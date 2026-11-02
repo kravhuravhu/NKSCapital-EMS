@@ -40,6 +40,7 @@ use App\Livewire\Admin\Projects as AdminProjects;
 use App\Livewire\Admin\AssetManagement;
 use App\Livewire\Admin\ContractManagement;
 use App\Livewire\Admin\SystemConfig;
+use App\Livewire\Admin\QueueMonitor;
 
 Route::get('/', function () {
     return auth()->check()
@@ -119,7 +120,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/assets', AssetManagement::class)->name('assets');
             Route::get('/contracts', ContractManagement::class)->name('contracts');
             Route::get('/system-config', SystemConfig::class)->name('system-config');
-            Route::get('/queue-monitor',    SmokeTest::class)->name('queue-monitor');
+            Route::get('/queue-monitor', QueueMonitor::class)->name('queue-monitor');
             Route::get('/backup-restore',   SmokeTest::class)->name('backup-restore');
         });
 
