@@ -42,6 +42,7 @@ use App\Livewire\Admin\ContractManagement;
 use App\Livewire\Admin\SystemConfig;
 use App\Livewire\Admin\QueueMonitor;
 use App\Livewire\Admin\BackupRestore;
+use App\Livewire\Recruiter\Requisitions;
 
 Route::get('/', function () {
     return auth()->check()
@@ -128,8 +129,8 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     // recruiter
     Route::middleware('role:recruiter,manager,director,admin,super_admin')
         ->prefix('recruiter')->name('recruiter.')->group(function () {
-            Route::get('/dashboard',    RecruiterDashboard::class)->name('dashboard');
-            Route::get('/requisitions', SmokeTest::class)->name('requisitions');
+            Route::get('/dashboard', RecruiterDashboard::class)->name('dashboard');
+            Route::get('/requisitions', Requisitions::class)->name('requisitions');
             Route::get('/candidates',   SmokeTest::class)->name('candidates');
             Route::get('/pipeline',     SmokeTest::class)->name('pipeline');
             Route::get('/interviews',   SmokeTest::class)->name('interviews');

@@ -73,6 +73,13 @@ class RecruitmentService
                 throw new \RuntimeException("Requisition is not pending approval (status: {$requisition->status}).");
             }
 
+            // block self-approval
+            if ((int) $requisition->created_by === (int) $approver->id) {
+                throw new \RuntimeException(
+                    'You cannot approve a requisition you created yourself. Ask another director or admin.'
+                );
+            }
+
             $requisition->status = 'open';
             $requisition->approved_by = $approver->id;
             $requisition->approval_date = now();
