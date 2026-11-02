@@ -295,6 +295,66 @@ class ContractController extends Controller
     }
 
     /**
+     * GET /api/v1/contract/list
+     * Paginated contract listing with optional filters. Admin-only read.
+     */
+    public function listContracts(Request $request)
+    {
+        $user = Auth::user();
+        if (!in_array($user->role, ['admin', 'super_admin', 'director', 'manager'])) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+        }
+
+        $query = Contract::with([
+            'user:id,first_name,last_name,employee_number,email,department,position',
+            'uploadedBy:id,first_name,last_name',
+            'parentContract:id,version,effective_date',
+        ]);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('contract_type')) {
+            $query->where('contract_type', $request->contract_type);
+        }
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+        if ($request->filled('expiring_days')) {
+            $days = (int) $request->expiring_days;
+            $query->active()
+                ->whereNotNull('expiry_date')
+                ->whereBetween('expiry_date', [now()->toDateString(), now()->addDays($days)->toDateString()]);
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('position', 'like', "%{$s}%")
+                ->orWhereHas('user', function ($qq) use ($s) {
+                    $qq->where('first_name', 'like', "%{$s}%")
+                        ->orWhere('last_name', 'like', "%{$s}%")
+                        ->orWhere('employee_number', 'like', "%{$s}%");
+                });
+            });
+        }
+
+        $contracts = $query->orderByDesc('created_at')->paginate($request->per_page ?? 20);
+
+        // add port-safe download URLs derived from the public disk
+        $contracts->getCollection()->transform(function ($c) {
+            $c->download_url = $c->file_path ? Storage::url($c->file_path) : null;
+            $c->signed_download_url = $c->signed_file_path ? Storage::url($c->signed_file_path) : null;
+            $c->days_until_expiry = $c->daysUntilExpiry();
+            return $c;
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $contracts,
+        ], 200);
+    }
+
+    /**
      * GET /api/v1/contract/history/{userId}
      */
     public function history($userId)

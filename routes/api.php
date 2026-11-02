@@ -282,6 +282,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('status/update', [ContractController::class, 'updateStatus']);
         Route::post('sign/{id}', [ContractController::class, 'sign']);
         Route::get('expiring', [ContractController::class, 'expiring']);
+        Route::get('list', [ContractController::class, 'listContracts']);
         Route::get('history/{userId}', [ContractController::class, 'history']);
         Route::delete('delete/{id}', [ContractController::class, 'destroy']);
     });
