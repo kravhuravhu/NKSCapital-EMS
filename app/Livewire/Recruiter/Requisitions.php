@@ -5,6 +5,7 @@ namespace App\Livewire\Recruiter;
 use App\Support\Api;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Illuminate\Support\Facades\Hash;
 
 class Requisitions extends Component
 {
@@ -309,10 +310,9 @@ class Requisitions extends Component
             return;
         }
 
-        if (!Auth::validate([
-            'email' => auth()->user()->email,
-            'password' => $this->approvePassword,
-        ])) {
+        $user = auth()->user();
+
+        if (!$user || !Hash::check($this->approvePassword, $user->password)) {
             $this->error = 'Password is incorrect.';
             return;
         }
