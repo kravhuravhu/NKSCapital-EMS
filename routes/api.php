@@ -460,6 +460,12 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('queue/pending/flush', [QueueController::class, 'flushPending']);
         Route::post('queue/failed/retry/{id}', [QueueController::class, 'retryFailed'])->whereNumber('id');
         Route::post('queue/failed/forget/{id}', [QueueController::class, 'forgetFailed'])->whereNumber('id');
+
+        // Backup management
+        Route::get('backup/list', [BackupController::class, 'index']);
+        Route::get('backup/download/{filename}', [BackupController::class, 'download'])->where('filename', '[a-z0-9-]+\.(sql|sqlite|phpdump)');
+        Route::delete('backup/delete/{filename}', [BackupController::class, 'destroy'])->where('filename', '[a-z0-9-]+\.(sql|sqlite|phpdump)');
+        Route::post('backup/restore/{filename}', [BackupController::class, 'restore'])->where('filename', '[a-z0-9-]+\.(sql|sqlite)');
     });
 
     Route::prefix('documents')->group(function () {

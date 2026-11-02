@@ -41,6 +41,7 @@ use App\Livewire\Admin\AssetManagement;
 use App\Livewire\Admin\ContractManagement;
 use App\Livewire\Admin\SystemConfig;
 use App\Livewire\Admin\QueueMonitor;
+use App\Livewire\Admin\BackupRestore;
 
 Route::get('/', function () {
     return auth()->check()
@@ -121,7 +122,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/contracts', ContractManagement::class)->name('contracts');
             Route::get('/system-config', SystemConfig::class)->name('system-config');
             Route::get('/queue-monitor', QueueMonitor::class)->name('queue-monitor');
-            Route::get('/backup-restore',   SmokeTest::class)->name('backup-restore');
+            Route::get('/backup-restore', BackupRestore::class)->name('backup-restore');
         });
 
     // recruiter
