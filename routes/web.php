@@ -44,6 +44,7 @@ use App\Livewire\Admin\QueueMonitor;
 use App\Livewire\Admin\BackupRestore;
 use App\Livewire\Recruiter\Requisitions;
 use App\Livewire\Recruiter\Candidates;
+use App\Livewire\Recruiter\Pipeline;
 
 Route::get('/', function () {
     return auth()->check()
@@ -133,7 +134,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/dashboard', RecruiterDashboard::class)->name('dashboard');
             Route::get('/requisitions', Requisitions::class)->name('requisitions');
             Route::get('/candidates', Candidates::class)->name('candidates');
-            Route::get('/pipeline',     SmokeTest::class)->name('pipeline');
+            Route::get('/pipeline', Pipeline::class)->name('pipeline');
             Route::get('/interviews',   SmokeTest::class)->name('interviews');
             Route::get('/offers',       SmokeTest::class)->name('offers');
             Route::get('/convert',      SmokeTest::class)->name('convert');
