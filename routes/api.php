@@ -268,8 +268,6 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('report', [AssetController::class, 'report']);
         Route::get('list', [AssetController::class, 'index']);
         Route::put('update/{id}', [AssetController::class, 'update'])->whereNumber('id');
-        // Route::delete('delete/{id}', [AssetController::class, 'destroy'])->whereNumber('id');
-        // Route::post('assign', [AssetController::class, 'assignToEmployee'])->whereNumber('id');
         Route::post('retire/{id}', [AssetController::class, 'retireAsset'])->whereNumber('id');
     });
 

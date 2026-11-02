@@ -107,7 +107,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     // admin
     Route::middleware('role:admin,super_admin')
         ->prefix('admin')->name('admin.')->group(function () {
-            Route::get('/dashboard',        AdminDashboard::class)->name('dashboard');
+            Route::get('/dashboard', AdminDashboard::class)->name('dashboard');
             Route::get('/employees', EmployeeManagement::class)->name('employees');
             Route::get('/employee-types', EmployeeTypes::class)->name('employee-types');
             Route::get('/roles', Roles::class)->name('roles');
