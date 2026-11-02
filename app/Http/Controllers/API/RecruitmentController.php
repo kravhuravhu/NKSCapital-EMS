@@ -61,6 +61,35 @@ class RecruitmentController extends Controller
     }
 
     /**
+     * GET /api/v1/recruitment/requisition/{id}
+     * Single requisition with relations attached.
+     */
+    public function showRequisition($id)
+    {
+        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+
+        $requisition = Requisition::with([
+            'createdBy:id,first_name,last_name,email',
+            'approvedBy:id,first_name,last_name',
+            'hiringManager:id,first_name,last_name,email',
+        ])
+            ->withCount('candidates')
+            ->find($id);
+
+        if (!$requisition) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Requisition not found',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $requisition,
+        ], 200);
+    }
+
+    /**
      * POST /api/v1/recruitment/requisition/create
      */
     public function createRequisition(Request $request)
@@ -81,6 +110,7 @@ class RecruitmentController extends Controller
             'reason_for_hire' => 'nullable|string',
             'hiring_manager_id' => 'nullable|exists:users,id',
             'target_start_date' => 'nullable|date',
+            'status' => 'nullable|in:draft,pending_approval',
             'requisition_code' => 'nullable|string|unique:requisitions,requisition_code',
         ]);
 
@@ -91,7 +121,7 @@ class RecruitmentController extends Controller
         $requisition = $this->recruitment->createRequisition($request->all(), $user);
 
         return response()->json([
-            'status' => 'success',
+            'status' => $data['status'] ?? 'pending_approval',
             'message' => 'Requisition created and pending approval',
             'data' => $requisition,
         ], 201);

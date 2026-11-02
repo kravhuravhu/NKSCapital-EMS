@@ -299,6 +299,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('requisition/create', [RecruitmentController::class, 'createRequisition']);
         Route::post('requisition/approve', [RecruitmentController::class, 'approveRequisition']);
         Route::put('requisition/update/{id}', [RecruitmentController::class, 'updateRequisition']);
+        Route::get('requisition/{id}', [RecruitmentController::class, 'showRequisition'])->whereNumber('id');
 
         // Candidates
         Route::get('candidate/list', [RecruitmentController::class, 'listCandidates']);
