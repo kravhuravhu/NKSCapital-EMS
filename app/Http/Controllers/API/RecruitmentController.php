@@ -257,7 +257,14 @@ class RecruitmentController extends Controller
             'interviews.interviewer:id,first_name,last_name',
             'hiredEmployee:id,first_name,last_name,employee_number',
             'rejectedBy:id,first_name,last_name',
-        ])->findOrFail($id);
+        ])->find($id);
+
+        if (!$candidate) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Candidate not found',
+            ], 404);
+        }
 
         return response()->json(['status' => 'success', 'data' => $candidate], 200);
     }
