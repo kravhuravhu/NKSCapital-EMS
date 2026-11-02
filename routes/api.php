@@ -29,6 +29,7 @@ use App\Http\Controllers\API\IntegrationController;
 use App\Http\Controllers\API\HealthController;
 use App\Http\Controllers\API\DocumentController;
 use App\Http\Controllers\API\SecurityController;
+use App\Http\Controllers\API\SystemConfigController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -443,6 +444,12 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('health', [HealthController::class, 'check']);
         Route::get('queue/stats', [HealthController::class, 'queueStats']);
         Route::post('backup/trigger', [HealthController::class, 'triggerBackup']);
+
+        // System configurations
+        Route::get('/system-config', [SystemConfigController::class, 'index']);
+        Route::put('/system-config/update', [SystemConfigController::class, 'update']);
+        Route::post('/system-config/verify-password', [SystemConfigController::class, 'verifyPassword']);
+        Route::delete('/system-config/delete/{key}', [SystemConfigController::class, 'destroy']);
     });
 
     Route::prefix('documents')->group(function () {
