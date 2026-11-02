@@ -257,11 +257,13 @@ class RecruitmentService
     {
         return DB::transaction(function () use ($interview, $interviewer, $data) {
             if ($interview->interviewer_id !== $interviewer->id) {
-                throw new \RuntimeException('You are not the assigned interviewer.');
+                throw new \RuntimeException('You are not the assigned interviewer for this interview.');
             }
 
             if (!$interview->canSubmitFeedback()) {
-                throw new \RuntimeException('Feedback has already been submitted or interview is not completed.');
+                throw new \RuntimeException(
+                    'Feedback cannot be submitted for this interview. It may have already been submitted, been cancelled, or not yet taken place.'
+                );
             }
 
             $interview->feedback_rating = $data['rating'];

@@ -74,7 +74,18 @@ class Interview extends Model
     // Helpers
     public function canSubmitFeedback(): bool
     {
-        return $this->status === 'completed' && is_null($this->feedback_rating);
+        // cannot re-submit
+        if (!is_null($this->feedback_rating)) {
+            return false;
+        }
+
+        // cancelled and no-show interviews do not get feedback
+        if (in_array($this->status, ['cancelled', 'no_show'], true)) {
+            return false;
+        }
+
+        // feedback can only be submitted once the interview has happened
+        return $this->scheduled_at && $this->scheduled_at->isPast();
     }
 
     public function canReschedule(): bool
