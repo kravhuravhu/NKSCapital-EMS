@@ -31,6 +31,7 @@ use App\Http\Controllers\API\DocumentController;
 use App\Http\Controllers\API\SecurityController;
 use App\Http\Controllers\API\SystemConfigController;
 use App\Http\Controllers\API\QueueController;
+use App\Http\Controllers\API\BackupController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
