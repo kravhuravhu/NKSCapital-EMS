@@ -266,6 +266,9 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('repair/request', [AssetController::class, 'requestRepair']);
         Route::get('history/{assetId}', [AssetController::class, 'history']);
         Route::get('report', [AssetController::class, 'report']);
+        Route::get('list', [AssetController::class, 'index']);
+        Route::put('update/{id}', [AssetController::class, 'update'])->whereNumber('id');
+        Route::post('retire/{id}', [AssetController::class, 'retireAsset'])->whereNumber('id');
     });
 
     // ========================================

@@ -37,6 +37,7 @@ use App\Livewire\Admin\Roles;
 use App\Livewire\Admin\Clients;
 use App\Livewire\Admin\ClientTemplates;
 use App\Livewire\Admin\Projects as AdminProjects;
+use App\Livewire\Admin\AssetManagement;
 
 Route::get('/', function () {
     return auth()->check()
@@ -106,14 +107,14 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     // admin
     Route::middleware('role:admin,super_admin')
         ->prefix('admin')->name('admin.')->group(function () {
-            Route::get('/dashboard',        AdminDashboard::class)->name('dashboard');
+            Route::get('/dashboard', AdminDashboard::class)->name('dashboard');
             Route::get('/employees', EmployeeManagement::class)->name('employees');
             Route::get('/employee-types', EmployeeTypes::class)->name('employee-types');
             Route::get('/roles', Roles::class)->name('roles');
             Route::get('/clients', Clients::class)->name('clients');
             Route::get('/client-templates', ClientTemplates::class)->name('client-templates');
             Route::get('/projects', AdminProjects::class)->name('projects');
-            Route::get('/assets',           SmokeTest::class)->name('assets');
+            Route::get('/assets', AssetManagement::class)->name('assets');
             Route::get('/contracts',        SmokeTest::class)->name('contracts');
             Route::get('/system-config',    SmokeTest::class)->name('system-config');
             Route::get('/queue-monitor',    SmokeTest::class)->name('queue-monitor');
