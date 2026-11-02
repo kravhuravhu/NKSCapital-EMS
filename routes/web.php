@@ -37,7 +37,7 @@ use App\Livewire\Admin\Roles;
 use App\Livewire\Admin\Clients;
 use App\Livewire\Admin\ClientTemplates;
 use App\Livewire\Admin\Projects as AdminProjects;
-use App\Livewire\Admin\Assets as AdminAssets;
+use App\Livewire\Admin\AssetManagement;
 
 Route::get('/', function () {
     return auth()->check()
@@ -114,7 +114,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/clients', Clients::class)->name('clients');
             Route::get('/client-templates', ClientTemplates::class)->name('client-templates');
             Route::get('/projects', AdminProjects::class)->name('projects');
-            Route::get('/assets', AdminAssets::class)->name('assets');
+            Route::get('/assets', AssetManagement::class)->name('assets');
             Route::get('/contracts',        SmokeTest::class)->name('contracts');
             Route::get('/system-config',    SmokeTest::class)->name('system-config');
             Route::get('/queue-monitor',    SmokeTest::class)->name('queue-monitor');
