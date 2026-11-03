@@ -3,9 +3,14 @@
 @php
     $user = auth()->user();
 @endphp
-
-<div class="nks-app">
+<div class="nks-app" x-data="{ sidebarOpen: false }">
     <header class="app-header">
+        <button type="button"
+                class="nks-hamburger"
+                @click="sidebarOpen = true"
+                aria-label="Open navigation">
+            <i class="fa-solid fa-bars"></i>
+        </button>
         <x-nks.brand />
 
         @if ($title)
@@ -22,4 +27,9 @@
             {{ $slot }}
         </main>
     </div>
+    <div class="nks-sidebar-overlay"
+         x-show="sidebarOpen"
+         x-cloak
+         @click="sidebarOpen = false"
+         aria-hidden="true"></div>
 </div>
