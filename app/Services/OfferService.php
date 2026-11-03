@@ -308,7 +308,7 @@ class OfferService
     /**
      * Convert an accepted candidate to an employee.
      */
-    public function convertToEmployee(Offer $offer, array $data, User $actor): User
+    public function convertToEmployee(Offer $offer, array $data, User $actor): array
     {
         return DB::transaction(function () use ($offer, $data, $actor) {
             if (!$offer->isAccepted()) {
@@ -337,7 +337,11 @@ class OfferService
             // Generate a temporary password
             $tempPassword = Str::random(12);
 
-            // Create the user
+            // pull default entitlements so new employees are immediately usable
+            $annualConfig = \App\Models\LeaveConfig::where('leave_type', 'annual')->first();
+            $sickConfig   = \App\Models\LeaveConfig::where('leave_type', 'sick')->first();
+            $familyConfig = \App\Models\LeaveConfig::where('leave_type', 'family')->first();
+
             $employee = User::create([
                 'employee_number' => $employeeNumber,
                 'first_name' => $candidate->first_name,
@@ -350,19 +354,20 @@ class OfferService
                 'role' => $data['role'] ?? 'employee',
                 'employee_type' => $employeeType,
                 'service_type' => $serviceType,
-                'manager_id' => $offer->manager_id ?? $requisition->hiring_manager_id,
+                'manager_id' => $data['manager_id'] ?? $offer->manager_id ?? $requisition->hiring_manager_id,
                 'client_id' => $data['client_id'] ?? null,
                 'project_id' => $data['project_id'] ?? null,
                 'hire_date' => $offer->start_date?->toDateString() ?? now()->toDateString(),
                 'is_active' => true,
-                'leave_balance_annual' => 0,
-                'leave_balance_sick' => 0,
+                'leave_balance_annual' => (float) ($annualConfig?->default_entitlement ?? 0),
+                'leave_balance_sick'   => (float) ($sickConfig?->default_entitlement ?? 0),
+                'leave_balance_family' => (float) ($familyConfig?->default_entitlement ?? 0),
             ]);
 
             // Assign Spatie role
             $employee->assignRole($data['role'] ?? 'employee');
 
-            // Link candidate → employee
+            // link candidate → employee and close the funnel
             $candidate->hired_employee_id = $employee->id;
             $candidate->converted_from_offer_id = $offer->id;
             $candidate->conversion_notes = $data['notes'] ?? null;
@@ -386,16 +391,17 @@ class OfferService
                 logType: 'success'
             );
 
-            // Notify employee + manager
+            // welcome notification for the new employee
             Notification::create([
                 'user_id' => $employee->id,
                 'type' => 'WELCOME_EMPLOYEE',
-                'title' => 'Welcome to NKS Capital',
-                'message' => "Welcome aboard! Your employee number is {$employeeNumber}. Please check your email for login credentials.",
+                'title' => 'Welcome to ' . config('app.name'),
+                'message' => "Welcome aboard! Your employee number is {$employeeNumber}. Check your email for login credentials.",
                 'reference_id' => $employee->id,
                 'reference_type' => User::class,
             ]);
 
+            // manager notification
             if ($employee->manager_id) {
                 Notification::create([
                     'user_id' => $employee->manager_id,
@@ -407,7 +413,47 @@ class OfferService
                 ]);
             }
 
-            return $employee;
+            // welcome email with credentials — previously the notification promised
+            // this but no email was actually being sent
+            try {
+                \Illuminate\Support\Facades\Mail::raw(
+                    "Dear {$employee->first_name},\n\n"
+                    . "Welcome to " . config('app.name') . "!\n\n"
+                    . "Your employee number is: {$employeeNumber}\n"
+                    . "Your login email: {$employee->email}\n"
+                    . "Your temporary password: {$tempPassword}\n\n"
+                    . "Please log in at " . url('/login') . " and change your password on first sign-in.\n\n"
+                    . "Kind regards,\n"
+                    . config('app.name'),
+                    function ($mail) use ($employee) {
+                        $mail->to($employee->email)
+                            ->subject('Welcome to ' . config('app.name') . ' — Your Login Details');
+                    }
+                );
+
+                AuditService::log(
+                    action: 'WELCOME_EMAIL_SENT',
+                    tableName: 'users',
+                    recordId: $employee->id,
+                    newValues: ['email' => $employee->email],
+                    logType: 'success'
+                );
+            } catch (\Throwable $e) {
+                // do not fail the whole conversion if mail bounces — admin can still copy the password from the UI
+                AuditService::log(
+                    action: 'WELCOME_EMAIL_FAILED',
+                    tableName: 'users',
+                    recordId: $employee->id,
+                    newValues: ['email' => $employee->email, 'error' => $e->getMessage()],
+                    logType: 'error',
+                    severity: 'error'
+                );
+            }
+
+            return [
+                'employee' => $employee,
+                'temporary_password' => $tempPassword,
+            ];
         });
     }
 

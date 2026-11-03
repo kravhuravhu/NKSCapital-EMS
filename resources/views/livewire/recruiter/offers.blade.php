@@ -191,8 +191,10 @@
                                             </button>
                                         @endif
 
-                                        @if ($this->canConvert($o))
-                                            <a href="{{ route('portal.recruiter.convert') }}" wire:navigate class="nks-btn nks-btn--primary nks-btn--sm">
+                                         @if ($this->canConvert($o))
+                                            <a href="{{ route('portal.recruiter.convert', ['offer_id' => $o['id']]) }}"
+                                            wire:navigate
+                                            class="nks-btn nks-btn--primary nks-btn--sm">
                                                 <i class="fa-solid fa-user-plus"></i> Convert
                                             </a>
                                         @endif

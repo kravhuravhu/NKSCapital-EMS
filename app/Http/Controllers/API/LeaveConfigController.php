@@ -249,10 +249,11 @@ class LeaveConfigController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['super_admin', 'director'])) {
+        // matches update() policy — admin is allowed to adjust balances
+        if (!in_array($user->role, ['super_admin', 'director', 'admin', 'manager'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Only Super Admin and Director can reset balances'
+                'message' => 'Only Super Admin, Director, Admin, or Manager can reset balances',
             ], 403);
         }
 

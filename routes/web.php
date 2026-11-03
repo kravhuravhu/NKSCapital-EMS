@@ -48,6 +48,7 @@ use App\Livewire\Recruiter\Pipeline;
 use App\Livewire\Recruiter\Interviews;
 use App\Livewire\Recruiter\Offers;
 use App\Livewire\Recruiter\Reports;
+use App\Livewire\Recruiter\ConvertToEmployee;
 
 Route::get('/', function () {
     return auth()->check()
@@ -140,7 +141,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/pipeline', Pipeline::class)->name('pipeline');
             Route::get('/interviews', Interviews::class)->name('interviews');
             Route::get('/offers', Offers::class)->name('offers');
-            Route::get('/convert',      SmokeTest::class)->name('convert');
+            Route::get('/convert', ConvertToEmployee::class)->name('convert');
             Route::get('/reports', Reports::class)->name('reports');
         });
 });
