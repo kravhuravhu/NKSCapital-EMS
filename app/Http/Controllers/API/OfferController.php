@@ -287,29 +287,42 @@ class OfferController extends Controller
             'service_type' => 'nullable|in:permanent,contractor,temporary,intern',
             'client_id' => 'nullable|exists:clients,id',
             'project_id' => 'nullable|exists:projects,id',
+            'manager_id' => 'nullable|exists:users,id',
             'notes' => 'nullable|string|max:5000',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['status' => 'error', 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
-        $offer = Offer::with('candidate.requisition')->findOrFail($request->offer_id);
+        $offer = Offer::with('candidate.requisition')->find($request->offer_id);
+
+        if (!$offer) {
+            return response()->json(['status' => 'error', 'message' => 'Offer not found'], 404);
+        }
 
         try {
-            $employee = $this->offerService->convertToEmployee($offer, $request->all(), $user);
+            $result = $this->offerService->convertToEmployee($offer, $request->all(), $user);
         } catch (\RuntimeException $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
         }
+
+        $employee = $result['employee'];
+        $tempPassword = $result['temporary_password'];
 
         return response()->json([
             'status' => 'success',
             'message' => 'Candidate converted to employee successfully',
             'data' => [
                 'employee' => $employee->load(['manager:id,first_name,last_name']),
+                'temporary_password' => $tempPassword,
                 'candidate' => $offer->candidate->fresh(),
                 'offer' => $offer->fresh(),
-            ]
+            ],
         ], 201);
     }
 
