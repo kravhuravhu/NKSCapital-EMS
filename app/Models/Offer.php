@@ -12,6 +12,8 @@ class Offer extends Model
         'candidate_id',
         'offer_letter_path',
         'offer_letter_hash',
+        'signed_copy_path',
+        'signed_copy_hash',
         'salary_offered',
         'position',
         'department',
