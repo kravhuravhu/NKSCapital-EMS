@@ -8,8 +8,11 @@
         <button type="button"
                 class="nks-hamburger"
                 @click="sidebarOpen = true"
-                aria-label="Open navigation">
-            <i class="fa-solid fa-bars"></i>
+                aria-label="Open navigation menu"
+                aria-expanded="false"
+                x-bind:aria-expanded="sidebarOpen ? 'true' : 'false'"
+                aria-controls="nks-sidebar">
+            <i class="fa-solid fa-bars" aria-hidden="true"></i>
         </button>
         <x-nks.brand />
 
@@ -22,8 +25,7 @@
 
     <div class="app-layout">
         <x-nks.sidebar :user="$user" />
-
-        <main class="page-content">
+        <main id="main-content" class="page-content" role="main" tabindex="-1">
             {{ $slot }}
         </main>
     </div>

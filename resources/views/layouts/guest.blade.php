@@ -11,16 +11,17 @@
     @livewireStyles
 </head>
 <body>
+    <a href="#auth-main" class="nks-skip-link">Skip to main content</a>
+
     <div class="auth-shell">
-        <div class="auth-card">
+        <main id="auth-main" class="auth-card" role="main">
             <div class="auth-brand">
                 <span>NKS</span>
                 <strong>CAPITAL</strong>
                 <small>Employee Management System</small>
             </div>
-
             {{ $slot }}
-        </div>
+        </main>
     </div>
 
     @livewireScripts

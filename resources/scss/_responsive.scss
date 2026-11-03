@@ -570,3 +570,17 @@
         tbody td { padding: 10px 10px; }
     }
 }
+
+@media (max-width: 1279px) and (min-width: 1024px) {
+    .sidebar .nav-item .nav-item-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+}
