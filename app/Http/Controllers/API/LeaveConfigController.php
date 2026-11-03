@@ -256,7 +256,7 @@ class LeaveConfigController extends Controller
                 'message' => 'Only Super Admin, Director, Admin, or Manager can reset balances',
             ], 403);
         }
-
+ 
         $employee = User::findOrFail($userId);
 
         $validator = Validator::make($request->all(), [

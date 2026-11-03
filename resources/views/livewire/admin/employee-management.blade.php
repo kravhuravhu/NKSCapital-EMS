@@ -93,19 +93,20 @@
                 <span>Try adjusting your filters or create a new employee.</span>
             </div>
         @else
-            <div class="em-table-wrapper">
-                <table class="em-table">
-                    <thead>
-                        <tr>
-                            <th>Employee</th>
-                            <th>Role</th>
-                            <th>Type</th>
-                            <th>Department</th>
-                            <th>Hired</th>
-                            <th>Status</th>
-                            <th style="width: 180px;">Actions</th>
-                        </tr>
-                    </thead>
+        <div class="em-table-wrapper">
+            <table class="em-table" aria-label="Employees">
+                <caption class="nks-sr-only">List of all employees with role, type, department, hire date, and status</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Employee</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Department</th>
+                        <th scope="col">Hired</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" aria-label="Actions"></th>
+                    </tr>
+                </thead>
                     <tbody>
                         @foreach ($employees as $emp)
                             <tr wire:key="emp-{{ $emp['id'] }}">
@@ -151,7 +152,7 @@
                                         </button>
                                         <div class="em-more">
                                             <button type="button" class="em-more-btn" aria-label="More actions">
-                                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
                                             </button>
                                             <div class="em-more-menu">
                                                 <button type="button" wire:click="openResetPassword({{ $emp['id'] }})"

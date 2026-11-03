@@ -1,0 +1,159 @@
+// screen-reader-only utility
+.nks-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+// focusable via keyboard jump when requested
+.nks-sr-only-focusable:not(:focus):not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+// ---- visible focus for keyboard users ----
+// uses :focus-visible so mouse clicks do not draw the outline
+// but every interactive element gets one under keyboard navigation
+:focus-visible {
+    outline: 2px solid var(--nks-gold);
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+.nks-btn:focus-visible,
+.nks-tab:focus-visible,
+.nav-item:focus-visible,
+.nks-icon-btn:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+    outline: 2px solid var(--nks-gold);
+    outline-offset: 2px;
+}
+
+// remove default focus ring only when :focus-visible handles it
+// inputs keep their box-shadow treatment (set in _components.scss) plus the outline above
+
+// ---- skip link ----
+.nks-skip-link {
+    position: absolute;
+    top: -100px;
+    left: 8px;
+    z-index: 1000;
+    padding: 10px 16px;
+    background: var(--nks-gold);
+    color: #FFF;
+    border-radius: var(--nks-radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: top 0.15s ease;
+
+    &:focus,
+    &:focus-visible {
+        top: 8px;
+        outline: 3px solid var(--nks-navy);
+        outline-offset: 2px;
+        color: #FFF;
+    }
+}
+
+// ---- aria-invalid styling ----
+[aria-invalid="true"] {
+    border-color: #E26B6B !important;
+    box-shadow: 0 0 0 3px rgba(226, 107, 107, 0.15) !important;
+}
+
+.nks-error-text {
+    display: block;
+    font-size: 11px;
+    color: #8A2A2A;
+    margin-top: 4px;
+    font-weight: 500;
+
+    &::before {
+        content: "Error: ";
+        font-weight: 700;
+    }
+}
+
+// ---- live regions ----
+// visible flash notices get announced when they appear.
+// not-extendable to every page yet — the shared pattern is documented in the
+// `role="status" / role="alert"` block below.
+[role="status"]:not(.nks-sr-only) {
+    // default focus treatment on the notice component
+    outline: none;
+}
+
+// ---- reduced motion ----
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .nks-page-loader-bar,
+    .nks-spinner i {
+        animation: none !important;
+    }
+}
+
+// ---- contrast bump for muted text ----
+// the current #8C8C8C fails WCAG AA on white.
+// this raises any context where muted text is used for body copy to a passing tone.
+.text-muted,
+.nks-help,
+.small.text-muted {
+    color: #6B7280;
+}
+
+// ---- dialog focus indicators ----
+[role="dialog"] {
+    outline: none;
+
+    &:focus-visible {
+        outline: 2px solid var(--nks-gold);
+        outline-offset: 2px;
+    }
+}
+
+// ---- icon-only buttons get a min tap target ----
+button[aria-label]:not([aria-label=""]):empty,
+button[aria-label]:not([aria-label=""]):has(> i:only-child) {
+    min-width: 32px;
+    min-height: 32px;
+}
+
+// ---- table caption (sr-only by default but visible on focus for sighted keyboard users) ----
+table caption.nks-table-caption {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--nks-navy);
+    padding: 8px 0;
+}
+
+// ---- required field indicator ----
+[aria-required="true"] + .nks-label::after,
+.nks-label .nks-required {
+    color: #B94A4A;
+    font-weight: 700;
+}

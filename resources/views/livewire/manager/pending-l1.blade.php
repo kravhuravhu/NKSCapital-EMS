@@ -105,12 +105,19 @@
 
     @if ($showView && $viewData)
         @php $detail = $viewData['timesheet'] ?? null; @endphp
-        <div class="l1-modal-backdrop" wire:click.self="closeView">
-            <div class="l1-modal l1-modal--lg">
+        <div class="l1-modal-backdrop" wire:click.self="closeView" @keydown.escape.window="$wire.closeView()">
+            <div class="l1-modal l1-modal--lg"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="l1-detail-title"
+                x-trap>
                 <header class="l1-modal-head">
-                    <h3>Timesheet Details</h3>
-                    <button type="button" wire:click="closeView" class="l1-modal-close">
-                        <i class="fa-solid fa-xmark"></i>
+                    <h3 id="l1-detail-title">Timesheet Details</h3>
+                    <button type="button"
+                            wire:click="closeView"
+                            class="l1-modal-close"
+                            aria-label="Close dialog">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                     </button>
                 </header>
                 <div class="l1-modal-body">
