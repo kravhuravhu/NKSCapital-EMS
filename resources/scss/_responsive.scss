@@ -1,0 +1,572 @@
+
+// overriding defaults,
+// loaded last so cascade wins
+@media (max-width: 1279px) and (min-width: 1024px) {
+    .app-layout {
+        grid-template-columns: 64px minmax(0, 1fr);
+    }
+
+    .sidebar {
+        padding: 20px 0 12px;
+        overflow: visible;
+
+        .nks-sidebar-close { display: none; }
+    }
+
+    .nav-item {
+        justify-content: center;
+        padding: 0 8px;
+        gap: 0;
+
+        span:not(.nav-badge) { display: none; }
+
+        i { width: auto; }
+
+        .nav-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            min-width: 16px;
+            height: 16px;
+            font-size: 9px;
+            padding: 0 4px;
+        }
+    }
+
+    .sidebar .logout {
+        padding: 12px 8px;
+
+        .nks-button {
+            justify-content: center;
+            padding: 0;
+
+            span { display: none; }
+        }
+    }
+}
+
+// ============ 768-1023: sidebar behind hamburger ============
+@media (max-width: 1023px) {
+    .nks-app {
+        padding: 20px 20px 28px;
+    }
+
+    .app-header {
+        gap: 16px;
+        padding: 0 16px;
+        align-items: center;
+    }
+
+    .nks-hamburger { display: inline-flex; }
+
+    .brand {
+        flex: 0 0 auto;
+
+        & > div { gap: 5px; }
+        strong { font-size: 22px; }
+        span { font-size: 20px; padding: 6px 5px; }
+        small { font-size: 10px; }
+    }
+
+    .page-heading {
+        h1 { font-size: 13px; }
+        p  { font-size: 11px; margin-top: 4px; }
+    }
+
+    .employee {
+        & > div:first-child { display: none; }
+    }
+
+    .app-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sidebar {
+        display: none;
+
+        &.is-open {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 260px;
+            max-height: 100vh;
+            border-radius: 0;
+            z-index: 100;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+            overflow-y: auto;
+            padding: 60px 0 15px;
+            background: #FFF;
+        }
+
+        .nks-sidebar-close { display: inline-flex; }
+    }
+
+    .nks-sidebar-overlay { display: block; }
+
+    // all two-column layouts collapse
+    .dash-grid,
+    .lv-layout,
+    .ast-layout,
+    .dc-layout,
+    .pf-layout,
+    .sc-layout,
+    .nf-layout,
+    .rp-content {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .cr-grid-2,
+    .mp-grid,
+    .et-grid,
+    .rl-grid,
+    .cl-form-grid,
+    .of-form-grid,
+    .ap-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    // stat strips — 3-up
+    .dash-stats,
+    .px-stats,
+    .cr-stats,
+    .aa-stats,
+    .rr-stats,
+    .qm-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    // tables keep horizontal scroll
+    .em-table-wrapper,
+    .ac-table-wrapper,
+    .aa-table-wrapper,
+    .ct-table-wrapper,
+    .cl-table-wrapper,
+    .rl-table-wrapper,
+    .rq-table-wrapper,
+    .cd-table-wrapper,
+    .of-table-wrapper,
+    .al-table-wrapper,
+    .l1-table-wrapper,
+    .tt-table-wrapper,
+    .pl-table-wrapper,
+    .rp-table-wrapper,
+    .iv-table-wrapper,
+    .mt-table-wrapper,
+    .br-table-wrapper,
+    .cv-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    // modal shrink
+    .nks-modal, .em-modal, .ac-modal, .aa-modal, .ct-modal, .cl-modal,
+    .rl-modal, .rq-modal, .cd-modal, .of-modal, .al-modal, .l1-modal,
+    .tt-modal, .pl-modal, .rp-modal, .iv-modal, .mt-modal, .sc-modal,
+    .px-modal, .br-modal, .dl-modal, .cv-modal, .qm-modal,
+    .cal-modal, .nf-modal, .dc-modal, .ast-modal, .lt-modal,
+    .pr-modal, .sc-page-modal, .qm-modal {
+        max-width: calc(100vw - 40px) !important;
+    }
+}
+
+// ============ < 768: single column + bottom-sheet modals ============
+@media (max-width: 767px) {
+    // base typography
+    body { font-size: 13px; }
+
+    .nks-app { padding: 14px 12px 20px; }
+
+    h1 { font-size: 16px; }
+    h2 { font-size: 14px; }
+
+    // header compress
+    .app-header {
+        height: auto;
+        padding: 0 4px 12px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .nks-hamburger {
+        width: 32px;
+        height: 32px;
+        margin-right: 6px;
+    }
+
+    .brand {
+        strong { font-size: 18px; }
+        span { font-size: 16px; padding: 5px 4px; }
+        small { display: none; }
+    }
+
+    .page-heading {
+        margin-top: 6px;
+        h1 { font-size: 13px; }
+        p  { display: none; }
+    }
+
+    .employee .employee-avatar {
+        width: 36px;
+        height: 36px;
+
+        i { font-size: 16px; }
+    }
+
+    // stat strips — 2-up
+    .dash-stats,
+    .px-stats,
+    .cr-stats,
+    .aa-stats,
+    .rr-stats,
+    .qm-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .cr-grid-2,
+    .ap-form-grid,
+    .of-detail-grid,
+    .ap-detail-grid,
+    .dash-progress-metrics,
+    .mt-att-stats,
+    .mt-view-meta,
+    .mp-detail-meta,
+    .rr-conv-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .rr-funnel-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    .rr-funnel-pct { text-align: left; }
+
+    // form grids
+    .em-form-grid,
+    .aa-form-grid,
+    .ac-form-grid,
+    .ct-form-grid,
+    .of-form-grid,
+    .rq-form-grid,
+    .cd-form-grid,
+    .cv-form-grid,
+    .mp-form-grid,
+    .rl-form-grid,
+    .sc-form-grid,
+    .mt-form-grid,
+    .cl-form-grid,
+    .ap-form-grid,
+    .br-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .em-form-full,
+    .aa-form-full,
+    .ac-form-full,
+    .of-form-full,
+    .rq-form-full,
+    .cd-form-full,
+    .cv-form-full,
+    .sc-form-full,
+    .cl-form-full,
+    .ap-form-full,
+    .br-form-full {
+        grid-column: 1 !important;
+    }
+
+    // filter rows — stack vertically
+    .em-filters,
+    .ac-filters,
+    .aa-filters,
+    .ct-filters,
+    .cl-filters,
+    .rl-filters,
+    .rq-filters,
+    .cd-filters,
+    .of-filters,
+    .al-filters,
+    .l1-filters,
+    .tt-filters,
+    .pl-filters,
+    .rp-filters,
+    .iv-filters,
+    .mt-filters,
+    .sc-filters,
+    .px-filters,
+    .qm-filters,
+    .cr-filters,
+    .rr-filters,
+    .br-filters {
+        flex-direction: column;
+        align-items: stretch;
+
+        .nks-field,
+        .rr-dates,
+        .mt-filter-actions,
+        .iv-filter-actions,
+        .rq-filter-actions,
+        .cd-filter-actions,
+        .of-filter-actions,
+        .em-filter-actions,
+        .ac-filter-actions,
+        .aa-filter-actions,
+        .ct-filter-actions,
+        .cl-filter-actions,
+        .rl-filter-actions,
+        .al-filter-actions,
+        .l1-filter-actions,
+        .tt-filter-actions,
+        .pl-filter-actions,
+        .rp-filter-actions,
+        .sc-filter-actions,
+        .px-filter-actions,
+        .qm-filter-actions,
+        .cr-filter-actions,
+        .rr-filter-actions,
+        .br-filter-actions {
+            width: 100%;
+            min-width: 0;
+        }
+    }
+
+    .rr-dates {
+        flex-wrap: wrap;
+        .rr-date-input { flex: 1 1 100%; }
+    }
+
+    // modals — full-width bottom sheets
+    .nks-modal-backdrop,
+    .em-modal-backdrop,
+    .ac-modal-backdrop,
+    .aa-modal-backdrop,
+    .ct-modal-backdrop,
+    .cl-modal-backdrop,
+    .rl-modal-backdrop,
+    .rq-modal-backdrop,
+    .cd-modal-backdrop,
+    .of-modal-backdrop,
+    .al-modal-backdrop,
+    .l1-modal-backdrop,
+    .tt-modal-backdrop,
+    .pl-modal-backdrop,
+    .rp-modal-backdrop,
+    .iv-modal-backdrop,
+    .mt-modal-backdrop,
+    .sc-modal-backdrop,
+    .px-modal-backdrop,
+    .br-modal-backdrop,
+    .dl-modal-backdrop,
+    .cv-modal-backdrop,
+    .qm-modal-backdrop,
+    .cal-modal-backdrop,
+    .nf-modal-backdrop,
+    .dc-modal-backdrop,
+    .ast-modal-backdrop {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+    .nks-modal, .em-modal, .ac-modal, .aa-modal, .ct-modal, .cl-modal,
+    .rl-modal, .rq-modal, .cd-modal, .of-modal, .al-modal, .l1-modal,
+    .tt-modal, .pl-modal, .rp-modal, .iv-modal, .mt-modal, .sc-modal,
+    .px-modal, .br-modal, .dl-modal, .cv-modal, .qm-modal,
+    .cal-modal, .nf-modal, .dc-modal, .ast-modal {
+        max-width: 100vw !important;
+        width: 100% !important;
+        max-height: 92vh !important;
+        border-radius: 12px 12px 0 0 !important;
+    }
+
+    // kanban board — horizontal scroll retained
+    .pl-board {
+        grid-template-columns: repeat(6, 260px) !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    // calendar grids — horizontal scroll
+    .cal-grid-wrapper,
+    .iv-cal-grid-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .cal-grid,
+    .iv-cal-grid {
+        min-width: 700px;
+    }
+
+    // tabs — horizontal scroll instead of wrapping
+    .nks-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+
+        .nks-tab {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+    }
+
+    // row actions stay inline but wrap
+    .em-row-actions,
+    .ac-row-actions,
+    .aa-row-actions,
+    .ct-row-actions,
+    .cl-row-actions,
+    .rq-row-actions,
+    .cd-row-actions,
+    .of-row-actions,
+    .al-row-actions,
+    .l1-row-actions,
+    .tt-row-actions,
+    .pl-row-actions,
+    .rp-row-actions,
+    .iv-row-actions,
+    .mt-row-actions,
+    .em-actions,
+    .ap-row-actions,
+    .aa-actions {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    // paginations stack
+    .em-pagination,
+    .ac-pagination,
+    .aa-pagination,
+    .ct-pagination,
+    .cl-pagination,
+    .rl-pagination,
+    .rq-pagination,
+    .cd-pagination,
+    .of-pagination,
+    .al-pagination,
+    .l1-pagination,
+    .tt-pagination,
+    .pl-pagination,
+    .rp-pagination,
+    .iv-pagination,
+    .mt-pagination,
+    .qm-pagination,
+    .ap-pagination {
+        flex-direction: column;
+        gap: 8px;
+
+        .em-page-info,
+        .ac-page-info,
+        .aa-page-info,
+        .ct-page-info,
+        .cl-page-info,
+        .rl-page-info,
+        .rq-page-info,
+        .cd-page-info,
+        .of-page-info,
+        .al-page-info,
+        .l1-page-info,
+        .tt-page-info,
+        .pl-page-info,
+        .rp-page-info,
+        .iv-page-info,
+        .mt-page-info,
+        .qm-page-info,
+        .ap-page-info {
+            order: -1;
+            text-align: center;
+        }
+
+        .nks-btn { width: 100%; }
+    }
+
+    // button sizing tweaks
+    .nks-btn { font-size: 12px; }
+    .nks-btn--sm { height: 30px; padding: 0 10px; font-size: 11px; }
+
+    // header action areas — stack
+    .em-header,
+    .ac-header,
+    .aa-header,
+    .ct-header,
+    .cl-header,
+    .rl-header,
+    .rq-header,
+    .cd-header,
+    .of-header,
+    .al-header,
+    .l1-header,
+    .tt-header,
+    .pl-header,
+    .rp-header,
+    .iv-header,
+    .mt-header,
+    .sc-header,
+    .px-header,
+    .qm-header,
+    .cr-header,
+    .rr-header,
+    .br-header {
+        flex-wrap: wrap;
+
+        .em-header-actions,
+        .ac-header-actions,
+        .aa-header-actions,
+        .of-header-actions,
+        .mt-header-actions,
+        .sc-header-actions,
+        .px-header-actions,
+        .qm-header-actions,
+        .cr-header-actions,
+        .rr-header-actions,
+        .br-header-actions,
+        .em-create-btn,
+        .ac-create-btn,
+        .aa-create-btn,
+        .ct-create-btn,
+        .cl-create-btn,
+        .rl-create-btn,
+        .rq-create-btn,
+        .cd-create-btn,
+        .of-create-btn,
+        .mt-create-btn,
+        .em-header-search,
+        .of-header-actions {
+            margin-left: 0;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .em-header-search,
+        .pl-filter-search {
+            min-width: 0;
+        }
+    }
+
+    // table cell padding reduction
+    .em-table,
+    .ac-table,
+    .aa-table,
+    .ct-table,
+    .cl-table,
+    .rl-table,
+    .rq-table,
+    .cd-table,
+    .of-table,
+    .al-table,
+    .l1-table,
+    .tt-table,
+    .pl-table,
+    .rp-table,
+    .iv-table,
+    .mt-table,
+    .ap-table,
+    .br-table,
+    .cv-table {
+        font-size: 11px;
+
+        thead th { padding: 8px 10px; }
+        tbody td { padding: 10px 10px; }
+    }
+}
