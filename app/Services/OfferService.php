@@ -116,24 +116,27 @@ class OfferService
     {
         return DB::transaction(function () use ($offer, $signedCopy, $actor) {
             if (!$offer->canAccept()) {
-                throw new \RuntimeException("Offer cannot be accepted in status {$offer->status}" . ($offer->isExpired() ? ' (expired)' : ''));
+                throw new \RuntimeException(
+                    "Offer cannot be accepted in status {$offer->status}" .
+                    ($offer->isExpired() ? ' (expired)' : '')
+                );
             }
 
-            // Store signed copy if provided
-            $signedPath = null;
+            // persist the signed copy if provided
             $signedHash = null;
+
             if ($signedCopy) {
                 $filename = 'offer-signed-' . $offer->id . '-' . time() . '.' . $signedCopy->getClientOriginalExtension();
-                $signedPath = $signedCopy->storeAs('offers/signed', $filename, 'public');
+                $path = $signedCopy->storeAs('offers/signed', $filename, 'public');
+
                 $signedHash = hash_file('sha256', $signedCopy->getRealPath());
+
+                $offer->signed_copy_path = $path;
+                $offer->signed_copy_hash = $signedHash;
             }
 
             $offer->status = 'accepted';
             $offer->accepted_at = now();
-            if ($signedPath) {
-                // Reuse offer_letter_path field pattern via extra column? Not available; store in benefits JSON audit
-                // We'll persist signed path via Audit only, plus attach to notes for future schema
-            }
             $offer->save();
 
             AuditService::log(
@@ -149,7 +152,6 @@ class OfferService
                 logType: 'success'
             );
 
-            // Notify recruiter + manager
             $this->notifyStakeholders(
                 $offer->candidate,
                 'OFFER_ACCEPTED',
@@ -248,17 +250,52 @@ class OfferService
                 throw new \RuntimeException("Can only send offers in 'extended' status.");
             }
 
-            // TODO: Mail::to($offer->candidate->email)->send(new OfferLetterMail($offer, $customMessage));
+            if (!$offer->offer_letter_path || !Storage::disk('public')->exists($offer->offer_letter_path)) {
+                throw new \RuntimeException('Offer letter PDF is missing. Regenerate the offer first.');
+            }
 
-            $offer->sent_at = now();
-            $offer->save();
+            $candidate = $offer->candidate;
+            $email = $candidate->email;
+            $subject = 'Offer of Employment — ' . ($offer->position ?? config('app.name'));
+
+            $body = $customMessage
+                ?? "Dear {$candidate->first_name},\n\n"
+                . "Please find attached our offer of employment for the position of {$offer->position}.\n\n"
+                . "This offer is valid until " . ($offer->expiry_date?->format('d F Y') ?? 'a date to be confirmed') . ".\n\n"
+                . "Kind regards,\n"
+                . config('app.name');
+
+            try {
+                \Illuminate\Support\Facades\Mail::raw($body, function ($mail) use ($email, $subject, $offer) {
+                    $mail->to($email)
+                        ->subject($subject)
+                        ->attach(
+                            Storage::disk('public')->path($offer->offer_letter_path),
+                            ['as' => 'offer-letter.pdf', 'mime' => 'application/pdf']
+                        );
+                });
+
+                $offer->sent_at = now();
+                $offer->save();
+            } catch (\Throwable $e) {
+                AuditService::log(
+                    action: 'OFFER_EMAIL_FAILED',
+                    tableName: 'offers',
+                    recordId: $offer->id,
+                    newValues: ['error' => $e->getMessage(), 'email' => $email],
+                    logType: 'error',
+                    severity: 'error'
+                );
+
+                throw new \RuntimeException('Failed to send offer email: ' . $e->getMessage());
+            }
 
             AuditService::log(
                 action: 'OFFER_EMAIL_SENT',
                 tableName: 'offers',
                 recordId: $offer->id,
                 newValues: [
-                    'sent_to' => $offer->candidate->email,
+                    'sent_to' => $email,
                     'sent_at' => now()->toIso8601String(),
                 ],
                 logType: 'success'

@@ -323,6 +323,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         // ========================================
         // Offers
         Route::post('offer/generate', [OfferController::class, 'generate']);
+        Route::get('offer/list', [OfferController::class, 'listOffers']);
+        Route::post('offer/withdraw', [OfferController::class, 'withdraw']);
         Route::get('offer/{id}', [OfferController::class, 'show']);
         Route::post('offer/accept', [OfferController::class, 'accept']);
         Route::post('offer/decline', [OfferController::class, 'decline']);

@@ -85,6 +85,101 @@ class OfferController extends Controller
     }
 
     /**
+     * GET /api/v1/recruitment/offer/list
+     * Paginated offers with filters.
+     */
+    public function listOffers(Request $request)
+    {
+        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+
+        $query = Offer::with([
+            'candidate:id,first_name,last_name,email,current_stage',
+            'candidate.requisition:id,requisition_code,title,department',
+            'manager:id,first_name,last_name,email',
+            'createdBy:id,first_name,last_name',
+        ]);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('candidate_id')) {
+            $query->where('candidate_id', $request->candidate_id);
+        }
+        if ($request->filled('requisition_id')) {
+            $query->whereHas('candidate', fn ($q) => $q->where('requisition_id', $request->requisition_id));
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->whereHas('candidate', function ($q) use ($s) {
+                $q->where('first_name', 'like', "%{$s}%")
+                ->orWhere('last_name', 'like', "%{$s}%")
+                ->orWhere('email', 'like', "%{$s}%");
+            });
+        }
+
+        $offers = $query->orderByDesc('created_at')->paginate($request->per_page ?? 20);
+
+        // decorate each offer with computed fields so the UI does not re-derive them
+        $offers->getCollection()->transform(function ($offer) {
+            $offer->days_until_expiry = $offer->daysUntilExpiry();
+            $offer->is_expired = $offer->isExpired();
+            $offer->offer_letter_url = $offer->offer_letter_path
+                ? Storage::url($offer->offer_letter_path)
+                : null;
+            $offer->signed_copy_url = $offer->signed_copy_path
+                ? Storage::url($offer->signed_copy_path)
+                : null;
+
+            return $offer;
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $offers,
+        ], 200);
+    }
+
+    /**
+     * POST /api/v1/recruitment/offer/withdraw
+     * Withdraw an extended offer (recruiter-side).
+     */
+    public function withdraw(Request $request)
+    {
+        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+
+        $validator = Validator::make($request->all(), [
+            'offer_id' => 'required|exists:offers,id',
+            'reason' => 'required|string|max:2000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $offer = Offer::find($request->offer_id);
+
+        if (!$offer) {
+            return response()->json(['status' => 'error', 'message' => 'Offer not found'], 404);
+        }
+
+        try {
+            $offer = $this->offerService->withdrawOffer($offer, $request->reason, $user);
+        } catch (\RuntimeException $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Offer withdrawn',
+            'data' => $offer,
+        ], 200);
+    }
+
+    /**
      * POST /api/v1/recruitment/offer/accept
      */
     public function accept(Request $request)
