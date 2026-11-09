@@ -30,6 +30,9 @@ class PendingL2 extends Component
 
     public function mount(): void
     {
+        if (! in_array(auth()->user()->role, ['director', 'operational_manager', 'admin', 'super_admin'], true)) {
+            abort(403, 'Operational Manager or Director role required.');
+        }
         $this->load();
     }
 

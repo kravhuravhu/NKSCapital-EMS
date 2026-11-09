@@ -68,7 +68,7 @@ class DashboardController extends Controller
     public function director(Request $request)
     {
         $user = Auth::user();
-        $this->requireRole($user, ['director', 'admin', 'super_admin']);
+        $this->requireRole($user, ['director', 'operational_manager', 'admin', 'super_admin']);
 
         return response()->json([
             'status' => 'success',

@@ -684,3 +684,125 @@ html.dark .nks-bar-label { color: #141B28; }
     color: var(--nks-muted);
     white-space: nowrap;
 }
+
+.nks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.nks-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--nks-border);
+
+    &:last-child { border-bottom: 0; }
+}
+
+.nks-list-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--nks-gold-tint);
+    color: var(--nks-gold-deep);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+
+    &--muted {
+        background: var(--nks-elevated);
+        color: var(--nks-muted);
+    }
+}
+
+.nks-list-body {
+    flex: 1;
+    min-width: 0;
+
+    strong {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--nks-ink);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    span {
+        display: block;
+        font-size: 11px;
+        color: var(--nks-muted);
+        margin-top: 1px;
+    }
+}
+
+.nks-donut-wrap {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 8px auto 16px;
+}
+
+.nks-donut {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.nks-donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    strong {
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--nks-ink);
+        line-height: 1;
+    }
+
+    span {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--nks-muted);
+        margin-top: 2px;
+    }
+}
+
+.nks-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nks-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--nks-body);
+
+    span:nth-child(2) { flex: 1; }
+
+    strong {
+        color: var(--nks-ink);
+        font-weight: 700;
+    }
+}
+
+.nks-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
