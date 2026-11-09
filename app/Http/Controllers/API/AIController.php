@@ -114,4 +114,24 @@ class AIController extends Controller
             'data' => ['entries' => $entries],
         ], 200);
     }
+
+    public function describeIssue(Request $request, GeminiService $gemini)
+    {
+        $validator = Validator::make($request->all(), [
+            'asset_model' => 'required|string|max:255',
+            'rough_issue' => 'required|string|min:3|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+        }
+
+        $result = $gemini->describeAssetIssue($request->asset_model, $request->rough_issue);
+
+        if (! $result) {
+            return response()->json(['status' => 'error', 'message' => 'AI is unavailable.'], 503);
+        }
+
+        return response()->json(['status' => 'success', 'data' => ['text' => $result]], 200);
+    }
 }

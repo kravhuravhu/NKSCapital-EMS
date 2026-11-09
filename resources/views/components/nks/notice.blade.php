@@ -1,8 +1,10 @@
 @props(['title' => null, 'icon' => 'fa-solid fa-circle-info', 'tone' => 'info'])
+
 @php
     $role = $tone === 'danger' ? 'alert' : 'status';
     $live = $tone === 'danger' ? 'assertive' : 'polite';
 @endphp
+
 <aside {{ $attributes->merge(['class' => 'nks-notice']) }}
        role="{{ $role }}"
        aria-live="{{ $live }}"

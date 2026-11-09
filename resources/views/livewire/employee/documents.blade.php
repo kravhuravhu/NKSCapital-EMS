@@ -1,195 +1,148 @@
 <div class="page-documents">
-
     @if ($error)
-        <div class="dc-flash dc-flash--error">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            <span>{{ $error }}</span>
+        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
+            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
+            <div class="nks-notice-body">{{ $error }}</div>
         </div>
     @endif
 
     @if ($flash)
-        <div class="dc-flash dc-flash--success">
-            <i class="fa-solid fa-circle-check"></i>
-            <span>{{ $flash }}</span>
+        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
+            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
+            <div class="nks-notice-body">{{ $flash }}</div>
         </div>
     @endif
 
-    <div class="dc-layout">
-
-        {{-- LEFT --}}
-        <div class="dc-left">
-
-            {{-- section heading --}}
-            <header class="dc-heading">
-                <div class="dc-heading-icon">
-                    <i class="fa-solid fa-folder-open"></i>
-                </div>
+    @if ($loading)
+        <x-nks.spinner block label="Loading documents..." />
+    @else
+        <div class="dc-stats">
+            <div class="dc-stat">
+                <div class="dc-stat-icon"><i class="fa-solid fa-share-nodes"></i></div>
                 <div>
-                    <h2>My Documents</h2>
-                    <p>View and download your company and personal documents</p>
+                    <div class="dc-stat-label">Shared</div>
+                    <div class="dc-stat-value">{{ $summary['shared_count'] ?? 0 }}</div>
                 </div>
-            </header>
-
-            {{-- tabs --}}
-            <nav class="nks-tabs dc-tabs" aria-label="Document views">
-                <button type="button"
-                        wire:click="selectTab('shared')"
-                        class="nks-tab {{ $tab === 'shared' ? 'is-active' : '' }}">
-                    Shared Documents
-                </button>
-                <button type="button"
-                        wire:click="selectTab('mine')"
-                        class="nks-tab {{ $tab === 'mine' ? 'is-active' : '' }}">
-                    My Documents
-                </button>
-            </nav>
-
-            {{-- table --}}
-            <div class="dc-table-wrapper">
-                <table class="dc-table">
-                    <thead>
-                        <tr>
-                            <th>Document Name</th>
-                            <th>Category</th>
-                            <th>Last Updated</th>
-                            <th>Size</th>
-                            <th style="width: 60px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($this->currentList as $doc)
-                            <tr>
-                                <td>
-                                    <div class="dc-name">
-                                        <span class="dc-name-icon">
-                                            <i class="{{ \App\Livewire\Employee\Documents::iconFor($doc['title'] ?? '') }}"></i>
-                                        </span>
-                                        <span>{{ $doc['title'] ?? 'Untitled' }}</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <x-nks.badge :tone="\App\Livewire\Employee\Documents::toneFor($doc['category'] ?? 'HR')">
-                                        {{ $doc['category'] ?? 'HR' }}
-                                    </x-nks.badge>
-                                </td>
-                                <td>
-                                    {{ isset($doc['updated_at']) ? \Carbon\Carbon::parse($doc['updated_at'])->format('d M Y') : '—' }}
-                                </td>
-                                <td>{{ $doc['size_human'] ?? '—' }}</td>
-                                <td>
-                                    <a href="{{ $doc['download_url'] ?? '#' }}"
-                                       class="dc-download"
-                                       title="Download document">
-                                        <i class="fa-solid fa-download"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="dc-empty">
-                                    <i class="fa-solid fa-folder-open"></i>
-                                    <strong>No documents</strong>
-                                    <span>
-                                        @if ($tab === 'mine')
-                                            You have no personal documents yet. Contact HR if this is unexpected.
-                                        @else
-                                            No shared documents have been published yet.
-                                        @endif
-                                    </span>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
             </div>
-
-            {{-- upload strip --}}
-            <button type="button"
-                    wire:click="openUpload"
-                    class="dc-upload-strip">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-                <div class="dc-upload-text">
-                    <strong>Upload Document</strong>
-                    <span>Upload supporting documents (PDF, JPG, PNG, up to 10MB), only if requested by management.</span>
+            <div class="dc-stat dc-stat--success">
+                <div class="dc-stat-icon"><i class="fa-solid fa-user"></i></div>
+                <div>
+                    <div class="dc-stat-label">My Documents</div>
+                    <div class="dc-stat-value">{{ $summary['mine_count'] ?? 0 }}</div>
                 </div>
+            </div>
+            <div class="dc-stat dc-stat--gold">
+                <div class="dc-stat-icon"><i class="fa-solid fa-folder-tree"></i></div>
+                <div>
+                    <div class="dc-stat-label">Total</div>
+                    <div class="dc-stat-value">{{ $summary['total_count'] ?? 0 }}</div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="nks-tabs">
+            <button type="button" wire:click="selectTab('shared')"
+                    class="nks-tab {{ $tab === 'shared' ? 'is-active' : '' }}">
+                Shared with me
             </button>
-        </div>
+            <button type="button" wire:click="selectTab('mine')"
+                    class="nks-tab {{ $tab === 'mine' ? 'is-active' : '' }}">
+                My documents
+            </button>
+        </nav>
 
-        {{-- RIGHT --}}
-        <div class="dc-right">
-
-            {{-- summary --}}
-            <div class="panel dc-summary">
-                <h2>Document Summary</h2>
-
-                <div class="dc-summary-row">
-                    <div class="dc-summary-icon dc-summary-icon--blue">
-                        <i class="fa-solid fa-share-nodes"></i>
-                    </div>
-                    <span class="dc-summary-label">Shared Documents</span>
-                    <strong>{{ $summary['shared_count'] ?? 0 }}</strong>
+        <div class="panel">
+            <div class="page-toolbar">
+                <div>
+                    <h2>{{ $tab === 'shared' ? 'Shared documents' : 'My documents' }}</h2>
+                    <p>Download anything you need. Upload supporting files only when requested.</p>
                 </div>
-
-                <div class="dc-summary-row">
-                    <div class="dc-summary-icon dc-summary-icon--green">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
-                    <span class="dc-summary-label">My Documents</span>
-                    <strong>{{ $summary['mine_count'] ?? 0 }}</strong>
-                </div>
-
-                <div class="dc-summary-row">
-                    <div class="dc-summary-icon dc-summary-icon--purple">
-                        <i class="fa-solid fa-folder-tree"></i>
-                    </div>
-                    <span class="dc-summary-label">Total Documents</span>
-                    <strong>{{ $summary['total_count'] ?? 0 }}</strong>
-                </div>
+                <button type="button" wire:click="openUpload" class="nks-btn nks-btn--primary">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    Upload
+                </button>
             </div>
 
-            {{-- help --}}
-            <div class="panel dc-help">
-                <h2>Need Help?</h2>
-                <div class="dc-help-body">
-                    <i class="fa-solid fa-headset"></i>
-                    <div>
-                        <p>Can't find the document you need? Contact HR and we will assist you.</p>
-                        <button type="button" class="nks-btn nks-btn--outline nks-btn--sm">
-                            <i class="fa-solid fa-envelope"></i>
-                            Contact HR
-                        </button>
-                    </div>
+            @if (count($this->currentList) === 0)
+                <div class="nks-card-empty">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <p>
+                        @if ($tab === 'shared')
+                            No shared documents have been published yet.
+                        @else
+                            You have no personal documents yet.
+                        @endif
+                    </p>
                 </div>
-            </div>
+            @else
+                <div class="nks-table-wrapper">
+                    <table class="nks-table">
+                        <thead>
+                            <tr>
+                                <th>Document</th>
+                                <th>Category</th>
+                                <th>Last updated</th>
+                                <th>Size</th>
+                                <th style="width: 60px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($this->currentList as $doc)
+                                <tr>
+                                    <td>
+                                        <div class="dc-name">
+                                            <span class="dc-name-icon">
+                                                <i class="{{ self::iconFor($doc['title'] ?? '') }}" aria-hidden="true"></i>
+                                            </span>
+                                            <div>
+                                                <strong>{{ $doc['title'] ?? 'Untitled' }}</strong>
+                                                @if (! empty($doc['description']))
+                                                    <small>{{ \Illuminate\Support\Str::limit($doc['description'], 70) }}</small>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <x-nks.badge :tone="self::toneFor($doc['category'] ?? 'HR')">
+                                            {{ $doc['category'] ?? 'HR' }}
+                                        </x-nks.badge>
+                                    </td>
+                                    <td>
+                                        {{ isset($doc['updated_at']) ? \Carbon\Carbon::parse($doc['updated_at'])->format('d M Y') : '—' }}
+                                    </td>
+                                    <td>{{ $doc['size_human'] ?? '—' }}</td>
+                                    <td>
+                                        <a href="{{ $doc['download_url'] ?? '#' }}" class="dc-download" title="Download">
+                                            <i class="fa-solid fa-download"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </div>
-    </div>
+    @endif
 
-    {{-- upload modal --}}
     @if ($showUpload)
-        <div class="dc-modal-backdrop" wire:click.self="closeUpload">
-            <div class="dc-modal">
-                <header class="dc-modal-head">
-                    <h3>Upload Document</h3>
-                    <button type="button" wire:click="closeUpload" class="dc-modal-close">
+        <div class="nks-modal-backdrop" wire:click.self="closeUpload" @keydown.escape.window="$wire.closeUpload()">
+            <div class="nks-modal nks-modal--md" role="dialog" aria-modal="true" x-trap>
+                <header class="nks-modal-head">
+                    <h3>Upload document</h3>
+                    <button type="button" wire:click="closeUpload" class="nks-modal-close">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </header>
-
-                <div class="dc-modal-body">
+                <div class="nks-modal-body">
                     <div class="nks-field">
-                        <label class="nks-label">
-                            Document Title <span class="nks-required">*</span>
-                        </label>
-                        <input type="text"
-                               wire:model="uploadTitle"
-                               class="nks-input"
-                               placeholder="e.g. Medical Certificate">
+                        <label class="nks-label">Title</label>
+                        <input type="text" wire:model.live="uploadTitle" class="nks-input"
+                               placeholder="Medical certificate">
                     </div>
 
                     <div class="nks-field">
-                        <label class="nks-label">
-                            Category <span class="nks-required">*</span>
-                        </label>
+                        <label class="nks-label">Category</label>
                         <select wire:model="uploadCategory" class="nks-select">
                             <option value="HR">HR</option>
                             <option value="Compliance">Compliance</option>
@@ -200,34 +153,46 @@
                     </div>
 
                     <div class="nks-field">
-                        <label class="nks-label">
-                            File <span class="nks-required">*</span>
-                        </label>
-                        <input type="file"
-                               wire:model="uploadFile"
-                               accept=".pdf,.jpg,.jpeg,.png"
-                               class="nks-input"
-                               style="height: auto; padding: 8px;">
+                        <label class="nks-label">File</label>
+                        <input type="file" wire:model="uploadFile" accept=".pdf,.jpg,.jpeg,.png"
+                               class="nks-input" style="height: auto; padding: 8px;">
                         @if ($uploadFile)
                             <span class="nks-help">{{ $uploadFile->getClientOriginalName() }}</span>
                         @endif
                     </div>
 
-                    <div class="nks-field">
-                        <label class="nks-label">Visibility</label>
-                        <label class="dc-modal-checkbox">
-                            <input type="checkbox" wire:model="uploadShared">
-                            <span>Share with the whole company</span>
-                        </label>
-                    </div>
-                </div>
+                    @if ($aiSummary)
+                        <div class="dc-ai-summary">
+                            <div class="dc-ai-summary-head">
+                                <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                                <span>AI summary (will be saved as description)</span>
+                            </div>
+                            <p>{{ $aiSummary }}</p>
+                        </div>
+                    @endif
 
-                <footer class="dc-modal-foot">
-                    <button type="button" wire:click="closeUpload" class="nks-btn nks-btn--outline">
-                        Cancel
-                    </button>
-                    <button type="button" wire:click="submitUpload" class="nks-btn nks-btn--primary">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <div class="dc-ai-row">
+                        <span class="nks-help">Not sure what to describe? Let AI read the file and summarize it.</span>
+                        <button type="button" wire:click="summarizeDraft"
+                                wire:loading.attr="disabled" wire:target="summarizeDraft"
+                                class="nks-btn nks-btn--outline nks-btn--sm">
+                            <i class="fa-solid fa-wand-magic-sparkles" wire:loading.remove wire:target="summarizeDraft"></i>
+                            <span class="nks-btn-spinner" wire:loading wire:target="summarizeDraft"></span>
+                            Summarize
+                        </button>
+                    </div>
+
+                    <label class="nks-checkbox">
+                        <input type="checkbox" wire:model="uploadShared">
+                        <span>Share with the whole company</span>
+                    </label>
+                </div>
+                <footer class="nks-modal-foot">
+                    <button type="button" wire:click="closeUpload" class="nks-btn nks-btn--outline">Cancel</button>
+                    <button type="button" wire:click="submitUpload" class="nks-btn nks-btn--primary"
+                            wire:loading.attr="disabled" wire:target="submitUpload">
+                        <i class="fa-solid fa-cloud-arrow-up" wire:loading.remove wire:target="submitUpload"></i>
+                        <span class="nks-btn-spinner" wire:loading wire:target="submitUpload"></span>
                         Upload
                     </button>
                 </footer>

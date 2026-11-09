@@ -3,6 +3,7 @@
 namespace App\Livewire\Employee;
 
 use App\Support\Api;
+use Carbon\Carbon;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -10,20 +11,19 @@ class Assets extends Component
 {
     use WithFileUploads;
 
-    public bool    $loading = true;
-    public ?string $error   = null;
-    public ?string $flash   = null;
+    public bool $loading = true;
+    public ?string $error = null;
+    public ?string $flash = null;
 
     public string $tab = 'current';
+    public array $assets = [];
 
-    public array  $assets  = [];
-    public ?array $details = null;
-
-    public bool   $showRepair = false;
-    public ?int   $repairAssetId = null;
+    public bool $showRepair = false;
+    public ?int $repairAssetId = null;
     public string $repairIssue = '';
     public string $repairUrgency = 'medium';
     public $repairPhoto = null;
+    public bool $describing = false;
 
     public function mount(): void
     {
@@ -33,11 +33,11 @@ class Assets extends Component
     public function load(): void
     {
         $this->loading = true;
-        $this->error   = null;
+        $this->error = null;
 
         $response = Api::get('/asset/track');
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load assets.';
             $this->loading = false;
             return;
@@ -51,57 +51,78 @@ class Assets extends Component
     {
         if (in_array($tab, ['current', 'history'], true)) {
             $this->tab = $tab;
-            $this->details = null;
         }
-    }
-
-    public function viewDetails(int $index): void
-    {
-        $this->details = $this->assets[$index] ?? null;
-    }
-
-    public function closeDetails(): void
-    {
-        $this->details = null;
     }
 
     public function openRepair(?int $assetId = null): void
     {
         $this->repairAssetId = $assetId ?? ($this->assets[0]['id'] ?? null);
-        $this->repairIssue   = '';
+        $this->repairIssue = '';
         $this->repairUrgency = 'medium';
-        $this->repairPhoto   = null;
-        $this->showRepair    = true;
+        $this->repairPhoto = null;
+        $this->showRepair = true;
     }
 
     public function closeRepair(): void
     {
-        $this->showRepair    = false;
+        $this->showRepair = false;
         $this->repairAssetId = null;
-        $this->repairIssue   = '';
-        $this->repairPhoto   = null;
+        $this->repairIssue = '';
+        $this->repairPhoto = null;
+    }
+
+    public function describeWithAi(): void
+    {
+        if (! $this->repairAssetId) {
+            $this->error = 'Select an asset first.';
+            return;
+        }
+
+        $asset = collect($this->assets)->firstWhere('id', $this->repairAssetId);
+
+        if (! $asset) {
+            $this->error = 'Asset not found.';
+            return;
+        }
+
+        $this->describing = true;
+        $this->error = null;
+
+        $response = Api::post('/ai/describe-issue', [
+            'asset_model' => $asset['model'] ?? '',
+            'rough_issue' => $this->repairIssue ?: 'Something is not working properly',
+        ]);
+
+        if (! $response['ok']) {
+            $this->error = $response['message'] ?? 'AI is unavailable.';
+            $this->describing = false;
+            return;
+        }
+
+        $this->repairIssue = $response['data']['text'] ?? $this->repairIssue;
+        $this->describing = false;
     }
 
     public function submitRepair(): void
     {
         $this->error = null;
 
-        if (!$this->repairAssetId || !$this->repairIssue) {
-            $this->error = 'Please select an asset and describe the issue.';
+        if (! $this->repairAssetId || ! $this->repairIssue) {
+            $this->error = 'Describe the issue first.';
             return;
         }
 
         $payload = [
-            'asset_id'          => $this->repairAssetId,
+            'asset_id' => $this->repairAssetId,
             'issue_description' => $this->repairIssue,
-            'urgency'           => $this->repairUrgency,
+            'urgency' => $this->repairUrgency,
         ];
 
         $response = $this->repairPhoto
             ? Api::upload('/asset/repair/request', $payload, ['damage_photo' => $this->repairPhoto])
             : Api::post('/asset/repair/request', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Failed to submit repair request.';
             return;
         }
@@ -110,8 +131,6 @@ class Assets extends Component
         $this->closeRepair();
         $this->load();
     }
-
-    // ============ computed ============
 
     public function getFilteredAssetsProperty(): array
     {
@@ -126,42 +145,30 @@ class Assets extends Component
     {
         $all = $this->assets;
 
-        $active       = collect($all)->where('status', 'loaned')->count();
-        $returned     = collect($all)->where('status', 'available')->count();
-        $maintenance  = collect($all)->whereIn('status', ['maintenance', 'repair_requested'])->count();
-        $overdue      = collect($all)->filter(fn ($a) => ($a['days_overdue'] ?? 0) > 0)->count();
-
         return [
-            'total'       => count($all),
-            'active'      => $active,
-            'returned'    => $returned,
-            'maintenance' => $maintenance,
-            'overdue'     => $overdue,
+            'total' => count($all),
+            'active' => collect($all)->where('status', 'loaned')->count(),
+            'returned' => collect($all)->where('status', 'available')->count(),
+            'maintenance' => collect($all)->whereIn('status', ['maintenance', 'repair_requested'])->count(),
+            'overdue' => collect($all)->filter(fn ($a) => ($a['days_overdue'] ?? 0) > 0)->count(),
         ];
+    }
+
+    public function daysLeft(array $asset): ?int
+    {
+        if (empty($asset['expected_return_date'])) return null;
+
+        return (int) now()->startOfDay()->diffInDays(Carbon::parse($asset['expected_return_date'])->startOfDay(), false);
     }
 
     public static function iconFor(array $asset): string
     {
         $model = strtolower($asset['model'] ?? '');
 
-        if (str_contains($model, 'monitor') || str_contains($model, 'display') || str_contains($model, 'screen')) {
-            return 'fa-solid fa-desktop';
-        }
-        if (str_contains($model, 'mouse')) {
-            return 'fa-solid fa-computer-mouse';
-        }
-        if (str_contains($model, 'keyboard')) {
-            return 'fa-solid fa-keyboard';
-        }
-        if (str_contains($model, 'phone')) {
-            return 'fa-solid fa-mobile-screen';
-        }
-        if (str_contains($model, 'tablet')) {
-            return 'fa-solid fa-tablet-screen-button';
-        }
-        if (str_contains($model, 'headset') || str_contains($model, 'headphone')) {
-            return 'fa-solid fa-headphones';
-        }
+        if (str_contains($model, 'monitor') || str_contains($model, 'display')) return 'fa-solid fa-desktop';
+        if (str_contains($model, 'phone')) return 'fa-solid fa-mobile-screen';
+        if (str_contains($model, 'tablet')) return 'fa-solid fa-tablet-screen-button';
+        if (str_contains($model, 'headset')) return 'fa-solid fa-headphones';
 
         return 'fa-solid fa-laptop';
     }

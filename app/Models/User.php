@@ -171,11 +171,16 @@ class User extends Authenticatable
     public function getProfilePhotoUrlAttribute(): string
     {
         if ($this->profile_photo) {
-            return asset('storage/profile-photos/' . $this->profile_photo);
+            $path = 'profile-photos/' . $this->profile_photo;
+
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+                return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+            }
         }
-        
+
         $name = urlencode($this->full_name ?: $this->email);
-        return 'https://ui-avatars.com/api/?name=' . $name . '&background=1a56db&color=fff&size=200';
+
+        return 'https://ui-avatars.com/api/?name=' . $name . '&background=26324A&color=C8A951&size=256';
     }
 
     /**

@@ -32,6 +32,10 @@ use App\Http\Controllers\API\SecurityController;
 use App\Http\Controllers\API\SystemConfigController;
 use App\Http\Controllers\API\QueueController;
 use App\Http\Controllers\API\BackupController;
+use App\Http\Controllers\API\AIController;
+use App\Http\Controllers\API\SearchController;
+use App\Http\Controllers\API\HalfDayController;
+use App\Http\Controllers\API\LeaveReasonsController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -108,6 +112,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('list', [EmployeeController::class, 'listEmployees']);
         Route::get('history/{id}', [EmployeeController::class, 'getHistory']);
         Route::get('show/{id}', [EmployeeController::class, 'showProfile']);
+        Route::put('roles/{id}', [EmployeeController::class, 'updateRoles'])->whereNumber('id');
     });
 
     // ========================================
@@ -476,6 +481,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::prefix('documents')->group(function () {
         Route::get('list', [DocumentController::class, 'list']);
         Route::post('upload', [DocumentController::class, 'upload']);
+        Route::post('summarize', [DocumentController::class, 'summarize']);
     });
 
     Route::prefix('security')->group(function () {
@@ -491,30 +497,31 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::post('/v1/integrations/payroll/webhook', [IntegrationController::class, 'payrollWebhook']);
 
     Route::prefix('leave/reasons')->group(function () {
-        Route::get('{type}', [\App\Http\Controllers\API\LeaveReasonsController::class, 'forType']);
+        Route::get('{type}', [LeaveReasonsController::class, 'forType']);
     });
 
     Route::prefix('admin')->middleware(['role:admin,super_admin,director'])->group(function () {
-        Route::get('leave-reasons', [\App\Http\Controllers\API\LeaveReasonsController::class, 'index']);
-        Route::post('leave-reasons', [\App\Http\Controllers\API\LeaveReasonsController::class, 'store']);
-        Route::put('leave-reasons/{id}', [\App\Http\Controllers\API\LeaveReasonsController::class, 'update']);
-        Route::delete('leave-reasons/{id}', [\App\Http\Controllers\API\LeaveReasonsController::class, 'destroy']);
+        Route::get('leave-reasons', [LeaveReasonsController::class, 'index']);
+        Route::post('leave-reasons', [LeaveReasonsController::class, 'store']);
+        Route::put('leave-reasons/{id}', [LeaveReasonsController::class, 'update']);
+        Route::delete('leave-reasons/{id}', [LeaveReasonsController::class, 'destroy']);
     });
 
     Route::prefix('half-day')->group(function () {
-        Route::post('request', [\App\Http\Controllers\API\HalfDayController::class, 'request']);
-        Route::get('mine', [\App\Http\Controllers\API\HalfDayController::class, 'mine']);
-        Route::get('pending', [\App\Http\Controllers\API\HalfDayController::class, 'pending']);
-        Route::post('{id}/respond', [\App\Http\Controllers\API\HalfDayController::class, 'respond']);
+        Route::post('request', [HalfDayController::class, 'request']);
+        Route::get('mine', [HalfDayController::class, 'mine']);
+        Route::get('pending', [HalfDayController::class, 'pending']);
+        Route::post('{id}/respond', [HalfDayController::class, 'respond']);
     });
 
     Route::prefix('ai')->middleware(['throttle:30,1'])->group(function () {
-        Route::post('refine-leave-reason', [\App\Http\Controllers\API\AIController::class, 'refineLeaveReason']);
-        Route::post('suggest-timesheet-entry', [\App\Http\Controllers\API\AIController::class, 'suggestTimesheetEntry']);
-        Route::post('autofill-timesheet', [\App\Http\Controllers\API\AIController::class, 'autofillTimesheet']);
-    });
+        Route::post('refine-leave-reason', [AIController::class, 'refineLeaveReason']);
+        Route::post('suggest-timesheet-entry', [AIController::class, 'suggestTimesheetEntry']);
+        Route::post('autofill-timesheet', [AIController::class, 'autofillTimesheet']);
+        Route::post('describe-issue', [AIController::class, 'describeIssue']);
+        });
 
-    Route::get('search', [\App\Http\Controllers\API\SearchController::class, 'search']);
+    Route::get('search', [SearchController::class, 'search']);
 
     // Role management - Admin only
     Route::prefix('admin/roles')
