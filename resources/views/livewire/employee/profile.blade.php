@@ -159,9 +159,9 @@
                             <div>
                                 <dt>Status</dt>
                                 <dd>
-                                    <x-nks-badge :tone="$contract['status'] === 'active' ? 'success' : 'muted'">
+                                    <x-nks.badge :tone="$contract['status'] === 'active' ? 'success' : 'muted'">
                                         {{ ucfirst($contract['status']) }}
-                                    </x-nks-badge>
+                                    </x-nks.badge>
                                 </dd>
                             </div>
                         </dl>
