@@ -49,6 +49,8 @@ use App\Livewire\Recruiter\Interviews;
 use App\Livewire\Recruiter\Offers;
 use App\Livewire\Recruiter\Reports;
 use App\Livewire\Recruiter\ConvertToEmployee;
+use App\Livewire\Manager\HalfDayNotices;
+use App\Livewire\Admin\LeaveReasons;
 
 Route::get('/', function () {
     return auth()->check()
@@ -75,11 +77,11 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     Route::get('/smoke-test', SmokeTest::class)->name('smoke-test');
 
     Route::middleware('role:admin,super_admin,director')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/leave-reasons', \App\Livewire\Admin\LeaveReasons::class)->name('leave-reasons');
+        Route::get('/leave-reasons', LeaveReasons::class)->name('leave-reasons');
     });
 
     Route::middleware('role:manager,director,admin,super_admin')->prefix('manager')->name('manager.')->group(function () {
-        Route::get('/half-day-notices', \App\Livewire\Manager\HalfDayNotices::class)->name('half-day-notices');
+        Route::get('/half-day-notices', HalfDayNotices::class)->name('half-day-notices');
     });
 
     // employee
