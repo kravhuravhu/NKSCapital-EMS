@@ -867,6 +867,50 @@ class LeaveController extends Controller
     }
 
     // ============================================================
+    // MY CALENDAR
+    // ============================================================
+    public function myCalendar(Request $request)
+    {
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'from' => 'required|date',
+            'to' => 'required|date|after_or_equal:from',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $entries = LeaveCalendar::with('leaveRequest:id,leave_type,status')
+            ->where('user_id', $user->id)
+            ->whereBetween('leave_date', [$request->from, $request->to])
+            ->where(function ($q) {
+                $q->where('is_approved', true)
+                ->orWhere('is_pending_proof', true)
+                ->orWhere('is_unpaid_conversion', true);
+            })
+            ->orderBy('leave_date')
+            ->get()
+            ->map(fn ($entry) => [
+                'date' => $entry->leave_date->format('Y-m-d'),
+                'leave_type' => $entry->leave_type,
+                'is_approved' => (bool) $entry->is_approved,
+                'is_pending_proof' => (bool) $entry->is_pending_proof,
+                'is_unpaid_conversion' => (bool) $entry->is_unpaid_conversion,
+            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => ['days' => $entries],
+        ], 200);
+    }
+
+    // ============================================================
     // PENDING
     // ============================================================
 

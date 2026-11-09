@@ -302,16 +302,23 @@ class DashboardService
     public function recentActivity(User $user, int $limit = 20): array
     {
         $query = \App\Models\AuditLog::with('user:id,first_name,last_name')
+            ->whereNotIn('table_name', ['api_request', 'api_error'])
             ->orderBy('timestamp', 'desc');
 
-        // Non-privileged users see only their own activity
-        if (!in_array($user->role, ['admin', 'super_admin', 'director'])) {
+        if (! in_array($user->role, ['admin', 'super_admin', 'director'])) {
             $query->where('user_id', $user->id);
         }
 
         return $query->limit($limit)->get([
-            'id', 'timestamp', 'action', 'log_type', 'severity',
-            'user_id', 'table_name', 'record_id', 'http_status', 'duration_ms',
+            'id',
+            'timestamp',
+            'action',
+            'log_type',
+            'severity',
+            'user_id',
+            'table_name',
+            'record_id',
+            'ip_address',
         ])->toArray();
     }
 

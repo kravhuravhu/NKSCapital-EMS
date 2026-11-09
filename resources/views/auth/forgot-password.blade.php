@@ -1,34 +1,51 @@
 <x-guest-layout>
-    <x-authentication-card>
-        <x-slot name="logo">
-            <x-authentication-card-logo />
-        </x-slot>
+    <header class="nks-auth-heading">
+        <h1>Forgot password</h1>
+        <p>Enter your email and we will send you a reset link</p>
+    </header>
 
-        <div class="mb-4 text-sm text-gray-600">
-            {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
+    @if (session('status'))
+        <div class="nks-auth-status" role="status">
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            <span>{{ session('status') }}</span>
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="nks-auth-status nks-auth-status--error" role="alert">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <div>
+                @foreach ($errors->all() as $error)
+                    <div>{{ $error }}</div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    <form method="POST" action="{{ route('password.email') }}" class="nks-auth-form" novalidate
+          x-data="{ submitting: false }" @submit="submitting = true">
+        @csrf
+
+        <div class="nks-auth-field">
+            <label for="email">Email</label>
+            <div class="nks-auth-input-wrap">
+                <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                <input id="email" type="email" name="email" value="{{ old('email') }}"
+                       required autofocus autocomplete="username" inputmode="email"
+                       placeholder="your.name@nkscapital.co.za">
+            </div>
         </div>
 
-        @session('status')
-            <div class="mb-4 font-medium text-sm text-green-600">
-                {{ $value }}
-            </div>
-        @endsession
+        <button type="submit" class="nks-auth-submit" :disabled="submitting">
+            <span x-show="!submitting">Send reset link</span>
+            <span x-show="submitting" x-cloak style="display: inline-flex; align-items: center; gap: 8px;">
+                <span class="nks-btn-spinner" style="display: inline-block;"></span>
+                Sending...
+            </span>
+        </button>
+    </form>
 
-        <x-validation-errors class="mb-4" />
-
-        <form method="POST" action="{{ route('password.email') }}">
-            @csrf
-
-            <div class="block">
-                <x-label for="email" value="{{ __('Email') }}" />
-                <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            </div>
-
-            <div class="flex items-center justify-end mt-4">
-                <x-button>
-                    {{ __('Email Password Reset Link') }}
-                </x-button>
-            </div>
-        </form>
-    </x-authentication-card>
+    <div class="nks-auth-links">
+        <a href="{{ route('login') }}">Back to sign in</a>
+    </div>
 </x-guest-layout>

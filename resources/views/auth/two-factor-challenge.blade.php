@@ -1,58 +1,62 @@
 <x-guest-layout>
-    <x-authentication-card>
-        <x-slot name="logo">
-            <x-authentication-card-logo />
-        </x-slot>
+    <div x-data="{ recovery: false }">
+        <header class="nks-auth-heading">
+            <h1 x-show="!recovery">Two factor authentication</h1>
+            <h1 x-show="recovery" x-cloak>Recovery code</h1>
+            <p x-show="!recovery">Enter the 6-digit code from your authenticator app</p>
+            <p x-show="recovery" x-cloak>Enter one of your emergency recovery codes</p>
+        </header>
 
-        <div x-data="{ recovery: false }">
-            <div class="mb-4 text-sm text-gray-600" x-show="! recovery">
-                {{ __('Please confirm access to your account by entering the authentication code provided by your authenticator application.') }}
+        @if ($errors->any())
+            <div class="nks-auth-status nks-auth-status--error" role="alert">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                <div>
+                    @foreach ($errors->all() as $error)
+                        <div>{{ $error }}</div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('two-factor.login') }}" class="nks-auth-form" novalidate
+              x-data="{ submitting: false }" @submit="submitting = true">
+            @csrf
+
+            <div class="nks-auth-field" x-show="!recovery">
+                <label for="code">Authentication code</label>
+                <input id="code" type="text" name="code" inputmode="numeric" autocomplete="one-time-code"
+                       maxlength="6" placeholder="000000" class="nks-auth-code-input"
+                       x-ref="code" autofocus>
             </div>
 
-            <div class="mb-4 text-sm text-gray-600" x-cloak x-show="recovery">
-                {{ __('Please confirm access to your account by entering one of your emergency recovery codes.') }}
+            <div class="nks-auth-field" x-show="recovery" x-cloak>
+                <label for="recovery_code">Recovery code</label>
+                <div class="nks-auth-input-wrap">
+                    <i class="fa-solid fa-key" aria-hidden="true"></i>
+                    <input id="recovery_code" type="text" name="recovery_code"
+                           autocomplete="one-time-code" x-ref="recovery_code"
+                           placeholder="Enter your recovery code">
+                </div>
             </div>
 
-            <x-validation-errors class="mb-4" />
+            <button type="submit" class="nks-auth-submit" :disabled="submitting">
+                <span x-show="!submitting">Verify and continue</span>
+                <span x-show="submitting" x-cloak style="display: inline-flex; align-items: center; gap: 8px;">
+                    <span class="nks-btn-spinner" style="display: inline-block;"></span>
+                    Verifying...
+                </span>
+            </button>
+        </form>
 
-            <form method="POST" action="{{ route('two-factor.login') }}">
-                @csrf
-
-                <div class="mt-4" x-show="! recovery">
-                    <x-label for="code" value="{{ __('Code') }}" />
-                    <x-input id="code" class="block mt-1 w-full" type="text" inputmode="numeric" name="code" autofocus x-ref="code" autocomplete="one-time-code" />
-                </div>
-
-                <div class="mt-4" x-cloak x-show="recovery">
-                    <x-label for="recovery_code" value="{{ __('Recovery Code') }}" />
-                    <x-input id="recovery_code" class="block mt-1 w-full" type="text" name="recovery_code" x-ref="recovery_code" autocomplete="one-time-code" />
-                </div>
-
-                <div class="flex items-center justify-end mt-4">
-                    <button type="button" class="text-sm text-gray-600 hover:text-gray-900 underline cursor-pointer"
-                                    x-show="! recovery"
-                                    x-on:click="
-                                        recovery = true;
-                                        $nextTick(() => { $refs.recovery_code.focus() })
-                                    ">
-                        {{ __('Use a recovery code') }}
-                    </button>
-
-                    <button type="button" class="text-sm text-gray-600 hover:text-gray-900 underline cursor-pointer"
-                                    x-cloak
-                                    x-show="recovery"
-                                    x-on:click="
-                                        recovery = false;
-                                        $nextTick(() => { $refs.code.focus() })
-                                    ">
-                        {{ __('Use an authentication code') }}
-                    </button>
-
-                    <x-button class="ms-4">
-                        {{ __('Log in') }}
-                    </x-button>
-                </div>
-            </form>
+        <div class="nks-auth-links">
+            <a href="#" x-show="!recovery"
+               @click.prevent="recovery = true; $nextTick(() => { $refs.recovery_code.focus() })">
+                Use a recovery code instead
+            </a>
+            <a href="#" x-show="recovery" x-cloak
+               @click.prevent="recovery = false; $nextTick(() => { $refs.code.focus() })">
+                Use an authentication code instead
+            </a>
         </div>
-    </x-authentication-card>
+    </div>
 </x-guest-layout>

@@ -1,45 +1,44 @@
 <x-guest-layout>
-    <x-authentication-card>
-        <x-slot name="logo">
-            <x-authentication-card-logo />
-        </x-slot>
+    <header class="nks-auth-heading">
+        <h1>Verify your email</h1>
+        <p>Check your inbox for the verification link we sent you</p>
+    </header>
 
-        <div class="mb-4 text-sm text-gray-600">
-            {{ __('Before continuing, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
+    <div class="nks-auth-hint">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <span>
+            Once you click the link in the email, your account will be fully activated.
+            If you did not receive the email, use the button below to resend it.
+        </span>
+    </div>
+
+    @if (session('status') == 'verification-link-sent')
+        <div class="nks-auth-status" role="status">
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            <span>A fresh verification link has been sent to your email.</span>
         </div>
+    @endif
 
-        @if (session('status') == 'verification-link-sent')
-            <div class="mb-4 font-medium text-sm text-green-600">
-                {{ __('A new verification link has been sent to the email address you provided in your profile settings.') }}
-            </div>
-        @endif
+    <div class="nks-auth-actions">
+        <form method="POST" action="{{ route('verification.send') }}" style="flex: 1;"
+              x-data="{ submitting: false }" @submit="submitting = true">
+            @csrf
+            <button type="submit" class="nks-auth-submit" :disabled="submitting" style="width: 100%;">
+                <span x-show="!submitting">Resend verification email</span>
+                <span x-show="submitting" x-cloak style="display: inline-flex; align-items: center; gap: 8px;">
+                    <span class="nks-btn-spinner" style="display: inline-block;"></span>
+                    Sending...
+                </span>
+            </button>
+        </form>
 
-        <div class="mt-4 flex items-center justify-between">
-            <form method="POST" action="{{ route('verification.send') }}">
-                @csrf
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" class="nks-auth-alt-btn">Sign out</button>
+        </form>
+    </div>
 
-                <div>
-                    <x-button type="submit">
-                        {{ __('Resend Verification Email') }}
-                    </x-button>
-                </div>
-            </form>
-
-            <div>
-                <a
-                    href="{{ route('profile.show') }}"
-                    class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                    {{ __('Edit Profile') }}</a>
-
-                <form method="POST" action="{{ route('logout') }}" class="inline">
-                    @csrf
-
-                    <button type="submit" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ms-2">
-                        {{ __('Log Out') }}
-                    </button>
-                </form>
-            </div>
-        </div>
-    </x-authentication-card>
+    <div class="nks-auth-links">
+        <a href="{{ route('profile.show') }}">Edit profile</a>
+    </div>
 </x-guest-layout>

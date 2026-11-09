@@ -1,36 +1,62 @@
 <x-guest-layout>
-    <x-authentication-card>
-        <x-slot name="logo">
-            <x-authentication-card-logo />
-        </x-slot>
+    <header class="nks-auth-heading">
+        <h1>Reset password</h1>
+        <p>Choose a new password for your account</p>
+    </header>
 
-        <x-validation-errors class="mb-4" />
-
-        <form method="POST" action="{{ route('password.update') }}">
-            @csrf
-
-            <input type="hidden" name="token" value="{{ $request->route('token') }}">
-
-            <div class="block">
-                <x-label for="email" value="{{ __('Email') }}" />
-                <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email', $request->email)" required autofocus autocomplete="username" />
+    @if ($errors->any())
+        <div class="nks-auth-status nks-auth-status--error" role="alert">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <div>
+                @foreach ($errors->all() as $error)
+                    <div>{{ $error }}</div>
+                @endforeach
             </div>
+        </div>
+    @endif
 
-            <div class="mt-4">
-                <x-label for="password" value="{{ __('Password') }}" />
-                <x-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />
-            </div>
+    <form method="POST" action="{{ route('password.update') }}" class="nks-auth-form" novalidate
+          x-data="{ submitting: false }" @submit="submitting = true">
+        @csrf
+        <input type="hidden" name="token" value="{{ $request->route('token') }}">
 
-            <div class="mt-4">
-                <x-label for="password_confirmation" value="{{ __('Confirm Password') }}" />
-                <x-input id="password_confirmation" class="block mt-1 w-full" type="password" name="password_confirmation" required autocomplete="new-password" />
+        <div class="nks-auth-field">
+            <label for="email">Email</label>
+            <div class="nks-auth-input-wrap">
+                <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                <input id="email" type="email" name="email" value="{{ old('email', $request->email) }}"
+                       required autocomplete="username" placeholder="your.name@nkscapital.co.za">
             </div>
+        </div>
 
-            <div class="flex items-center justify-end mt-4">
-                <x-button>
-                    {{ __('Reset Password') }}
-                </x-button>
+        <div class="nks-auth-field">
+            <label for="password">New password</label>
+            <div class="nks-auth-input-wrap">
+                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                <input id="password" type="password" name="password" required autocomplete="new-password"
+                       placeholder="At least 8 characters">
             </div>
-        </form>
-    </x-authentication-card>
+        </div>
+
+        <div class="nks-auth-field">
+            <label for="password_confirmation">Confirm new password</label>
+            <div class="nks-auth-input-wrap">
+                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                <input id="password_confirmation" type="password" name="password_confirmation"
+                       required autocomplete="new-password" placeholder="Re-enter your password">
+            </div>
+        </div>
+
+        <button type="submit" class="nks-auth-submit" :disabled="submitting">
+            <span x-show="!submitting">Reset password</span>
+            <span x-show="submitting" x-cloak style="display: inline-flex; align-items: center; gap: 8px;">
+                <span class="nks-btn-spinner" style="display: inline-block;"></span>
+                Resetting...
+            </span>
+        </button>
+    </form>
+
+    <div class="nks-auth-links">
+        <a href="{{ route('login') }}">Back to sign in</a>
+    </div>
 </x-guest-layout>

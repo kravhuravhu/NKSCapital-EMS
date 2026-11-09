@@ -20,6 +20,7 @@ class PortalBadges
             'l1_pending'    => $data['l1_approvals']         ?? 0,
             'l2_pending'    => $data['l2_approvals']         ?? 0,
             'leave_pending' => $data['team_leave_requests']  ?? 0,
+            'half_day_pending' => $data['half_day_notices']    ?? 0,
             'contract'      => $data['contract_expiring']    ?? 0,
             'overdue'       => $data['overdue_assets']       ?? 0,
         ];

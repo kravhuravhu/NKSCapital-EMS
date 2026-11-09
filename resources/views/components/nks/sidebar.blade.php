@@ -1,43 +1,94 @@
 @props(['user'])
 
 @php
-    $links  = config('portal-nav.' . $user->role, []);
-    $badges = \App\Support\PortalBadges::for($user);
-@endphp
-<aside class="sidebar" id="nks-sidebar" x-bind:class="sidebarOpen ? 'is-open' : ''">
-    <button type="button"
-            class="nks-sidebar-close"
-            @click="sidebarOpen = false"
-            aria-label="Close navigation menu">
-        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-    </button>
-    <nav aria-label="Primary">
-        @foreach ($links as $link)
-            @php
-                $active = request()->routeIs($link['route']);
-                $badge  = isset($link['badge']) ? ($badges[$link['badge']] ?? 0) : 0;
-            @endphp
+    $userRoles = $user->getRoleNames()->toArray();
+    if (empty($userRoles) && $user->role) {
+        $userRoles = [$user->role];
+    }
 
-            <a href="{{ route($link['route']) }}"
-               class="nav-item {{ $active ? 'is-active' : '' }}"
-               @if ($active) aria-current="page" @endif
-               wire:navigate>
-                <i class="{{ $link['icon'] }}" aria-hidden="true"></i>
-                <span class="nav-item-label">{{ $link['label'] }}</span>
-                @if ($badge > 0)
-                    <span class="nav-badge" aria-label="{{ $badge }} pending">
-                        {{ $badge }}
-                    </span>
-                @endif
-            </a>
+    $badges = \App\Support\PortalBadges::for($user);
+    $groups = config('portal-nav.groups', []);
+
+    $visibleGroups = [];
+    foreach ($groups as $group) {
+        $visibleItems = [];
+        foreach ($group['items'] as $item) {
+            if (array_intersect($userRoles, $item['roles'] ?? [])) {
+                $visibleItems[] = $item;
+            }
+        }
+        if (! empty($visibleItems)) {
+            $visibleGroups[] = array_merge($group, ['items' => $visibleItems]);
+        }
+    }
+@endphp
+
+<aside class="nks-sidebar"
+       id="nks-sidebar"
+       :class="{ 'is-collapsed': collapsed, 'is-mobile-open': mobileOpen }"
+       aria-label="Primary navigation">
+
+    <div class="nks-sidebar-brand">
+        <div class="nks-sidebar-logo">
+            <span class="nks-logo-mark" aria-hidden="true">NKS</span>
+            <span class="nks-brand-name">CAPITAL</span>
+        </div>
+        <div class="nks-sidebar-app-name">
+            Employee Management System
+        </div>
+    </div>
+    
+
+    <nav class="nks-sidebar-nav">
+        @foreach ($visibleGroups as $group)
+            <div class="nks-nav-group" x-data="{ open: true }" :class="{ 'is-closed': !open }">
+                <button type="button"
+                        class="nks-nav-group-label"
+                        @click="open = !open"
+                        :aria-expanded="open.toString()">
+                    <span>{{ $group['label'] }}</span>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+
+                <div class="nks-nav-items" x-show="open" x-cloak>
+                    @foreach ($group['items'] as $item)
+                        @php
+                            $active = request()->routeIs($item['route']);
+                            $badge = isset($item['badge']) ? ($badges[$item['badge']] ?? 0) : 0;
+                        @endphp
+
+                        <a href="{{ route($item['route']) }}"
+                           class="nks-nav-item {{ $active ? 'is-active' : '' }}"
+                           @if ($active) aria-current="page" @endif
+                           wire:navigate>
+                            <i class="{{ $item['icon'] }} nks-nav-icon" aria-hidden="true"></i>
+                            <span class="nks-nav-label">{{ $item['label'] }}</span>
+                            @if ($badge > 0)
+                                <span class="nks-nav-badge" aria-label="{{ $badge }} pending">{{ $badge }}</span>
+                            @endif
+                            <span class="nks-nav-tooltip">{{ $item['label'] }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
         @endforeach
     </nav>
 
-    <form method="POST" action="{{ route('logout') }}" class="logout">
-        @csrf
-        <button type="submit" class="nks-button nks-button-quiet">
-            <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
-            <span>Log Out</span>
+    <div class="nks-sidebar-footer">
+        <button type="button"
+                class="nks-collapse-btn"
+                @click="toggleCollapsed()"
+                aria-label="Toggle sidebar">
+            <i class="fa-solid fa-angles-left" aria-hidden="true"></i>
+            <span>Collapse</span>
         </button>
-    </form>
+
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" class="nks-logout-btn">
+                <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                <span>Log out</span>
+            </button>
+        </form>
+    </div>
 </aside>

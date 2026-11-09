@@ -1,219 +1,306 @@
-<div class="page-dashboard">
-
+<div class="nks-dashboard">
     @if ($loading)
-        <x-nks.spinner block label="Loading dashboard…" />
+        <div class="nks-kpi-grid">
+            @for ($i = 0; $i < 4; $i++)
+                <div class="nks-kpi">
+                    <div class="nks-skeleton" style="width: 40%; height: 12px; margin-bottom: 12px;"></div>
+                    <div class="nks-skeleton" style="width: 60%; height: 28px; margin-bottom: 8px;"></div>
+                    <div class="nks-skeleton" style="width: 50%; height: 10px;"></div>
+                </div>
+            @endfor
+        </div>
     @elseif ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
+        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
+            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
             <div class="nks-notice-body">{{ $error }}</div>
         </div>
     @else
-
-        {{-- top stats --}}
-        <div class="dash-stats">
-            <div class="dash-stat">
-                <div class="dash-stat-head">
-                    <i class="fa-solid fa-clock"></i>
-                    <span>Timesheet Status</span>
-                </div>
-                <div class="dash-stat-value">
-                    @if (($summary['current_ps_timesheet']['status'] ?? null) === 'submitted_to_client'
-                      || ($summary['current_pr_timesheet']['status'] ?? null) === 'approved')
-                        Completed
-                    @elseif (($summary['current_ps_timesheet']['status'] ?? null) === 'template_generated'
-                      || ($summary['current_pr_timesheet']['status'] ?? null) === 'pending_l1')
-                        Pending
-                    @else
-                        Draft
-                    @endif
-                </div>
-                <div class="dash-stat-note">
-                    Total hours: {{ $summary['current_ps_timesheet']['total_hours']
-                        ?? $summary['current_pr_timesheet']['regular_hours'] ?? 0 }}
-                </div>
-            </div>
-
-            <div class="dash-stat">
-                <div class="dash-stat-head">
-                    <i class="fa-solid fa-hourglass-half"></i>
-                    <span>Leave Balance</span>
-                </div>
-                <div class="dash-stat-value">
-                    {{ $leaveBalances['annual']['available'] ?? 0 }}<span> Days</span>
-                </div>
-                <div class="dash-stat-note">
-                    Used: {{ $leaveBalances['annual']['used_this_year'] ?? 0 }} days
-                </div>
-            </div>
-
-            <div class="dash-stat">
-                <div class="dash-stat-head">
-                    <i class="fa-solid fa-diagram-project"></i>
-                    <span>My Projects</span>
-                </div>
-                <div class="dash-stat-value">{{ count($summary['recent_pr_timesheets'] ?? []) }}</div>
-                <div class="dash-stat-note">Timesheets recorded</div>
-            </div>
-
-            <div class="dash-stat">
-                <div class="dash-stat-head">
-                    <i class="fa-solid fa-laptop"></i>
-                    <span>My Assets</span>
-                </div>
-                <div class="dash-stat-value">{{ count($summary['my_assets'] ?? []) }}</div>
-                <div class="dash-stat-note">Currently assigned</div>
+        <div class="nks-dashboard-greeting">
+            <div>
+                <h2>Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 17 ? 'afternoon' : 'evening') }}, {{ auth()->user()->first_name }}</h2>
+                <p>{{ now()->format('l, j F Y') }}</p>
             </div>
         </div>
 
-        {{-- main grid --}}
-        <div class="dash-grid">
-
-            {{-- left: progress + notifications --}}
-            <div class="stack">
-
-                <div class="panel dash-progress">
-                    <h2>Timesheet Progress</h2>
-
-                    @php
-                        $regular = $summary['current_pr_timesheet']['regular_hours']
-                            ?? $summary['current_ps_timesheet']['total_hours'] ?? 0;
-                        $overtime = $summary['current_pr_timesheet']['overtime_hours'] ?? 0;
-                        $target = 180;
-                        $pct = $target > 0 ? min(100, round((($regular + $overtime) / $target) * 100)) : 0;
-                    @endphp
-
-                    <div class="dash-progress-head">
-                        <div>
-                            <div class="dash-progress-label">Hours logged this month</div>
-                            <div class="dash-progress-label">
-                                {{ $regular }}h regular · {{ $overtime }}h overtime
-                            </div>
-                        </div>
-                        <div class="dash-progress-value">{{ $pct }}%</div>
-                    </div>
-
-                    <div class="dash-progress-bar">
-                        <div class="dash-progress-fill" style="width: {{ $pct }}%"></div>
-                    </div>
-
-                    <div class="dash-progress-metrics">
-                        <div class="dash-progress-metric">
-                            <div class="metric-label">Regular hours</div>
-                            <div class="metric-value">{{ $regular }}h</div>
-                        </div>
-                        <div class="dash-progress-metric">
-                            <div class="metric-label">Overtime</div>
-                            <div class="metric-value">{{ $overtime }}h</div>
-                        </div>
-                        <div class="dash-progress-metric">
-                            <div class="metric-label">Leave taken</div>
-                            <div class="metric-value">{{ $leaveBalances['annual']['used_this_year'] ?? 0 }} days</div>
-                        </div>
-                        <div class="dash-progress-metric">
-                            <div class="metric-label">Status</div>
-                            <div class="metric-value">
-                                {{ ucfirst($summary['current_pr_timesheet']['status']
-                                    ?? $summary['current_ps_timesheet']['status'] ?? 'draft') }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="progress-actions">
-                        <a href="{{ route('portal.' . auth()->user()->role . '.timesheet') }}"
-                           class="nks-btn nks-btn--primary">
-                            <i class="fa-solid fa-clock"></i>
-                            Continue Timesheet
-                        </a>
-                        <a href="{{ route('portal.' . auth()->user()->role . '.timesheet') }}"
-                           class="nks-btn nks-btn--outline">
-                            <i class="fa-solid fa-history"></i>
-                            View History
-                        </a>
-                    </div>
+        <div class="nks-kpi-grid">
+            <div class="nks-kpi nks-kpi--{{ $this->statusTone }}">
+                <div class="nks-kpi-head">
+                    <span class="nks-kpi-icon"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i></span>
+                    <span class="nks-kpi-label">Timesheet</span>
                 </div>
-
-                <div class="panel dash-activity">
-                    <h2>Recent Activity</h2>
-
-                    @forelse ($recentActivity as $activity)
-                        <div class="dash-activity-item">
-                            <i class="fa-solid fa-circle-notch"></i>
-                            <div class="dash-activity-text">
-                                {{ $activity['action'] ?? 'Activity' }}
-                            </div>
-                            <div class="dash-activity-time">
-                                {{ isset($activity['timestamp']) ? \Carbon\Carbon::parse($activity['timestamp'])->diffForHumans() : '' }}
-                            </div>
-                        </div>
-                    @empty
-                        <div class="dash-activity-item">
-                            <i class="fa-solid fa-circle-info"></i>
-                            <div class="dash-activity-text">No recent activity</div>
-                        </div>
-                    @endforelse
+                <div class="nks-kpi-value">{{ $this->statusLabel }}</div>
+                <div class="nks-kpi-foot">
+                    <div class="nks-mini-progress">
+                        <div class="nks-mini-progress-bar" style="width: {{ $progressPercent }}%"></div>
+                    </div>
+                    <span>{{ $progressPercent }}% of {{ $targetHours }}h</span>
                 </div>
             </div>
 
-            {{-- right: leave + assets --}}
-            <div class="stack">
-
-                <div class="panel">
-                    <h2>Leave Balance Summary</h2>
-
-                    <div class="dash-leave-grid">
-                        @foreach (['annual' => 'Annual Leave', 'sick' => 'Sick Leave', 'family' => 'Family Leave', 'unpaid' => 'Unpaid Leave'] as $key => $label)
-                            <div class="dash-leave-tile">
-                                <div class="dash-leave-name">{{ $label }}</div>
-                                <div class="dash-leave-days">
-                                    {{ $leaveBalances[$key]['available'] ?? 0 }} Days
-                                </div>
-                                <div class="dash-leave-sub">
-                                    Entitlement: {{ $leaveBalances[$key]['entitlement'] ?? 0 }}
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    <a href="{{ route('portal.' . auth()->user()->role . '.leave') }}"
-                       class="nks-btn nks-btn--primary nks-btn--block">
-                        <i class="fa-solid fa-umbrella-beach"></i>
-                        Apply For Leave
-                    </a>
+            <div class="nks-kpi">
+                <div class="nks-kpi-head">
+                    <span class="nks-kpi-icon"><i class="fa-solid fa-umbrella-beach" aria-hidden="true"></i></span>
+                    <span class="nks-kpi-label">Annual Leave</span>
                 </div>
+                <div class="nks-kpi-value">{{ (float) ($leaveBalances['annual']['available'] ?? 0) }}<span class="nks-kpi-unit"> days</span></div>
+                <div class="nks-kpi-foot">
+                    <span>{{ (float) ($leaveBalances['annual']['used_this_year'] ?? 0) }} used this year</span>
+                </div>
+            </div>
 
-                <div class="panel">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="m-0">My Assets</h2>
-                        <a href="{{ route('portal.' . auth()->user()->role . '.assets') }}"
-                           class="text-gold" style="font-size: 12px;">
-                            View All
+            <div class="nks-kpi">
+                <div class="nks-kpi-head">
+                    <span class="nks-kpi-icon"><i class="fa-solid fa-inbox" aria-hidden="true"></i></span>
+                    <span class="nks-kpi-label">Pending Items</span>
+                </div>
+                <div class="nks-kpi-value">{{ $this->totalPending }}</div>
+                <div class="nks-kpi-foot"><span>awaiting your attention</span></div>
+            </div>
+
+            <div class="nks-kpi">
+                <div class="nks-kpi-head">
+                    <span class="nks-kpi-icon"><i class="fa-solid fa-laptop" aria-hidden="true"></i></span>
+                    <span class="nks-kpi-label">My Assets</span>
+                </div>
+                <div class="nks-kpi-value">{{ count($myAssets) }}</div>
+                <div class="nks-kpi-foot">
+                    <a href="{{ route('portal.employee.assets') }}" wire:navigate>View all</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nks-dashboard-grid">
+            <div class="nks-dashboard-col">
+                <div class="nks-card">
+                    <div class="nks-card-head">
+                        <h3>Timesheet Progress</h3>
+                        <a href="{{ route('portal.employee.timesheet') }}" wire:navigate class="nks-card-link">
+                            Open timesheet
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                         </a>
                     </div>
 
-                    @forelse (($summary['my_assets'] ?? []) as $asset)
-                        <div class="dash-asset-row">
-                            <div class="dash-asset-icon">
-                                <i class="fa-solid fa-laptop"></i>
+                    <div class="nks-progress-header">
+                        <div class="nks-progress-ring">
+                            <svg viewBox="0 0 100 100" aria-hidden="true">
+                                <circle cx="50" cy="50" r="44" class="nks-ring-track"></circle>
+                                <circle cx="50" cy="50" r="44" class="nks-ring-fill"
+                                        style="stroke-dasharray: 276.46; stroke-dashoffset: {{ 276.46 - (276.46 * $progressPercent / 100) }};"></circle>
+                            </svg>
+                            <div class="nks-ring-label">
+                                <strong>{{ $progressPercent }}%</strong>
+                                <span>complete</span>
                             </div>
-                            <div class="dash-asset-info">
-                                <div class="dash-asset-name">{{ $asset['model'] ?? $asset['asset_tag'] }}</div>
-                                <div class="dash-asset-serial">
-                                    {{ $asset['asset_tag'] ?? '' }} · {{ $asset['condition'] ?? '' }}
+                        </div>
+                        <div class="nks-progress-metrics">
+                            <div class="nks-progress-metric">
+                                <span>Logged</span>
+                                <strong>{{ \App\Livewire\Employee\Timesheet::formatHours($totalLogged) }}</strong>
+                            </div>
+                            <div class="nks-progress-metric">
+                                <span>Target</span>
+                                <strong>{{ \App\Livewire\Employee\Timesheet::formatHours($targetHours) }}</strong>
+                            </div>
+                            <div class="nks-progress-metric">
+                                <span>Days</span>
+                                <strong>{{ $workingDaysElapsed }} / {{ $workingDaysTotal }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (count($timesheetHistory) > 0)
+                        <div class="nks-chart-label">Recent months</div>
+                        <div class="nks-bar-chart">
+                            @php
+                                $maxHours = collect($timesheetHistory)
+                                    ->map(fn ($t) => (float) ($t['total_regular_hours'] ?? 0) + (float) ($t['total_overtime_hours'] ?? 0))
+                                    ->max() ?: 1;
+                            @endphp
+                            @foreach ($timesheetHistory as $row)
+                                @php
+                                    $hours = (float) ($row['total_regular_hours'] ?? 0) + (float) ($row['total_overtime_hours'] ?? 0);
+                                    $height = $maxHours > 0 ? max(8, round(($hours / $maxHours) * 100)) : 8;
+                                    $monthLabel = isset($row['month_year'])
+                                        ? \Carbon\Carbon::parse($row['month_year'])->format('M')
+                                        : '';
+                                @endphp
+                                <div class="nks-bar" style="height: {{ $height }}%" title="{{ $monthLabel }}">
+                                    <span class="nks-bar-value">{{ \App\Livewire\Employee\Timesheet::formatHours($hours) }}</span>
+                                    <span class="nks-bar-label">{{ $monthLabel }}</span>
                                 </div>
-                            </div>
-                            <x-nks.badge tone="success">Active</x-nks.badge>
+                            @endforeach
                         </div>
-                    @empty
-                        <div class="dash-asset-row">
-                            <div class="dash-asset-icon">
-                                <i class="fa-solid fa-laptop"></i>
-                            </div>
-                            <div class="dash-asset-info">
-                                <div class="dash-asset-name">No assets assigned</div>
-                                <div class="dash-asset-serial">Contact IT if this is unexpected</div>
-                            </div>
+                    @endif
+                </div>
+
+                <div class="nks-card">
+                    <div class="nks-card-head">
+                        <h3>Recent Activity</h3>
+                    </div>
+
+                    @if (count($recentActivity) === 0)
+                        <div class="nks-card-empty">
+                            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                            <p>No recent activity yet.</p>
                         </div>
-                    @endforelse
+                    @else
+                        <div class="nks-activity-table-wrap">
+                            <table class="nks-activity-table">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Action</th>
+                                        <th>Record</th>
+                                        <th>IP Address</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($recentActivity as $entry)
+                                        @php
+                                            $actor = $entry['user'] ?? [];
+                                            $actorName = trim(($actor['first_name'] ?? '') . ' ' . ($actor['last_name'] ?? ''));
+                                            $initials = strtoupper(
+                                                substr($actor['first_name'] ?? 'S', 0, 1) .
+                                                substr($actor['last_name'] ?? 'Y', 0, 1)
+                                            );
+                                            $tone = $this->actionTone($entry['action'] ?? '');
+                                            $time = isset($entry['timestamp'])
+                                                ? \Carbon\Carbon::parse($entry['timestamp'])->format('d M Y H:i')
+                                                : '';
+                                        @endphp
+                                        <tr>
+                                            <td>
+                                                <div class="nks-activity-user">
+                                                    <span class="nks-activity-avatar nks-activity-avatar--{{ $tone }}">{{ $initials }}</span>
+                                                    <span>{{ $actorName ?: 'System' }}</span>
+                                                </div>
+                                            </td>
+                                            <td>{{ $this->humanizeAction($entry['action'] ?? '') }}</td>
+                                            <td>
+                                                @if (!empty($entry['table_name']))
+                                                    <span class="nks-activity-record">
+                                                        {{ $entry['table_name'] }}#{{ $entry['record_id'] ?? '0' }}
+                                                    </span>
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
+                                            <td><span class="nks-activity-ip">{{ $entry['ip_address'] ?? '—' }}</span></td>
+                                            <td><span class="nks-activity-time">{{ $time }}</span></td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="nks-dashboard-col">
+                <div class="nks-card">
+                    <div class="nks-card-head">
+                        <h3>Leave Balance</h3>
+                        <a href="{{ route('portal.employee.leave') }}" wire:navigate class="nks-card-link">
+                            Apply
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </div>
+
+                    <div class="nks-leave-list">
+                        @foreach ([
+                            'annual' => ['Annual', 'fa-umbrella-beach', 'gold'],
+                            'sick' => ['Sick', 'fa-thermometer-half', 'danger'],
+                            'family' => ['Family', 'fa-users', 'info'],
+                            'unpaid' => ['Unpaid', 'fa-coins', 'muted'],
+                        ] as $key => $meta)
+                            @php
+                                $available = $leaveBalances[$key]['available'] ?? 0;
+                                $entitlement = $leaveBalances[$key]['entitlement'] ?? 0;
+                                $isInfinite = $available === 'infinite' || $entitlement === 'infinite';
+                                $pct = (! $isInfinite && (float) $entitlement > 0)
+                                    ? min(100, ((float) $available / (float) $entitlement) * 100)
+                                    : 0;
+                            @endphp
+                            <div class="nks-leave-row">
+                                <div class="nks-leave-row-head">
+                                    <div class="nks-leave-row-label">
+                                        <i class="fa-solid {{ $meta[1] }} nks-leave-row-icon nks-leave-row-icon--{{ $meta[2] }}" aria-hidden="true"></i>
+                                        <span>{{ $meta[0] }}</span>
+                                    </div>
+                                    <strong>
+                                        @if ($isInfinite) Unlimited
+                                        @else {{ (float) $available }} / {{ (float) $entitlement }} d
+                                        @endif
+                                    </strong>
+                                </div>
+                                @if (! $isInfinite)
+                                    <div class="nks-leave-track">
+                                        <div class="nks-leave-fill nks-leave-fill--{{ $meta[2] }}" style="width: {{ $pct }}%"></div>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="nks-card">
+                    <div class="nks-card-head">
+                        <h3>My Assets</h3>
+                        <a href="{{ route('portal.employee.assets') }}" wire:navigate class="nks-card-link">
+                            View all
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                    @if (count($myAssets) === 0)
+                        <div class="nks-card-empty">
+                            <i class="fa-solid fa-laptop" aria-hidden="true"></i>
+                            <p>No assets assigned.</p>
+                        </div>
+                    @else
+                        <div class="nks-asset-list">
+                            @foreach (array_slice($myAssets, 0, 4) as $asset)
+                                <div class="nks-asset-item">
+                                    <div class="nks-asset-icon"><i class="fa-solid fa-laptop" aria-hidden="true"></i></div>
+                                    <div class="nks-asset-body">
+                                        <strong>{{ $asset['model'] ?? 'Asset' }}</strong>
+                                        <span>{{ $asset['asset_tag'] ?? '' }}</span>
+                                    </div>
+                                    <span class="nks-asset-tag">{{ ucfirst($asset['condition'] ?? '') }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                <div class="nks-card">
+                    <div class="nks-card-head"><h3>Upcoming Meetings</h3></div>
+                    @if (count($upcomingMeetings) === 0)
+                        <div class="nks-card-empty">
+                            <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                            <p>No meetings scheduled.</p>
+                        </div>
+                    @else
+                        <div class="nks-meeting-list">
+                            @foreach (array_slice($upcomingMeetings, 0, 4) as $meeting)
+                                <div class="nks-meeting-item">
+                                    <div class="nks-meeting-date">
+                                        <strong>{{ isset($meeting['start_time']) ? \Carbon\Carbon::parse($meeting['start_time'])->format('d') : '—' }}</strong>
+                                        <span>{{ isset($meeting['start_time']) ? \Carbon\Carbon::parse($meeting['start_time'])->format('M') : '' }}</span>
+                                    </div>
+                                    <div class="nks-meeting-body">
+                                        <strong>{{ $meeting['title'] ?? 'Meeting' }}</strong>
+                                        <span>
+                                            {{ isset($meeting['start_time']) ? \Carbon\Carbon::parse($meeting['start_time'])->format('H:i') : '' }}
+                                            @if (!empty($meeting['location']))
+                                                · {{ $meeting['location'] }}
+                                            @endif
+                                        </span>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

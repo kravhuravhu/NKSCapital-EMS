@@ -219,6 +219,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('balance', [LeaveController::class, 'balance']);
         Route::get('history', [LeaveController::class, 'history']);
         Route::get('calendar', [LeaveController::class, 'calendar']);
+        Route::get('my-days', [LeaveController::class, 'myCalendar']);
         Route::get('conflicts/{dateRange}', [LeaveController::class, 'conflicts']);
         
         // Approval actions (Manager/Director)
@@ -488,6 +489,32 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
 
     // Payroll webhook (external system) — no auth, separate group
     Route::post('/v1/integrations/payroll/webhook', [IntegrationController::class, 'payrollWebhook']);
+
+    Route::prefix('leave/reasons')->group(function () {
+        Route::get('{type}', [\App\Http\Controllers\API\LeaveReasonsController::class, 'forType']);
+    });
+
+    Route::prefix('admin')->middleware(['role:admin,super_admin,director'])->group(function () {
+        Route::get('leave-reasons', [\App\Http\Controllers\API\LeaveReasonsController::class, 'index']);
+        Route::post('leave-reasons', [\App\Http\Controllers\API\LeaveReasonsController::class, 'store']);
+        Route::put('leave-reasons/{id}', [\App\Http\Controllers\API\LeaveReasonsController::class, 'update']);
+        Route::delete('leave-reasons/{id}', [\App\Http\Controllers\API\LeaveReasonsController::class, 'destroy']);
+    });
+
+    Route::prefix('half-day')->group(function () {
+        Route::post('request', [\App\Http\Controllers\API\HalfDayController::class, 'request']);
+        Route::get('mine', [\App\Http\Controllers\API\HalfDayController::class, 'mine']);
+        Route::get('pending', [\App\Http\Controllers\API\HalfDayController::class, 'pending']);
+        Route::post('{id}/respond', [\App\Http\Controllers\API\HalfDayController::class, 'respond']);
+    });
+
+    Route::prefix('ai')->middleware(['throttle:30,1'])->group(function () {
+        Route::post('refine-leave-reason', [\App\Http\Controllers\API\AIController::class, 'refineLeaveReason']);
+        Route::post('suggest-timesheet-entry', [\App\Http\Controllers\API\AIController::class, 'suggestTimesheetEntry']);
+        Route::post('autofill-timesheet', [\App\Http\Controllers\API\AIController::class, 'autofillTimesheet']);
+    });
+
+    Route::get('search', [\App\Http\Controllers\API\SearchController::class, 'search']);
 
     // Role management - Admin only
     Route::prefix('admin/roles')
