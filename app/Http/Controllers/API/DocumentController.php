@@ -155,4 +155,77 @@ class DocumentController extends Controller
             'source'       => 'document',
         ];
     }
+
+    public function summarize(Request $request, GeminiService $gemini)
+    {
+        $validator = Validator::make($request->all(), [
+            'document_id' => 'nullable|exists:documents,id',
+            'file' => 'nullable|file|mimes:pdf,txt|max:10240',
+            'title' => 'nullable|string|max:255',
+            'category' => 'nullable|string|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+        }
+
+        $text = '';
+        $title = $request->title ?? 'Untitled';
+        $category = $request->category ?? 'General';
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $ext = strtolower($file->getClientOriginalExtension());
+
+            if ($ext === 'txt') {
+                $text = (string) @file_get_contents($file->getRealPath());
+            } elseif ($ext === 'pdf' && class_exists(\Smalot\PdfParser\Parser::class)) {
+                try {
+                    $parser = new \Smalot\PdfParser\Parser();
+                    $pdf = $parser->parseFile($file->getRealPath());
+                    $text = (string) $pdf->getText();
+                } catch (\Throwable $e) {
+                    $text = '';
+                }
+            }
+        } elseif ($request->filled('document_id')) {
+            $doc = Document::findOrFail($request->document_id);
+
+            if (! $doc->file_path || ! \Illuminate\Support\Facades\Storage::disk('public')->exists($doc->file_path)) {
+                return response()->json(['status' => 'error', 'message' => 'File not found'], 404);
+            }
+
+            $title = $doc->title;
+            $category = $doc->category;
+
+            $path = \Illuminate\Support\Facades\Storage::disk('public')->path($doc->file_path);
+
+            if (str_ends_with($doc->file_path, '.pdf') && class_exists(\Smalot\PdfParser\Parser::class)) {
+                try {
+                    $parser = new \Smalot\PdfParser\Parser();
+                    $pdf = $parser->parseFile($path);
+                    $text = (string) $pdf->getText();
+                } catch (\Throwable $e) {
+                    $text = '';
+                }
+            } elseif (str_ends_with($doc->file_path, '.txt')) {
+                $text = (string) @file_get_contents($path);
+            }
+        }
+
+        if (strlen(trim($text)) < 100) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not enough text to summarize. Upload a text based PDF or a .txt file.',
+            ], 422);
+        }
+
+        $summary = $gemini->summarizeDocument($title, $category, $text);
+
+        if (! $summary) {
+            return response()->json(['status' => 'error', 'message' => 'AI is unavailable.'], 503);
+        }
+
+        return response()->json(['status' => 'success', 'data' => ['summary' => $summary]], 200);
+    }
 }

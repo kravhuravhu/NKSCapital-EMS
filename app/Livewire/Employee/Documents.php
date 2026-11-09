@@ -10,22 +10,23 @@ class Documents extends Component
 {
     use WithFileUploads;
 
-    public bool    $loading = true;
-    public ?string $error   = null;
-    public ?string $flash   = null;
+    public bool $loading = true;
+    public ?string $error = null;
+    public ?string $flash = null;
 
     public string $tab = 'shared';
-
-    public array $shared  = [];
-    public array $mine    = [];
+    public array $shared = [];
+    public array $mine = [];
     public array $summary = [];
 
-    // upload
-    public bool   $showUpload = false;
+    public bool $showUpload = false;
     public string $uploadTitle = '';
     public string $uploadCategory = 'HR';
-    public bool   $uploadShared = false;
+    public bool $uploadShared = false;
     public $uploadFile = null;
+    public string $uploadDescription = '';
+    public string $aiSummary = '';
+    public bool $summarizing = false;
 
     public function mount(): void
     {
@@ -35,18 +36,18 @@ class Documents extends Component
     public function load(): void
     {
         $this->loading = true;
-        $this->error   = null;
+        $this->error = null;
 
         $response = Api::get('/documents/list');
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load documents.';
             $this->loading = false;
             return;
         }
 
-        $this->shared  = $response['data']['shared']  ?? [];
-        $this->mine    = $response['data']['mine']    ?? [];
+        $this->shared = $response['data']['shared'] ?? [];
+        $this->mine = $response['data']['mine'] ?? [];
         $this->summary = $response['data']['summary'] ?? [];
 
         $this->loading = false;
@@ -61,11 +62,13 @@ class Documents extends Component
 
     public function openUpload(): void
     {
-        $this->uploadTitle    = '';
+        $this->uploadTitle = '';
         $this->uploadCategory = 'HR';
-        $this->uploadShared   = false;
-        $this->uploadFile     = null;
-        $this->showUpload     = true;
+        $this->uploadShared = false;
+        $this->uploadFile = null;
+        $this->uploadDescription = '';
+        $this->aiSummary = '';
+        $this->showUpload = true;
     }
 
     public function closeUpload(): void
@@ -74,27 +77,51 @@ class Documents extends Component
         $this->uploadFile = null;
     }
 
+    public function summarizeDraft(): void
+    {
+        if (! $this->uploadFile) {
+            $this->error = 'Select a file first.';
+            return;
+        }
+
+        $this->summarizing = true;
+        $this->error = null;
+
+        $response = Api::upload('/documents/summarize', [
+            'title' => $this->uploadTitle ?: 'Draft',
+            'category' => $this->uploadCategory,
+        ], ['file' => $this->uploadFile]);
+
+        if (! $response['ok']) {
+            $this->error = $response['message'] ?? 'AI could not read this file.';
+            $this->summarizing = false;
+            return;
+        }
+
+        $this->aiSummary = $response['data']['summary'] ?? '';
+        $this->summarizing = false;
+    }
+
     public function submitUpload(): void
     {
         $this->error = null;
 
-        if (!$this->uploadTitle || !$this->uploadFile) {
+        if (! $this->uploadTitle || ! $this->uploadFile) {
             $this->error = 'Title and file are required.';
             return;
         }
 
         $response = Api::upload('/documents/upload', [
-            'title'     => $this->uploadTitle,
-            'category'  => $this->uploadCategory,
+            'title' => $this->uploadTitle,
+            'category' => $this->uploadCategory,
             'is_shared' => $this->uploadShared ? '1' : '0',
-        ], [
-            'file' => $this->uploadFile,
-        ]);
+            'description' => $this->aiSummary ?: $this->uploadDescription,
+        ], ['file' => $this->uploadFile]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Upload failed.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Upload failed.');
             return;
         }
 
@@ -112,11 +139,11 @@ class Documents extends Component
     {
         $t = strtolower($title);
 
-        if (str_contains($t, 'payslip'))   return 'fa-solid fa-money-check-dollar';
-        if (str_contains($t, 'contract'))  return 'fa-solid fa-file-contract';
-        if (str_contains($t, 'handbook'))  return 'fa-solid fa-book';
-        if (str_contains($t, 'policy'))    return 'fa-solid fa-scroll';
-        if (str_contains($t, 'conduct'))   return 'fa-solid fa-gavel';
+        if (str_contains($t, 'payslip')) return 'fa-solid fa-money-check-dollar';
+        if (str_contains($t, 'contract')) return 'fa-solid fa-file-contract';
+        if (str_contains($t, 'handbook')) return 'fa-solid fa-book';
+        if (str_contains($t, 'policy')) return 'fa-solid fa-scroll';
+        if (str_contains($t, 'cert')) return 'fa-solid fa-certificate';
 
         return 'fa-solid fa-file-lines';
     }
@@ -125,10 +152,10 @@ class Documents extends Component
     {
         return match ($category) {
             'Compliance' => 'success',
-            'Policy'     => 'gold',
-            'Finance'    => 'blue',
-            'Personal'   => 'purple',
-            default      => 'purple',
+            'Policy' => 'gold',
+            'Finance' => 'info',
+            'Personal' => 'purple',
+            default => 'muted',
         };
     }
 

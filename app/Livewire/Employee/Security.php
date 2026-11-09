@@ -7,24 +7,25 @@ use Livewire\Component;
 
 class Security extends Component
 {
-    public bool    $loading = true;
-    public ?string $error   = null;
-    public ?string $flash   = null;
+    public bool $loading = true;
+    public ?string $error = null;
+    public ?string $flash = null;
 
     public array $passwordInfo = [];
-    public array $sessions     = [];
-    public array $activity     = [];
+    public array $sessions = [];
+    public array $activity = [];
 
-    // change-password modal
-    public bool   $showPassword = false;
+    public bool $showPassword = false;
     public string $currentPassword = '';
     public string $newPassword = '';
     public string $newPasswordConfirm = '';
 
-    // 2fa modal
-    public bool   $show2fa = false;
-    public array  $twoFactorSetup = [];
+    public bool $show2fa = false;
+    public array $twoFactorSetup = [];
+    public string $twoFactorCode = '';
     public string $disablePassword = '';
+    public bool $enabling2fa = false;
+    public bool $verifying2fa = false;
 
     public function mount(): void
     {
@@ -34,7 +35,7 @@ class Security extends Component
     public function load(): void
     {
         $this->loading = true;
-        $this->error   = null;
+        $this->error = null;
 
         $info = Api::get('/security/password-info');
         if ($info['ok']) {
@@ -54,8 +55,6 @@ class Security extends Component
         $this->loading = false;
     }
 
-    // ============ change password ============
-
     public function openPassword(): void
     {
         $this->currentPassword = '';
@@ -73,8 +72,8 @@ class Security extends Component
     {
         $this->error = null;
 
-        if (!$this->currentPassword || strlen($this->newPassword) < 8) {
-            $this->error = 'Password must be at least 8 characters.';
+        if (strlen($this->newPassword) < 8) {
+            $this->error = 'New password must be at least 8 characters.';
             return;
         }
 
@@ -84,15 +83,15 @@ class Security extends Component
         }
 
         $response = Api::post('/security/password/change', [
-            'current_password'      => $this->currentPassword,
-            'new_password'          => $this->newPassword,
+            'current_password' => $this->currentPassword,
+            'new_password' => $this->newPassword,
             'new_password_confirmation' => $this->newPasswordConfirm,
         ]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Password change failed.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Password change failed.');
             return;
         }
 
@@ -101,19 +100,25 @@ class Security extends Component
         $this->load();
     }
 
-    // ============ 2FA ============
-
     public function open2fa(): void
     {
         $this->twoFactorSetup = [];
         $this->disablePassword = '';
+        $this->twoFactorCode = '';
         $this->show2fa = true;
 
-        if (!($this->passwordInfo['two_factor_enabled'] ?? false)) {
+        if (! ($this->passwordInfo['two_factor_enabled'] ?? false)) {
+            $this->enabling2fa = true;
+
             $response = Api::post('/security/2fa/enable');
+
             if ($response['ok']) {
                 $this->twoFactorSetup = $response['data'] ?? [];
+            } else {
+                $this->error = $response['message'] ?? 'Unable to start 2FA setup.';
             }
+
+            $this->enabling2fa = false;
         }
     }
 
@@ -121,40 +126,62 @@ class Security extends Component
     {
         $this->show2fa = false;
         $this->twoFactorSetup = [];
+        $this->twoFactorCode = '';
+        $this->disablePassword = '';
+    }
+
+    public function verify2fa(): void
+    {
+        $this->error = null;
+
+        if (strlen($this->twoFactorCode) !== 6 || ! ctype_digit($this->twoFactorCode)) {
+            $this->error = 'Enter the 6 digit code from your authenticator app.';
+            return;
+        }
+
+        $this->verifying2fa = true;
+
+        $response = Api::post('/auth/2fa/verify', [
+            'code' => $this->twoFactorCode,
+            'secret' => $this->twoFactorSetup['secret'] ?? '',
+        ]);
+
+        if (! $response['ok']) {
+            $this->error = $response['message'] ?? 'Code did not verify.';
+            $this->verifying2fa = false;
+            return;
+        }
+
+        $this->flash = 'Two factor authentication enabled.';
+        $this->verifying2fa = false;
+        $this->close2fa();
+        $this->load();
     }
 
     public function disable2fa(): void
     {
         $this->error = null;
 
-        if (!$this->disablePassword) {
+        if (! $this->disablePassword) {
             $this->error = 'Enter your password to disable 2FA.';
             return;
         }
 
-        $response = Api::post('/security/2fa/disable', [
-            'password' => $this->disablePassword,
-        ]);
+        $response = Api::post('/security/2fa/disable', ['password' => $this->disablePassword]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Disable failed.';
             return;
         }
 
-        $this->flash = 'Two-factor disabled.';
+        $this->flash = 'Two factor authentication disabled.';
         $this->close2fa();
         $this->load();
     }
 
-    public function revokeSession(int $id): void
+    public function strengthPercent(): int
     {
-        // not a real endpoint yet — marked as TODO
-        $this->flash = 'Session revoked (frontend only — endpoint pending).';
-    }
-
-    public static function strengthBars(int $strength): int
-    {
-        return max(0, min(5, $strength));
+        return max(0, min(100, ((int) ($this->passwordInfo['strength'] ?? 3)) * 20));
     }
 
     public function render()

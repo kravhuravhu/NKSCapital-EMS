@@ -62,6 +62,13 @@ class EmployeeManagement extends Component
     public string $deactivateName = '';
     public string $deactivatePassword = '';
 
+    // roles modal
+    public bool $showRoles = false;
+    public ?int $rolesUserId = null;
+    public array $rolesForm = [];
+    public array $availableRoles = [];
+    public string $rolesPrimary = '';
+
     public function mount(): void
     {
         $this->resetCreateForm();
@@ -533,6 +540,76 @@ class EmployeeManagement extends Component
             'recruiter' => 'purple',
             default     => 'muted',
         };
+    }
+
+    public function openRoles(int $id): void
+    {
+        $response = Api::get('/admin/roles/list');
+        $this->availableRoles = $response['ok'] ? ($response['data'] ?? []) : [];
+
+        $row = collect($this->employees)->firstWhere('id', $id);
+
+        if (! $row) {
+            $this->error = 'Employee not found.';
+            return;
+        }
+
+        $existing = collect($row['roles'] ?? [])->pluck('name')->toArray();
+
+        if (empty($existing) && ! empty($row['role'])) {
+            $existing = [$row['role']];
+        }
+
+        $this->rolesUserId = $id;
+        $this->rolesForm = $existing;
+        $this->rolesPrimary = $row['role'] ?? ($existing[0] ?? 'employee');
+        $this->showRoles = true;
+        $this->closeView();
+    }
+
+    public function submitRoles(): void
+    {
+        $this->error = null;
+
+        if (empty($this->rolesForm)) {
+            $this->error = 'Select at least one role.';
+            return;
+        }
+
+        if (! in_array($this->rolesPrimary, $this->rolesForm, true)) {
+            $this->error = 'Primary role must be one of the selected roles.';
+            return;
+        }
+
+        $response = Api::put('/employee/roles/' . $this->rolesUserId, [
+            'roles' => $this->rolesForm,
+            'primary_role' => $this->rolesPrimary,
+        ]);
+
+        if (! $response['ok']) {
+            $errs = $response['errors'] ?? [];
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to update roles.');
+            return;
+        }
+
+        $this->flash = 'Roles updated.';
+        $this->showRoles = false;
+        $this->rolesUserId = null;
+        $this->load();
+    }
+
+    public function toggleRole(string $name): void
+    {
+        if (in_array($name, $this->rolesForm, true)) {
+            $this->rolesForm = array_values(array_diff($this->rolesForm, [$name]));
+
+            if ($this->rolesPrimary === $name && count($this->rolesForm) > 0) {
+                $this->rolesPrimary = $this->rolesForm[0];
+            }
+        } else {
+            $this->rolesForm[] = $name;
+        }
     }
 
     public function render()

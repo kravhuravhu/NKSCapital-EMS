@@ -111,4 +111,31 @@ class GeminiService
 
         return array_values($decoded);
     }
+
+    public function summarizeDocument(string $title, string $category, string $extractedText): ?string
+    {
+        $system = 'You write concise summaries of uploaded HR documents. '
+                . 'Two or three short sentences. Include the document type, the parties involved, '
+                . 'and any dates or amounts that matter. No emojis. No em dashes. No quotes.';
+
+        $prompt = "Title: {$title}\n"
+                . "Category: {$category}\n"
+                . "Content:\n" . mb_substr($extractedText, 0, 6000) . "\n\n"
+                . 'Write the summary now.';
+
+        return $this->generate($prompt, $system, 220);
+    }
+
+    public function describeAssetIssue(string $assetModel, string $roughIssue): ?string
+    {
+        $system = 'You rewrite short equipment issue descriptions into clear, professional sentences. '
+                . 'One or two sentences. Keep the meaning exact. Mention what is broken and what the user tried. '
+                . 'No emojis, no em dashes.';
+
+        $prompt = "Asset: {$assetModel}\n"
+                . "User description: {$roughIssue}\n"
+                . 'Return only the rewritten description.';
+
+        return $this->generate($prompt, $system, 150);
+    }
 }

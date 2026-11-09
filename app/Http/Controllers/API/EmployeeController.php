@@ -199,6 +199,72 @@ class EmployeeController extends Controller
     }
 
     /**
+     * 
+     */
+    public function updateRoles(Request $request, $id)
+    {
+        $authUser = Auth::user();
+
+        if (! in_array($authUser->role, ['admin', 'super_admin'], true)) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'string|exists:roles,name',
+            'primary_role' => 'required|string|exists:roles,name',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+        }
+
+        if (! in_array($request->primary_role, $request->roles, true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Primary role must be one of the selected roles.',
+            ], 422);
+        }
+
+        $target = User::findOrFail($id);
+        $oldRoles = $target->getRoleNames()->toArray();
+        $oldPrimary = $target->role;
+
+        $target->syncRoles($request->roles);
+
+        $primary = $request->primary_role;
+
+        if (in_array($primary, ['employee', 'manager', 'director', 'admin', 'recruiter', 'operational_manager'], true)) {
+            $target->role = $primary;
+        } elseif (in_array($primary, ['admin', 'super_admin'], true) && $primary === 'super_admin') {
+            $target->role = 'admin';
+        } else {
+            $target->role = 'employee';
+        }
+
+        $target->save();
+
+        AuditService::log(
+            action: 'EMPLOYEE_ROLES_UPDATED',
+            tableName: 'users',
+            recordId: $target->id,
+            oldValues: ['roles' => $oldRoles, 'primary_role' => $oldPrimary],
+            newValues: ['roles' => $request->roles, 'primary_role' => $target->role],
+            logType: 'success'
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Roles updated',
+            'data' => [
+                'user_id' => $target->id,
+                'roles' => $target->getRoleNames(),
+                'primary_role' => $target->role,
+            ],
+        ], 200);
+    }
+
+    /**
      * GET /api/v1/employee/show/{id}
      *
      * Full editable snapshot used by the Admin edit modal.
@@ -430,31 +496,51 @@ class EmployeeController extends Controller
     public function uploadPhoto(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:255120',
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $user = Auth::user();
         $photo = $request->file('photo');
-        $filename = time() . '.' . $photo->getClientOriginalExtension();
-        $path = $photo->storeAs('profile-photos', $filename, 'public');
+
+        if ($user->profile_photo) {
+            $old = 'profile-photos/' . $user->profile_photo;
+
+            if (Storage::disk('public')->exists($old)) {
+                Storage::disk('public')->delete($old);
+            }
+        }
+
+        $filename = (string) Str::uuid() . '.' . strtolower($photo->getClientOriginalExtension());
+        $photo->storeAs('profile-photos', $filename, 'public');
 
         $user->profile_photo = $filename;
         $user->save();
 
+        $user = $user->fresh();
+
+        AuditService::log(
+            action: 'EMPLOYEE_PHOTO_UPLOADED',
+            tableName: 'users',
+            recordId: $user->id,
+            newValues: ['profile_photo' => $filename],
+            logType: 'success'
+        );
+
         return response()->json([
             'status' => 'success',
-            'message' => 'Photo uploaded successfully',
+            'message' => 'Photo uploaded',
             'data' => [
+                'profile_photo' => $user->profile_photo,
                 'profile_photo_url' => $user->profile_photo_url,
-            ]
+            ],
         ], 200);
     }
 

@@ -2,19 +2,20 @@
 
 namespace App\Livewire\Employee;
 
+use App\Support\AuditActionVerb;
 use App\Support\Api;
 use Carbon\Carbon;
 use Livewire\Component;
 
 class Notifications extends Component
 {
-    public bool    $loading = true;
-    public ?string $error   = null;
-    public ?string $flash   = null;
+    public bool $loading = true;
+    public ?string $error = null;
+    public ?string $flash = null;
 
-    public array $groups      = [];
+    public array $groups = [];
     public array $preferences = [];
-    public int   $unreadCount = 0;
+    public int $unreadCount = 0;
 
     public function mount(): void
     {
@@ -24,11 +25,11 @@ class Notifications extends Component
     public function load(): void
     {
         $this->loading = true;
-        $this->error   = null;
+        $this->error = null;
 
         $list = Api::get('/notifications/list', ['per_page' => 60]);
 
-        if (!$list['ok']) {
+        if (! $list['ok']) {
             $this->error = $list['message'] ?? 'Unable to load notifications.';
             $this->loading = false;
             return;
@@ -40,7 +41,6 @@ class Notifications extends Component
         $this->groups = $this->groupByDate($items);
 
         $prefs = Api::get('/notifications/preferences');
-
         if ($prefs['ok']) {
             $this->preferences = $prefs['data'] ?? [];
         }
@@ -50,13 +50,13 @@ class Notifications extends Component
 
     protected function groupByDate(array $items): array
     {
-        $today     = Carbon::today();
+        $today = Carbon::today();
         $yesterday = Carbon::yesterday();
 
         $groups = [
-            'today'     => ['label' => 'Today',     'items' => []],
+            'today' => ['label' => 'Today', 'items' => []],
             'yesterday' => ['label' => 'Yesterday', 'items' => []],
-            'earlier'   => ['label' => 'Earlier',   'items' => []],
+            'earlier' => ['label' => 'Earlier', 'items' => []],
         ];
 
         foreach ($items as $item) {
@@ -76,13 +76,9 @@ class Notifications extends Component
         return array_values(array_filter($groups, fn ($g) => count($g['items']) > 0));
     }
 
-    // ============ actions ============
-
     public function markRead(int $notificationId): void
     {
-        $response = Api::post('/notifications/mark-read', [
-            'notification_id' => $notificationId,
-        ]);
+        $response = Api::post('/notifications/mark-read', ['notification_id' => $notificationId]);
 
         if ($response['ok']) {
             $this->load();
@@ -110,23 +106,22 @@ class Notifications extends Component
 
     public function togglePreference(string $category, string $field): void
     {
-        if (!in_array($field, ['in_app', 'email', 'digest_only'], true)) {
+        if (! in_array($field, ['in_app', 'email', 'digest_only'], true)) {
             return;
         }
 
-        // find existing preference
         $updated = collect($this->preferences)->map(function ($p) use ($category, $field) {
             if (($p['category'] ?? null) === $category) {
-                $p[$field] = !(bool) ($p[$field] ?? false);
+                $p[$field] = ! (bool) ($p[$field] ?? false);
             }
             return $p;
         })->toArray();
 
         $response = Api::put('/notifications/preferences/update', [
             'preferences' => collect($updated)->map(fn ($p) => [
-                'category'    => $p['category'],
-                'in_app'      => (bool) ($p['in_app'] ?? false),
-                'email'       => (bool) ($p['email'] ?? false),
+                'category' => $p['category'],
+                'in_app' => (bool) ($p['in_app'] ?? false),
+                'email' => (bool) ($p['email'] ?? false),
                 'digest_only' => (bool) ($p['digest_only'] ?? false),
             ])->toArray(),
         ]);
@@ -143,23 +138,34 @@ class Notifications extends Component
     {
         $type = (string) $type;
 
-        if (str_contains($type, 'TIMESHEET'))   return 'fa-solid fa-clock';
-        if (str_contains($type, 'LEAVE'))       return 'fa-solid fa-umbrella-beach';
-        if (str_contains($type, 'ASSET'))       return 'fa-solid fa-laptop';
-        if (str_contains($type, 'CONTRACT'))    return 'fa-solid fa-file-contract';
-        if (str_contains($type, 'PAYROLL'))     return 'fa-solid fa-money-check-dollar';
-        if (str_contains($type, 'MEETING'))     return 'fa-solid fa-users';
-        if (str_contains($type, 'DELEGATION'))  return 'fa-solid fa-user-cog';
-        if (str_contains($type, 'RECRUIT'))     return 'fa-solid fa-briefcase';
+        if (str_contains($type, 'TIMESHEET')) return 'fa-solid fa-clock';
+        if (str_contains($type, 'LEAVE')) return 'fa-solid fa-umbrella-beach';
+        if (str_contains($type, 'ASSET')) return 'fa-solid fa-laptop';
+        if (str_contains($type, 'CONTRACT')) return 'fa-solid fa-file-contract';
+        if (str_contains($type, 'PAYROLL')) return 'fa-solid fa-money-check-dollar';
+        if (str_contains($type, 'MEETING')) return 'fa-solid fa-users';
+        if (str_contains($type, 'DELEGATION')) return 'fa-solid fa-user-cog';
+        if (str_contains($type, 'RECRUIT')) return 'fa-solid fa-briefcase';
+        if (str_contains($type, 'HALF_DAY')) return 'fa-solid fa-clock';
 
-        return 'fa-solid fa-bell';
+        return 'fa-regular fa-bell';
+    }
+
+    public static function toneForType(?string $type): string
+    {
+        $type = (string) $type;
+
+        if (str_contains($type, 'REJECTED') || str_contains($type, 'DECLINED')) return 'danger';
+        if (str_contains($type, 'APPROVED') || str_contains($type, 'ACCEPTED') || str_contains($type, 'ACKNOWLEDGED')) return 'success';
+        if (str_contains($type, 'REMINDER') || str_contains($type, 'PENDING')) return 'warning';
+
+        return 'info';
     }
 
     public static function prettyTime(?string $iso): string
     {
-        if (!$iso) {
-            return '';
-        }
+        if (! $iso) return '';
+
         return Carbon::parse($iso)->diffForHumans();
     }
 

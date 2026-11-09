@@ -7,11 +7,11 @@ use Livewire\Component;
 
 class Projects extends Component
 {
-    public bool    $loading = true;
-    public ?string $error   = null;
+    public bool $loading = true;
+    public ?string $error = null;
 
-    public ?array $primary   = null;
-    public array  $projects  = [];
+    public ?array $primary = null;
+    public array $projects = [];
 
     public function mount(): void
     {
@@ -21,43 +21,62 @@ class Projects extends Component
     public function load(): void
     {
         $this->loading = true;
-        $this->error   = null;
+        $this->error = null;
 
         $response = Api::get('/project/list/assigned');
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load projects.';
             $this->loading = false;
             return;
         }
 
-        $this->primary  = $response['data']['primary_project']   ?? null;
+        $this->primary = $response['data']['primary_project'] ?? null;
         $this->projects = $response['data']['assigned_projects'] ?? [];
 
         $this->loading = false;
     }
 
+    public function canSeeFinancials(): bool
+    {
+        $user = auth()->user();
+
+        return in_array($user->role, [
+            'admin', 'super_admin', 'director', 'operational_manager', 'manager',
+        ], true);
+    }
+
+    public function daysUntilEnd(array $project): ?int
+    {
+        if (empty($project['end_date'])) return null;
+
+        return (int) now()->startOfDay()->diffInDays(
+            \Carbon\Carbon::parse($project['end_date'])->startOfDay(),
+            false
+        );
+    }
+
     public static function statusTone(?string $status): string
     {
         return match ($status) {
-            'active'    => 'success',
-            'planning'  => 'blue',
-            'on_hold'   => 'gold',
+            'active' => 'success',
+            'planning' => 'info',
+            'on_hold' => 'warning',
             'completed' => 'muted',
-            'archived'  => 'muted',
-            default     => 'muted',
+            'archived' => 'muted',
+            default => 'muted',
         };
     }
 
     public static function statusLabel(?string $status): string
     {
         return match ($status) {
-            'active'    => 'Active',
-            'planning'  => 'Planning',
-            'on_hold'   => 'On Hold',
+            'active' => 'Active',
+            'planning' => 'Planning',
+            'on_hold' => 'On hold',
             'completed' => 'Completed',
-            'archived'  => 'Archived',
-            default     => 'Assigned',
+            'archived' => 'Archived',
+            default => 'Assigned',
         };
     }
 

@@ -145,6 +145,10 @@
                                             <i class="fa-solid fa-eye"></i>
                                             View
                                         </button>
+                                        <button type="button" wire:click="openRoles({{ $emp['id'] }})" class="em-more-item">
+                                            <i class="fa-solid fa-user-tag"></i>
+                                            Manage Roles
+                                        </button>
                                         <button type="button" wire:click="openEdit({{ $emp['id'] }})"
                                                 class="nks-btn nks-btn--primary nks-btn--sm">
                                             <i class="fa-solid fa-pen"></i>
@@ -752,6 +756,58 @@
                     <button type="button" wire:click="submitDeactivate" class="nks-btn nks-btn--danger">
                         <i class="fa-solid fa-user-slash"></i>
                         Deactivate
+                    </button>
+                </footer>
+            </div>
+        </div>
+    @endif
+
+    @if ($showRoles)
+        <div class="nks-modal-backdrop" wire:click.self="$set('showRoles', false)" @keydown.escape.window="$set('showRoles', false)">
+            <div class="nks-modal nks-modal--md" role="dialog" aria-modal="true" x-trap>
+                <header class="nks-modal-head">
+                    <h3>Manage roles</h3>
+                    <button type="button" wire:click="$set('showRoles', false)" class="nks-modal-close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </header>
+                <div class="nks-modal-body">
+                    <p class="nks-help">
+                        Toggle the roles this employee should have. Multiple roles give combined access.
+                        The primary role controls the topbar label and dashboard routing.
+                    </p>
+
+                    <div class="nks-field">
+                        <label class="nks-label">Roles</label>
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            @foreach ($availableRoles as $role)
+                                <label class="nks-checkbox">
+                                    <input type="checkbox"
+                                        value="{{ $role['name'] }}"
+                                        @checked(in_array($role['name'], $rolesForm, true))
+                                        wire:click="toggleRole('{{ $role['name'] }}')">
+                                    <span>{{ \App\Support\RoleLabels::label($role['name']) }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="nks-field">
+                        <label class="nks-label">Primary role</label>
+                        <select wire:model="rolesPrimary" class="nks-select">
+                            @foreach ($rolesForm as $name)
+                                <option value="{{ $name }}">{{ \App\Support\RoleLabels::label($name) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <footer class="nks-modal-foot">
+                    <button type="button" wire:click="$set('showRoles', false)" class="nks-btn nks-btn--outline">Cancel</button>
+                    <button type="button" wire:click="submitRoles" class="nks-btn nks-btn--primary"
+                            wire:loading.attr="disabled" wire:target="submitRoles">
+                        <i class="fa-solid fa-check" wire:loading.remove wire:target="submitRoles"></i>
+                        <span class="nks-btn-spinner" wire:loading wire:target="submitRoles"></span>
+                        Save roles
                     </button>
                 </footer>
             </div>
