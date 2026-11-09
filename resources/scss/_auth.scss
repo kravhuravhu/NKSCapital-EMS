@@ -1,52 +1,91 @@
-// auth shell
-
-.auth-shell {
+.nks-auth-shell {
     min-height: 100vh;
-    display: grid;
-    place-items: center;
-    background: var(--nks-page);
-    padding: 32px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 20px;
+    background:
+        radial-gradient(ellipse at top, rgba(200, 169, 81, 0.06), transparent 60%),
+        var(--nks-page);
 }
 
-.auth-card {
-    background: #FFF;
-    border-radius: var(--nks-radius);
-    padding: 40px 40px 36px;
+html.dark .nks-auth-shell {
+    background:
+        radial-gradient(ellipse at top, rgba(200, 169, 81, 0.08), transparent 60%),
+        var(--nks-page);
+}
+
+.nks-auth-card {
     width: 100%;
-    max-width: 440px;
-    box-shadow: 0 2px 12px rgba(31, 41, 55, 0.05);
+    max-width: 420px;
+    background: var(--nks-surface);
+    border: 1px solid var(--nks-border);
+    border-radius: var(--nks-radius-lg);
+    padding: 40px 36px;
+    box-shadow: var(--nks-shadow-md);
 }
 
-.auth-brand {
+.nks-auth-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 32px;
+
+    .nks-logo-mark {
+        height: 32px;
+        padding: 0 14px;
+        font-size: 13px;
+    }
+
+    .nks-brand-name {
+        font-size: 26px;
+    }
+}
+
+.nks-auth-brand .nks-brand-name {
+    color: var(--nks-ink);
+}
+
+.nks-auth-heading {
+    margin-bottom: 28px;
     text-align: center;
-    margin-bottom: 30px;
 
-    span {
-        display: inline-block;
-        background: var(--nks-gold);
-        color: #FFF;
-        padding: 8px 7px;
-        font-size: 24px;
+    h1 {
+        font-size: 22px;
         font-weight: 700;
-        border-radius: 2px;
-        line-height: 1;
+        color: var(--nks-ink);
+        letter-spacing: -0.02em;
+        margin-bottom: 6px;
     }
 
-    strong {
-        font-size: 30px;
+    p {
+        font-size: 13px;
         color: var(--nks-muted);
-        margin-left: 8px;
-    }
-
-    small {
-        display: block;
-        color: var(--nks-muted);
-        margin-top: 6px;
-        font-size: 11px;
     }
 }
 
-// the login form — matches the reference rhythm
+.nks-auth-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(63, 161, 104, 0.1);
+    color: var(--nks-success);
+    border-radius: var(--nks-radius-sm);
+    margin-bottom: 20px;
+    font-size: 13px;
+    line-height: 1.5;
+
+    i { font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+    &--error {
+        background: rgba(194, 91, 91, 0.1);
+        color: var(--nks-danger);
+    }
+}
+
 .nks-auth-form {
     display: flex;
     flex-direction: column;
@@ -60,48 +99,83 @@
 
     label {
         font-size: 13px;
-        font-weight: 700;
-        color: var(--nks-navy);
+        font-weight: 600;
+        color: var(--nks-ink);
+    }
+}
+
+.nks-auth-field-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nks-auth-forgot {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--nks-muted);
+
+    &:hover { color: var(--nks-gold-deep); text-decoration: underline; }
+}
+
+.nks-auth-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    > i {
+        position: absolute;
+        left: 14px;
+        color: var(--nks-faint);
+        font-size: 14px;
+        pointer-events: none;
+        transition: color var(--nks-transition);
     }
 
     input {
         width: 100%;
-        height: 26px;
-        padding: 2px 6px;
-        border: 1px solid #6B7280;
-        border-radius: 2px;
-        background: #FFF;
+        height: 44px;
+        padding: 0 14px 0 40px;
+        border: 1px solid var(--nks-border);
+        border-radius: var(--nks-radius-sm);
+        background: var(--nks-surface);
+        color: var(--nks-ink);
         font-size: 14px;
+        transition: border-color var(--nks-transition), box-shadow var(--nks-transition);
+
+        &::placeholder { color: var(--nks-faint); }
 
         &:focus {
             outline: none;
             border-color: var(--nks-gold);
-            box-shadow: 0 0 0 2px rgba(200, 169, 81, 0.2);
+            box-shadow: 0 0 0 3px rgba(200, 169, 81, 0.15);
+        }
+
+        &[aria-invalid="true"] {
+            border-color: var(--nks-danger);
+            &:focus { box-shadow: 0 0 0 3px rgba(194, 91, 91, 0.15); }
         }
     }
+
+    &:focus-within > i { color: var(--nks-gold-deep); }
 }
 
 .nks-auth-error {
-    color: #8A2A2A;
+    color: var(--nks-danger);
     font-size: 12px;
-}
-
-.nks-auth-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 4px;
+    font-weight: 500;
 }
 
 .nks-auth-checkbox {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     font-size: 13px;
+    color: var(--nks-body);
     cursor: pointer;
+    font-weight: 500;
 
-    input[type="checkbox"] {
+    input {
         width: 16px;
         height: 16px;
         accent-color: var(--nks-gold);
@@ -109,37 +183,128 @@
     }
 }
 
-.nks-auth-link {
-    color: var(--nks-navy);
-    font-size: 13px;
-
-    &:hover {
-        color: var(--nks-gold);
-        text-decoration: underline;
-    }
-}
-
 .nks-auth-submit {
-    width: auto;
-    align-self: flex-start;
-    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    height: 46px;
+    width: 100%;
+    margin-top: 8px;
     padding: 0 20px;
-    margin-top: 6px;
-    background: var(--nks-gold-soft);
-    color: #FFF;
-    border: 0;
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 500;
+    background: var(--nks-navy);
+    color: white;
+    border: 1px solid var(--nks-navy);
+    border-radius: var(--nks-radius-sm);
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background var(--nks-transition), transform var(--nks-transition);
+
+    i { font-size: 12px; transition: transform var(--nks-transition); }
 
     &:hover:not(:disabled) {
-        background: var(--nks-gold);
+        background: var(--nks-navy-deep);
+        border-color: var(--nks-navy-deep);
+
+        i { transform: translateX(2px); }
     }
+
+    &:active { transform: translateY(1px); }
 
     &:disabled {
         opacity: 0.6;
         cursor: not-allowed;
     }
+}
+
+.nks-auth-footer {
+    margin-top: 32px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--nks-faint);
+}
+
+.nks-auth-links {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 13px;
+
+    a {
+        color: var(--nks-muted);
+        font-weight: 500;
+        margin: 0 8px;
+
+        &:hover { color: var(--nks-gold-deep); text-decoration: underline; }
+    }
+}
+
+.nks-auth-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+
+    .nks-auth-submit { flex: 1; min-width: 140px; margin-top: 0; }
+}
+
+.nks-auth-alt-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 46px;
+    padding: 0 18px;
+    background: transparent;
+    color: var(--nks-body);
+    border: 1px solid var(--nks-border);
+    border-radius: var(--nks-radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--nks-transition), color var(--nks-transition), border-color var(--nks-transition);
+
+    &:hover {
+        background: var(--nks-elevated);
+        color: var(--nks-ink);
+        border-color: var(--nks-border-strong);
+    }
+}
+
+.nks-auth-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--nks-elevated);
+    color: var(--nks-body);
+    border-radius: var(--nks-radius-sm);
+    font-size: 12px;
+    line-height: 1.55;
+    margin-bottom: 18px;
+
+    i { color: var(--nks-gold-deep); font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+}
+
+.nks-auth-code-input {
+    width: 100%;
+    height: 56px;
+    padding: 0 16px;
+    border: 1px solid var(--nks-border);
+    border-radius: var(--nks-radius-sm);
+    background: var(--nks-surface);
+    color: var(--nks-ink);
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 12px;
+    font-family: 'Roboto Mono', ui-monospace, monospace;
+
+    &:focus {
+        outline: none;
+        border-color: var(--nks-gold);
+        box-shadow: 0 0 0 3px rgba(200, 169, 81, 0.15);
+    }
+
+    &::placeholder { color: var(--nks-faint); letter-spacing: 12px; font-weight: 400; }
 }

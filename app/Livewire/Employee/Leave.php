@@ -11,47 +11,102 @@ class Leave extends Component
 {
     use WithFileUploads;
 
-    public bool    $loading = true;
-    public ?string $error   = null;
-    public ?string $flash   = null;
+    public bool $loading = true;
+    public ?string $error = null;
+    public ?string $flash = null;
+
+    public string $tab = 'apply';
 
     public array $balances = [];
+    public array $policies = [];
+    public array $myRequests = [];
+    public array $myHalfDays = [];
 
-    // form state
-    public string $leaveType  = 'annual';
-    public string $startDate  = '';
-    public string $endDate    = '';
-    public bool   $isHalfDay  = false;
-    public string $reason     = '';
-    public string $handover   = '';
-    public $attachment        = null;
+    public string $leaveType = 'annual';
+    public string $startDate = '';
+    public string $endDate = '';
 
-    public array  $conflicts = [];
+    public array $reasonOptions = [];
+    public string $reasonOption = '';
+    public string $reasonCustom = '';
+    public string $handover = '';
+    public $attachment = null;
+    public bool $refining = false;
 
-    public array $policies = []; 
+    public array $conflicts = [];
+
+    public bool $showHalfDay = false;
+    public array $halfDayForm = [];
 
     public function mount(): void
     {
         $this->startDate = now()->addDay()->format('Y-m-d');
-        $this->endDate   = now()->addDay()->format('Y-m-d');
+        $this->endDate = now()->addDay()->format('Y-m-d');
+        $this->halfDayForm = [
+            'notice_date' => now()->addDay()->format('Y-m-d'),
+            'leave_time' => '14:00',
+            'reason' => '',
+        ];
+
         $this->load();
     }
 
     public function load(): void
     {
         $this->loading = true;
-        $this->error   = null;
+        $this->error = null;
 
-        $response = Api::get('/leave/balance');
-
-        if ($response['ok']) {
-            $this->balances = $response['data']['balances'] ?? [];
-            $this->policies = $response['data']['policies'] ?? [];
-        } else {
-            $this->error = $response['message'] ?? 'Unable to load leave balances.';
+        $balance = Api::get('/leave/balance');
+        if ($balance['ok']) {
+            $this->balances = $balance['data']['balances'] ?? [];
+            $this->policies = $balance['data']['policies'] ?? [];
         }
 
+        $this->loadReasons();
+        $this->loadMyRequests();
+        $this->loadMyHalfDays();
+
         $this->loading = false;
+    }
+
+    protected function loadReasons(): void
+    {
+        $response = Api::get('/leave/reasons/' . $this->leaveType);
+
+        $options = $response['ok'] ? ($response['data'] ?? []) : [];
+
+        if (count($options) === 0) {
+            // Fallback if SQL seed was not applied: single "Other" so the form still works.
+            $options = [['id' => 0, 'label' => 'Other', 'is_other' => true]];
+        }
+
+        $this->reasonOptions = $options;
+
+        if (empty($this->reasonOption) || ! collect($options)->contains('label', $this->reasonOption)) {
+            $this->reasonOption = $options[0]['label'] ?? '';
+        }
+    }
+
+    protected function loadMyRequests(): void
+    {
+        $response = Api::get('/leave/history', ['per_page' => 30]);
+
+        $this->myRequests = $response['ok']
+            ? ($response['data']['data'] ?? [])
+            : [];
+    }
+
+    protected function loadMyHalfDays(): void
+    {
+        $response = Api::get('/half-day/mine');
+
+        $this->myHalfDays = $response['ok'] ? ($response['data'] ?? []) : [];
+    }
+
+    public function updatedLeaveType(): void
+    {
+        $this->loadReasons();
+        $this->reasonCustom = '';
     }
 
     public function updatedStartDate(): void
@@ -59,7 +114,6 @@ class Leave extends Component
         if (Carbon::parse($this->endDate)->lt(Carbon::parse($this->startDate))) {
             $this->endDate = $this->startDate;
         }
-
         $this->checkConflicts();
     }
 
@@ -68,16 +122,9 @@ class Leave extends Component
         $this->checkConflicts();
     }
 
-    public function updatedIsHalfDay(): void
-    {
-        if ($this->isHalfDay) {
-            $this->endDate = $this->startDate;
-        }
-    }
-
     protected function checkConflicts(): void
     {
-        if (!$this->startDate || !$this->endDate) {
+        if (! $this->startDate || ! $this->endDate) {
             $this->conflicts = [];
             return;
         }
@@ -90,62 +137,86 @@ class Leave extends Component
         }
     }
 
-    // ============ computed getters ============
+    public function getIsOtherReasonProperty(): bool
+    {
+        $selected = collect($this->reasonOptions)->firstWhere('label', $this->reasonOption);
+
+        return (bool) ($selected['is_other'] ?? false);
+    }
 
     public function getDaysTakenProperty(): float
     {
-        if ($this->isHalfDay) {
-            return 0.5;
-        }
-
-        if (!$this->startDate || !$this->endDate) {
-            return 0;
-        }
+        if (! $this->startDate || ! $this->endDate) return 0;
 
         $start = Carbon::parse($this->startDate);
-        $end   = Carbon::parse($this->endDate);
+        $end = Carbon::parse($this->endDate);
 
-        if ($end->lt($start)) {
-            return 0;
-        }
+        if ($end->lt($start)) return 0;
 
-        $count   = 0;
+        $count = 0;
         $current = $start->copy();
+
         while ($current->lte($end)) {
-            if (!$current->isWeekend()) {
-                $count++;
-            }
+            if (! $current->isWeekend()) $count++;
             $current->addDay();
         }
 
-        return $count;
+        return (float) $count;
     }
 
     public function getLeaveTypesProperty(): array
     {
-        // driven by what the API returned in balances
         return collect($this->balances)
             ->keys()
-            ->mapWithKeys(fn ($key) => [
-                $key => ucfirst($key) . ' Leave',
-            ])
+            ->mapWithKeys(fn ($key) => [$key => ucfirst($key) . ' Leave'])
             ->toArray();
     }
 
-    // ============ actions ============
+    public function switchTab(string $tab): void
+    {
+        if (in_array($tab, ['apply', 'requests', 'half-day'], true)) {
+            $this->tab = $tab;
+
+            if ($tab === 'requests') $this->loadMyRequests();
+            if ($tab === 'half-day') $this->loadMyHalfDays();
+        }
+    }
+
+    public function refineReason(): void
+    {
+        if (strlen(trim($this->reasonCustom)) < 3) {
+            $this->error = 'Type a rough reason first, then click Refine.';
+            return;
+        }
+
+        $this->refining = true;
+        $response = Api::post('/ai/refine-leave-reason', [
+            'rough_reason' => $this->reasonCustom,
+            'leave_type' => $this->leaveType,
+        ]);
+
+        if ($response['ok']) {
+            $this->reasonCustom = $response['data']['text'] ?? $this->reasonCustom;
+            $this->flash = 'Reason refined.';
+        } else {
+            $this->error = $response['message'] ?? 'AI is unavailable right now.';
+        }
+
+        $this->refining = false;
+    }
 
     public function resetForm(): void
     {
         $this->leaveType = 'annual';
         $this->startDate = now()->addDay()->format('Y-m-d');
-        $this->endDate   = now()->addDay()->format('Y-m-d');
-        $this->isHalfDay = false;
-        $this->reason    = '';
-        $this->handover  = '';
+        $this->endDate = now()->addDay()->format('Y-m-d');
+        $this->reasonCustom = '';
+        $this->handover = '';
         $this->attachment = null;
-        $this->flash     = null;
-        $this->error     = null;
+        $this->flash = null;
+        $this->error = null;
         $this->conflicts = [];
+        $this->loadReasons();
     }
 
     public function submit(): void
@@ -153,59 +224,89 @@ class Leave extends Component
         $this->error = null;
         $this->flash = null;
 
-        if (empty($this->startDate) || empty($this->endDate)) {
-            $this->error = 'Please select a date range.';
+        if (empty($this->reasonOption)) {
+            $this->error = 'Select a reason for leave.';
             return;
         }
 
-        if (empty($this->reason)) {
-            $this->error = 'Please provide a reason for leave.';
+        if ($this->isOtherReason && strlen(trim($this->reasonCustom)) < 3) {
+            $this->error = 'Describe the reason (at least 3 characters).';
             return;
         }
 
-        $days = $this->daysTaken;
-
-        if ($days <= 0) {
+        if ($this->daysTaken <= 0) {
             $this->error = 'No working days in the selected range.';
             return;
         }
 
-        // client-side conflict guard — user must acknowledge
-        if (!empty($this->conflicts)) {
-            $this->error = 'There is a conflict with a teammate on leave. Please adjust dates or ask your manager for an override.';
+        if (! empty($this->conflicts)) {
+            $this->error = 'There is a conflict with a teammate on leave.';
             return;
+        }
+
+        $reason = $this->isOtherReason ? $this->reasonCustom : $this->reasonOption;
+
+        if (! empty($this->handover)) {
+            $reason .= "\n\nHandover: " . $this->handover;
         }
 
         $payload = [
             'leave_type' => $this->leaveType,
             'start_date' => $this->startDate,
-            'end_date'   => $this->endDate,
-            'reason'     => trim($this->reason . "\n\nHandover: " . $this->handover),
+            'end_date' => $this->endDate,
+            'reason' => $reason,
         ];
 
-        if ($this->attachment) {
-            $response = Api::upload('/leave/apply', $payload, [
-                'attachment' => $this->attachment,
-            ]);
-        } else {
-            $response = Api::post('/leave/apply', $payload);
-        }
+        $response = $this->attachment
+            ? Api::upload('/leave/apply', $payload, ['attachment' => $this->attachment])
+            : Api::post('/leave/apply', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $firstError = collect($errs)->flatten()->first();
-            $this->error = $firstError ?: ($response['message'] ?? 'Failed to submit leave request.');
+            $this->error = collect($errs)->flatten()->first() ?: ($response['message'] ?? 'Failed.');
             return;
         }
 
-        $this->flash = 'Leave request submitted. You will be notified once it has been reviewed.';
+        $this->flash = 'Leave request submitted.';
         $this->resetForm();
         $this->load();
+    }
+
+    public function openHalfDay(): void
+    {
+        $this->halfDayForm = [
+            'notice_date' => now()->addDay()->format('Y-m-d'),
+            'leave_time' => '14:00',
+            'reason' => '',
+        ];
+        $this->showHalfDay = true;
+    }
+
+    public function closeHalfDay(): void
+    {
+        $this->showHalfDay = false;
+    }
+
+    public function submitHalfDay(): void
+    {
+        $this->error = null;
+
+        $response = Api::post('/half-day/request', $this->halfDayForm);
+
+        if (! $response['ok']) {
+            $errs = $response['errors'] ?? [];
+            $this->error = collect($errs)->flatten()->first() ?: ($response['message'] ?? 'Failed.');
+            return;
+        }
+
+        $this->flash = 'Half-day notice sent to your manager.';
+        $this->closeHalfDay();
+        $this->loadMyHalfDays();
     }
 
     public function render()
     {
         return view('livewire.employee.leave')
-            ->layout('layouts.portal', ['title' => 'Leave Request', 'breadcrumb' => 'Leave Request']);
+            ->layout('layouts.portal', ['title' => 'Leave', 'breadcrumb' => 'Leave']);
     }
 }
