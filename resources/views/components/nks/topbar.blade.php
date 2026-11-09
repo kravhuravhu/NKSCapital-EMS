@@ -4,14 +4,7 @@
     $initials = strtoupper(
         substr($user->first_name ?? 'U', 0, 1) . substr($user->last_name ?? '', 0, 1)
     );
-    $roleFallback = match ($user->role) {
-        'super_admin' => 'Super Admin',
-        'admin' => 'Administrator',
-        'director' => 'Director',
-        'manager' => 'Manager',
-        'recruiter' => 'Recruiter',
-        default => 'Employee',
-    };
+    $roleFallback = \App\Support\RoleLabels::label($user->role);
     $subtitle = $user->position ?: $roleFallback;
     $unread = (int) (\App\Models\Notification::where('user_id', $user->id)
         ->where('is_read', false)

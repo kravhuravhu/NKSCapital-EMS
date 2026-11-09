@@ -334,7 +334,7 @@ class PRTimesheetController extends Controller
             ], 422);
         }
 
-        $l2Approver = User::where('role', 'director')->where('is_active', true)->first();
+        $l2Approver = User::where('role', 'operational_manager')->where('is_active', true)->first() ?? User::where('role', 'director')->where('is_active', true)->first();
 
         $timesheet->status = 'pending_l2';
         $timesheet->level1_approved_at = now();

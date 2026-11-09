@@ -77,7 +77,7 @@ return [
                     'label' => 'Pending L2',
                     'route' => 'portal.director.pending-l2',
                     'icon' => 'fa-solid fa-user-shield',
-                    'roles' => ['director', 'admin', 'super_admin'],
+                    'roles' => ['director', 'operational_manager', 'admin', 'super_admin'],
                     'badge' => 'l2_pending',
                 ],
                 [

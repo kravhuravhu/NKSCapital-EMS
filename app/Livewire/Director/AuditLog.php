@@ -2,15 +2,15 @@
 
 namespace App\Livewire\Director;
 
+use App\Support\AuditActionVerb;
 use App\Support\Api;
 use Livewire\Component;
 
 class AuditLog extends Component
 {
     public bool $loading = true;
-    public bool $statsLoading = true;
-    public bool $exporting = false;
     public bool $verifying = false;
+    public bool $exporting = false;
     public ?string $error = null;
     public ?string $flash = null;
 
@@ -35,30 +35,17 @@ class AuditLog extends Component
 
     public function mount(): void
     {
-        // default range for the stats strip
         $this->from = now()->subDays(7)->format('Y-m-d');
         $this->to = now()->format('Y-m-d');
-
         $this->loadStats();
         $this->load();
     }
 
     public function loadStats(): void
     {
-        $this->statsLoading = true;
+        $response = Api::get('/admin/audit/report', ['from' => $this->from, 'to' => $this->to]);
 
-        $response = Api::get('/admin/audit/report', [
-            'from' => $this->from,
-            'to' => $this->to,
-        ]);
-
-        if ($response['ok']) {
-            $this->stats = $response['data']['totals'] ?? [];
-        } else {
-            $this->stats = [];
-        }
-
-        $this->statsLoading = false;
+        $this->stats = $response['ok'] ? ($response['data']['totals'] ?? []) : [];
     }
 
     public function load(): void
@@ -66,21 +53,18 @@ class AuditLog extends Component
         $this->loading = true;
         $this->error = null;
 
-        $payload = [
-            'page' => $this->page,
-            'per_page' => 25,
-        ];
+        $payload = ['page' => $this->page, 'per_page' => 25];
 
-        if ($this->search !== '')     $payload['search'] = $this->search;
-        if ($this->logType !== '')    $payload['log_type'] = $this->logType;
-        if ($this->severity !== '')   $payload['severity'] = $this->severity;
-        if ($this->from !== '')       $payload['from'] = $this->from;
-        if ($this->to !== '')         $payload['to'] = $this->to;
-        if ($this->isSlow)            $payload['is_slow'] = true;
+        if ($this->search !== '')   $payload['search'] = $this->search;
+        if ($this->logType !== '')  $payload['log_type'] = $this->logType;
+        if ($this->severity !== '') $payload['severity'] = $this->severity;
+        if ($this->from !== '')     $payload['from'] = $this->from;
+        if ($this->to !== '')       $payload['to'] = $this->to;
+        if ($this->isSlow)          $payload['is_slow'] = true;
 
         $response = Api::post('/admin/audit/search', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load audit logs.';
             $this->logs = [];
             $this->loading = false;
@@ -88,7 +72,6 @@ class AuditLog extends Component
         }
 
         $paginator = $response['data'] ?? [];
-
         $this->logs = $paginator['data'] ?? [];
         $this->pagination = [
             'current_page' => $paginator['current_page'] ?? 1,
@@ -128,8 +111,8 @@ class AuditLog extends Component
     {
         $row = collect($this->logs)->firstWhere('id', $id);
 
-        if (!$row) {
-            $this->error = 'Log entry not found in the current view.';
+        if (! $row) {
+            $this->error = 'Log entry not found.';
             return;
         }
 
@@ -148,11 +131,10 @@ class AuditLog extends Component
         $this->verifying = true;
         $this->error = null;
         $this->flash = null;
-        $this->chainResult = null;
 
         $response = Api::get('/admin/audit/verify-chain');
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to verify chain.';
             $this->verifying = false;
             return;
@@ -160,10 +142,10 @@ class AuditLog extends Component
 
         $this->chainResult = $response['data'] ?? null;
 
-        if (!empty($this->chainResult['is_valid'])) {
-            $this->flash = 'Audit chain verified — ' . ($this->chainResult['total_logs'] ?? 0) . ' entries, integrity intact.';
+        if (! empty($this->chainResult['is_valid'])) {
+            $this->flash = 'Chain verified. ' . ($this->chainResult['total_logs'] ?? 0) . ' entries, integrity intact.';
         } else {
-            $this->error = 'Audit chain integrity FAILED — broken at log #' . ($this->chainResult['broken_at'] ?? '?');
+            $this->error = 'Chain integrity FAILED at log #' . ($this->chainResult['broken_at'] ?? '?');
         }
 
         $this->verifying = false;
@@ -173,11 +155,9 @@ class AuditLog extends Component
     {
         $this->exporting = true;
         $this->error = null;
-        $this->lastExport = null;
 
-        // export endpoint requires both from and to
         if ($this->from === '' || $this->to === '') {
-            $this->error = 'Set a From and To date before exporting.';
+            $this->error = 'Set From and To dates before exporting.';
             $this->exporting = false;
             return;
         }
@@ -188,10 +168,8 @@ class AuditLog extends Component
             'format' => 'csv',
         ]);
 
-        if (!$response['ok']) {
-            $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to export audit log.');
+        if (! $response['ok']) {
+            $this->error = $response['message'] ?? 'Failed to export.';
             $this->exporting = false;
             return;
         }
@@ -200,36 +178,24 @@ class AuditLog extends Component
         $this->exporting = false;
     }
 
-    public static function logTypeTone(string $type): string
+    public function verb(string $action): string
     {
-        return match ($type) {
-            'success' => 'success',
-            'warning' => 'gold',
-            'error'   => 'red',
-            'info'    => 'blue',
-            default   => 'muted',
-        };
+        return AuditActionVerb::verb($action);
     }
 
-    public static function severityTone(string $severity): string
+    public function tone(string $action): string
     {
-        return match ($severity) {
-            'critical' => 'red',
-            'error'    => 'red',
-            'warning'  => 'gold',
-            'success'  => 'success',
-            'info'     => 'blue',
-            default    => 'muted',
-        };
+        return AuditActionVerb::tone($action);
     }
 
-    public static function httpTone(?int $status): string
+    public function initials(?array $user): string
     {
-        if (!$status) return 'muted';
-        if ($status >= 500) return 'red';
-        if ($status >= 400) return 'gold';
-        if ($status >= 300) return 'blue';
-        return 'success';
+        if (! $user) return 'SY';
+
+        return strtoupper(
+            substr($user['first_name'] ?? 'S', 0, 1) .
+            substr($user['last_name'] ?? 'Y', 0, 1)
+        );
     }
 
     public function render()

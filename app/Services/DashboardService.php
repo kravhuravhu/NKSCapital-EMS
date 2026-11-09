@@ -165,11 +165,41 @@ class DashboardService
                         ->orderBy('created_at')
                         ->limit(5)
                         ->get(['id', 'user_id', 'month_year', 'total_regular_hours']),
+                    'team_history' => $this->managerTeamHistory($manager),
                     'unread_notifications' => Notification::where('user_id', $manager->id)->unread()->count(),
                     'active_delegations' => $manager->activeDelegationsGiven()->with('delegate:id,first_name,last_name')->get(),
                 ],
             ];
         });
+    }
+
+    public function managerTeamHistory(User $manager, int $months = 6): array
+    {
+        $teamIds = User::where('manager_id', $manager->id)->pluck('id');
+        $history = [];
+
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $month = now()->subMonths($i)->startOfMonth();
+
+            $rows = PRTimesheet::whereIn('user_id', $teamIds)
+                ->whereYear('month_year', $month->year)
+                ->whereMonth('month_year', $month->month)
+                ->get();
+
+            $history[] = [
+                'month' => $month->format('M'),
+                'month_year' => $month->format('Y-m'),
+                'submitted' => $rows->count(),
+                'approved' => $rows->where('status', 'approved')->count(),
+                'rejected' => $rows->where('status', 'rejected')->count(),
+                'total_hours' => round(
+                    (float) $rows->sum('total_regular_hours') + (float) $rows->sum('total_overtime_hours'),
+                    2
+                ),
+            ];
+        }
+
+        return $history;
     }
 
     // ============================================================
@@ -217,7 +247,7 @@ class DashboardService
                 ],
             ];
         });
-    }
+    } 
 
     // ============================================================
     // ADMIN
