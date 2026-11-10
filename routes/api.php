@@ -519,7 +519,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('suggest-timesheet-entry', [AIController::class, 'suggestTimesheetEntry']);
         Route::post('autofill-timesheet', [AIController::class, 'autofillTimesheet']);
         Route::post('describe-issue', [AIController::class, 'describeIssue']);
-        });
+    });
 
     Route::get('search', [SearchController::class, 'search']);
 
