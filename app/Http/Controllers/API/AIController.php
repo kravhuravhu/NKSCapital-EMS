@@ -41,7 +41,7 @@ class AIController extends Controller
         return response()->json(['status' => 'success', 'data' => ['text' => $result]], 200);
     }
 
-    public function suggestTimesheetEntry(Request $request, GeminiService $gemini)
+    public function suggestTimesheetEntry(Request $request, GeminiService $gemini) 
     {
         $validator = Validator::make($request->all(), [
             'project_name' => 'required|string|max:255',
@@ -50,7 +50,10 @@ class AIController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'status' => 'error',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
         $result = $gemini->suggestTimesheetEntry(
@@ -59,14 +62,19 @@ class AIController extends Controller
             $request->hint
         );
 
-        if (! $result) {
+        if (!$result) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'AI is not configured or temporarily unavailable.',
             ], 503);
         }
 
-        return response()->json(['status' => 'success', 'data' => ['text' => $result]], 200);
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'text' => $result,
+            ],
+        ], 200);
     }
 
     public function autofillTimesheet(Request $request, GeminiService $gemini)
