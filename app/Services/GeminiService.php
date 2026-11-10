@@ -167,4 +167,25 @@ class GeminiService
 
         return $this->generate($prompt, $system, 120);
     }
+
+    public function autofillTimesheet(
+        string $projectName,
+        string $date,
+        ?string $hint = null
+    ): ?string {
+
+        $system = 'You are an assistant that generates professional timesheet entries. '
+            . 'Generate a realistic, concise description of work performed on the specified project. '
+            . 'Use one or two professional sentences. '
+            . 'Do not invent specific meetings, deliverables, or completed tasks. '
+            . 'Do not use emojis or em dashes.';
+
+        $prompt = "Project: {$projectName}\n"
+            . "Date: {$date}\n"
+            . ($hint ? "Additional information: {$hint}\n" : '')
+            . 'Generate a professional timesheet description. '
+            . 'Return only the description.';
+
+        return $this->generate($prompt, $system, 150);
+    }
 }
