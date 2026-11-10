@@ -192,3 +192,24 @@ document.addEventListener('livewire:navigating', () => {
 document.addEventListener('livewire:navigated', () => {
     document.getElementById('nks-page-loader')?.classList.remove('is-active');
 });
+
+document.addEventListener('keydown', (e) => {
+    const tag = (document.activeElement?.tagName || '').toLowerCase();
+    const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select'
+        || document.activeElement?.isContentEditable;
+
+    if (isTyping) return;
+
+    const isSlash = e.key === '/';
+    const isCmdK = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k';
+
+    if (! isSlash && ! isCmdK) return;
+
+    const searchInput = document.querySelector('.nks-search-input');
+
+    if (! searchInput) return;
+
+    e.preventDefault();
+    searchInput.focus();
+    searchInput.select?.();
+});

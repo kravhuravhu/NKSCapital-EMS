@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Support\Api;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class Projects extends Component
@@ -19,43 +20,42 @@ class Projects extends Component
 
     public array $projects = [];
     public array $pagination = [];
-
     public array $clients = [];
     public array $managers = [];
     public array $assignableUsers = [];
 
-    // view modal
+    public array $stats = [
+        'total' => 0,
+        'active' => 0,
+        'planning' => 0,
+        'archived' => 0,
+    ];
+
     public bool $showView = false;
     public ?array $viewProject = null;
     public bool $hoursLoading = false;
     public ?array $hoursData = null;
 
-    // create modal
     public bool $showCreate = false;
     public array $createForm = [];
 
-    // edit modal
     public bool $showEdit = false;
     public ?int $editId = null;
     public array $editForm = [];
 
-    // assign manager modal
     public bool $showAssignManager = false;
     public ?int $assignManagerProjectId = null;
     public string $assignManagerId = '';
 
-    // assign employee modal
     public bool $showAssignEmployee = false;
     public ?int $assignEmpProjectId = null;
     public array $assignEmpForm = [];
 
-    // remove employee modal
     public bool $showRemoveEmployee = false;
     public ?int $removeProjectId = null;
     public ?int $removeUserId = null;
     public string $removeName = '';
 
-    // archive modal (admin password)
     public bool $showArchive = false;
     public ?int $archiveId = null;
     public string $archiveName = '';
@@ -79,16 +79,14 @@ class Projects extends Component
         if ($usr['ok']) {
             $all = $usr['data']['data'] ?? [];
 
-            // project managers must be manager/director/admin
             $this->managers = array_values(array_filter(
                 $all,
-                fn ($u) => in_array($u['role'] ?? '', ['manager', 'director', 'admin'], true)
+                fn ($u) => in_array($u['role'] ?? '', ['manager', 'director', 'operational_manager', 'admin'], true)
             ));
 
-            // assignable team members are any active employee/manager/recruiter (not admins)
             $this->assignableUsers = array_values(array_filter(
                 $all,
-                fn ($u) => in_array($u['role'] ?? '', ['employee', 'manager', 'recruiter', 'director'], true)
+                fn ($u) => in_array($u['role'] ?? '', ['employee', 'manager', 'recruiter', 'director', 'operational_manager'], true)
             ));
         }
     }
@@ -108,7 +106,7 @@ class Projects extends Component
 
         $response = Api::get('/project/list', $params);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load projects.';
             $this->loading = false;
             return;
@@ -122,7 +120,26 @@ class Projects extends Component
             'total' => $paginator['total'] ?? 0,
         ];
 
+        $this->computeStats();
         $this->loading = false;
+    }
+
+    protected function computeStats(): void
+    {
+        $stats = ['total' => 0, 'active' => 0, 'planning' => 0, 'archived' => 0];
+
+        foreach ($this->projects as $p) {
+            $stats['total']++;
+
+            match ($p['status'] ?? '') {
+                'active' => $stats['active']++,
+                'planning' => $stats['planning']++,
+                'archived' => $stats['archived']++,
+                default => null,
+            };
+        }
+
+        $this->stats = $stats;
     }
 
     public function applyFilters(): void
@@ -147,8 +164,6 @@ class Projects extends Component
         $this->load();
     }
 
-    // ============ view ============
-
     public function openView(int $id): void
     {
         $this->error = null;
@@ -157,7 +172,7 @@ class Projects extends Component
 
         $response = Api::get('/project/' . $id);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load project.';
             return;
         }
@@ -177,7 +192,7 @@ class Projects extends Component
     {
         $projectId = $this->viewProject['project']['id'] ?? null;
 
-        if (!$projectId) return;
+        if (! $projectId) return;
 
         $this->hoursLoading = true;
 
@@ -191,8 +206,6 @@ class Projects extends Component
 
         $this->hoursLoading = false;
     }
-
-    // ============ create ============
 
     public function resetCreateForm(): void
     {
@@ -227,25 +240,21 @@ class Projects extends Component
         $this->error = null;
         $this->flash = null;
 
-        $required = ['client_id', 'project_code', 'name', 'project_type'];
-        foreach ($required as $field) {
+        foreach (['client_id', 'project_code', 'name', 'project_type'] as $field) {
             if (empty($this->createForm[$field])) {
                 $this->error = 'Client, project code, name, and type are required.';
                 return;
             }
         }
 
-        $payload = array_filter(
-            $this->createForm,
-            fn ($v) => $v !== '' && $v !== null
-        );
+        $payload = array_filter($this->createForm, fn ($v) => $v !== '' && $v !== null);
 
         $response = Api::post('/project/create', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to create project.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to create project.');
             return;
         }
 
@@ -254,14 +263,12 @@ class Projects extends Component
         $this->load();
     }
 
-    // ============ edit ============
-
     public function openEdit(int $id): void
     {
         $row = collect($this->projects)->firstWhere('id', $id);
 
-        if (!$row) {
-            $this->error = 'Project not found in the current view.';
+        if (! $row) {
+            $this->error = 'Project not found.';
             return;
         }
 
@@ -295,19 +302,16 @@ class Projects extends Component
     public function submitEdit(): void
     {
         $this->error = null;
-        if (!$this->editId) return;
+        if (! $this->editId) return;
 
-        $payload = array_filter(
-            $this->editForm,
-            fn ($v) => $v !== '' && $v !== null
-        );
+        $payload = array_filter($this->editForm, fn ($v) => $v !== '' && $v !== null);
 
         $response = Api::put('/project/update/' . $this->editId, $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to update project.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to update project.');
             return;
         }
 
@@ -315,8 +319,6 @@ class Projects extends Component
         $this->closeEdit();
         $this->load();
     }
-
-    // ============ assign manager ============
 
     public function openAssignManager(int $projectId, ?int $currentManagerId = null): void
     {
@@ -348,10 +350,10 @@ class Projects extends Component
             'project_manager_id' => $this->assignManagerId,
         ]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to assign manager.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to assign manager.');
             return;
         }
 
@@ -364,8 +366,6 @@ class Projects extends Component
 
         $this->load();
     }
-
-    // ============ assign employee ============
 
     public function openAssignEmployee(int $projectId): void
     {
@@ -406,16 +406,16 @@ class Projects extends Component
             'assigned_date' => $this->assignEmpForm['assigned_date'],
         ];
 
-        if (!empty($this->assignEmpForm['end_date'])) {
+        if (! empty($this->assignEmpForm['end_date'])) {
             $payload['end_date'] = $this->assignEmpForm['end_date'];
         }
 
         $response = Api::post('/project/assign-employee', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to assign employee.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to assign employee.');
             return;
         }
 
@@ -428,8 +428,6 @@ class Projects extends Component
 
         $this->load();
     }
-
-    // ============ remove employee ============
 
     public function openRemoveEmployee(int $projectId, int $userId, string $name): void
     {
@@ -458,7 +456,7 @@ class Projects extends Component
             'user_id' => $this->removeUserId,
         ]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Failed to remove employee.';
             return;
         }
@@ -473,13 +471,11 @@ class Projects extends Component
         $this->load();
     }
 
-    // ============ archive ============
-
     public function openArchive(int $id): void
     {
         $row = collect($this->projects)->firstWhere('id', $id);
 
-        if (!$row) {
+        if (! $row) {
             $this->error = 'Project not found.';
             return;
         }
@@ -509,7 +505,7 @@ class Projects extends Component
             return;
         }
 
-        if (!\Illuminate\Support\Facades\Auth::validate([
+        if (! Auth::validate([
             'email' => auth()->user()->email,
             'password' => $this->archivePassword,
         ])) {
@@ -519,7 +515,7 @@ class Projects extends Component
 
         $response = Api::post('/project/archive/' . $this->archiveId);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Failed to archive project.';
             return;
         }
@@ -529,35 +525,26 @@ class Projects extends Component
         $this->load();
     }
 
-    // ============ helpers ============
-
     public static function statusTone(string $status): string
     {
         return match ($status) {
-            'active'    => 'success',
-            'planning'  => 'blue',
-            'on_hold'   => 'gold',
+            'active' => 'success',
+            'planning' => 'info',
+            'on_hold' => 'warning',
             'completed' => 'muted',
-            'archived'  => 'muted',
-            default     => 'muted',
+            'archived' => 'muted',
+            default => 'muted',
         };
     }
 
     public static function typeTone(string $type): string
     {
         return match ($type) {
-            'client'   => 'gold',
+            'client' => 'gold',
             'internal' => 'purple',
-            'hybrid'   => 'blue',
-            default    => 'muted',
+            'hybrid' => 'info',
+            default => 'muted',
         };
-    }
-
-    public static function allocationTone(float $pct): string
-    {
-        if ($pct >= 80) return 'success';
-        if ($pct >= 50) return 'gold';
-        return 'muted';
     }
 
     public function render()

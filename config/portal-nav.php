@@ -54,6 +54,12 @@ return [
                     'roles' => ['employee', 'manager', 'director', 'admin', 'super_admin'],
                 ],
                 [
+                    'label' => 'Timesheet History',
+                    'route' => 'portal.employee.timesheet-history',
+                    'icon' => 'fa-solid fa-clock-rotate-left',
+                    'roles' => ['employee', 'manager', 'director', 'operational_manager', 'admin', 'super_admin'],
+                ],
+                [
                     'label' => 'Team Timesheets',
                     'route' => 'portal.manager.team-timesheets',
                     'icon' => 'fa-solid fa-table-list',

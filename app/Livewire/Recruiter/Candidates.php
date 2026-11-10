@@ -24,11 +24,16 @@ class Candidates extends Component
     public array $pagination = [];
     public array $requisitions = [];
 
-    // view
+    public array $stats = [
+        'total' => 0,
+        'active' => 0,
+        'hired' => 0,
+        'rejected' => 0,
+    ];
+
     public bool $showView = false;
     public ?array $viewData = null;
 
-    // create
     public bool $showCreate = false;
     public array $createForm = [];
     public $resumeFile = null;
@@ -36,7 +41,6 @@ class Candidates extends Component
     public bool $parsed = false;
     public ?string $parseWarning = null;
 
-    // advance stage
     public bool $showAdvance = false;
     public ?int $advanceId = null;
     public string $advanceName = '';
@@ -44,7 +48,6 @@ class Candidates extends Component
     public string $advanceStage = '';
     public string $advanceNotes = '';
 
-    // reject
     public bool $showReject = false;
     public ?int $rejectId = null;
     public string $rejectName = '';
@@ -81,7 +84,7 @@ class Candidates extends Component
 
         $response = Api::get('/recruitment/candidate/list', $params);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load candidates.';
             $this->loading = false;
             return;
@@ -95,7 +98,24 @@ class Candidates extends Component
             'total' => $paginator['total'] ?? 0,
         ];
 
+        $this->computeStats();
         $this->loading = false;
+    }
+
+    protected function computeStats(): void
+    {
+        $stats = ['total' => 0, 'active' => 0, 'hired' => 0, 'rejected' => 0];
+
+        foreach ($this->candidates as $c) {
+            $stats['total']++;
+
+            $stage = $c['current_stage'] ?? 'applied';
+            if ($stage === 'hired') $stats['hired']++;
+            elseif (in_array($stage, ['rejected', 'withdrawn', 'offer_declined'], true)) $stats['rejected']++;
+            else $stats['active']++;
+        }
+
+        $this->stats = $stats;
     }
 
     public function applyFilters(): void
@@ -127,15 +147,11 @@ class Candidates extends Component
         $this->load();
     }
 
-    // ============ view ============
-
     public function openView(int $id): void
     {
-        $this->error = null;
-
         $response = Api::get('/recruitment/candidate/' . $id);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load candidate.';
             return;
         }
@@ -149,8 +165,6 @@ class Candidates extends Component
         $this->showView = false;
         $this->viewData = null;
     }
-
-    // ============ create ============
 
     public function resetCreateForm(): void
     {
@@ -194,18 +208,16 @@ class Candidates extends Component
         $this->parseWarning = null;
         $this->parsed = false;
 
-        if (!$this->resumeFile) {
+        if (! $this->resumeFile) {
             $this->error = 'Select a resume file first.';
             return;
         }
 
         $this->parsing = true;
 
-        $response = Api::upload('/recruitment/candidate/parse-resume', [], [
-            'resume' => $this->resumeFile,
-        ]);
+        $response = Api::upload('/recruitment/candidate/parse-resume', [], ['resume' => $this->resumeFile]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->parseWarning = $response['message'] ?? 'Could not parse resume. Enter details manually.';
             $this->parsing = false;
             return;
@@ -213,31 +225,23 @@ class Candidates extends Component
 
         $data = $response['data'] ?? [];
 
-        // split full_name into first/last if present
-        if (!empty($data['full_name'])) {
+        if (! empty($data['full_name'])) {
             $parts = preg_split('/\s+/', trim($data['full_name']), 2);
-            if (empty($this->createForm['first_name']) && !empty($parts[0])) {
-                $this->createForm['first_name'] = $parts[0];
-            }
-            if (empty($this->createForm['last_name']) && !empty($parts[1])) {
-                $this->createForm['last_name'] = $parts[1];
+            if (empty($this->createForm['first_name']) && ! empty($parts[0])) $this->createForm['first_name'] = $parts[0];
+            if (empty($this->createForm['last_name']) && ! empty($parts[1])) $this->createForm['last_name'] = $parts[1];
+        }
+
+        foreach (['email', 'phone', 'linkedin_url'] as $field) {
+            if (! empty($data[$field]) && empty($this->createForm[$field])) {
+                $this->createForm[$field] = $data[$field];
             }
         }
 
-        // only fill fields that are currently empty — never overwrite what the user typed
-        if (!empty($data['email']) && empty($this->createForm['email'])) {
-            $this->createForm['email'] = $data['email'];
-        }
-        if (!empty($data['phone']) && empty($this->createForm['phone'])) {
-            $this->createForm['phone'] = $data['phone'];
-        }
-        if (!empty($data['linkedin_url']) && empty($this->createForm['linkedin_url'])) {
-            $this->createForm['linkedin_url'] = $data['linkedin_url'];
-        }
         if (isset($data['years_experience']) && $data['years_experience'] !== null && empty($this->createForm['years_experience'])) {
             $this->createForm['years_experience'] = (string) $data['years_experience'];
         }
-        if (!empty($data['skills']) && is_array($data['skills']) && empty($this->createForm['skills'])) {
+
+        if (! empty($data['skills']) && is_array($data['skills']) && empty($this->createForm['skills'])) {
             $this->createForm['skills'] = implode(', ', $data['skills']);
         }
 
@@ -264,17 +268,16 @@ class Candidates extends Component
         }
 
         $payload = $this->buildCreatePayload();
-
         $files = $this->resumeFile ? ['resume' => $this->resumeFile] : [];
 
         $response = $files
             ? Api::upload('/recruitment/candidate/add', $payload, $files)
             : Api::post('/recruitment/candidate/add', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to add candidate.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to add candidate.');
             return;
         }
 
@@ -286,7 +289,7 @@ class Candidates extends Component
     protected function buildCreatePayload(): array
     {
         $skills = [];
-        if (!empty($this->createForm['skills'])) {
+        if (! empty($this->createForm['skills'])) {
             $skills = array_values(array_filter(array_map('trim', explode(',', $this->createForm['skills']))));
         }
 
@@ -299,9 +302,8 @@ class Candidates extends Component
             'skills' => $skills,
         ];
 
-        $optional = ['phone', 'years_experience', 'expected_salary', 'linkedin_url', 'notes'];
-        foreach ($optional as $field) {
-            if (!empty($this->createForm[$field])) {
+        foreach (['phone', 'years_experience', 'expected_salary', 'linkedin_url', 'notes'] as $field) {
+            if (! empty($this->createForm[$field])) {
                 $payload[$field] = $this->createForm[$field];
             }
         }
@@ -309,18 +311,15 @@ class Candidates extends Component
         return $payload;
     }
 
-    // ============ advance stage ============
-
     public function openAdvance(int $id): void
     {
         $row = collect($this->candidates)->firstWhere('id', $id);
-        if (!$row) {
+        if (! $row) {
             $this->error = 'Candidate not found.';
             return;
         }
 
         $current = $row['current_stage'] ?? 'applied';
-
         if (in_array($current, ['hired', 'rejected', 'withdrawn'], true)) {
             $this->error = 'Cannot advance a candidate in stage ' . ucfirst($current) . '.';
             return;
@@ -360,10 +359,10 @@ class Candidates extends Component
             'notes' => $this->advanceNotes ?: null,
         ]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to advance candidate.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to advance candidate.');
             return;
         }
 
@@ -372,12 +371,10 @@ class Candidates extends Component
         $this->load();
     }
 
-    // ============ reject ============
-
     public function openReject(int $id): void
     {
         $row = collect($this->candidates)->firstWhere('id', $id);
-        if (!$row) {
+        if (! $row) {
             $this->error = 'Candidate not found.';
             return;
         }
@@ -417,10 +414,10 @@ class Candidates extends Component
             'reason' => $this->rejectReason,
         ]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to reject candidate.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to reject candidate.');
             return;
         }
 
@@ -429,37 +426,29 @@ class Candidates extends Component
         $this->load();
     }
 
-    // ============ helpers ============
-
-    public static function stageTone(string $stage): string
-    {
-        return match ($stage) {
-            'applied'        => 'muted',
-            'screening'      => 'blue',
-            'interview'      => 'gold',
-            'offer'          => 'purple',
-            'hired'          => 'success',
-            'rejected'       => 'red',
-            'offer_declined' => 'red',
-            'withdrawn'      => 'muted',
-            'on_hold'        => 'gold',
-            default          => 'muted',
-        };
-    }
-
     public function stageOptions(): array
     {
-        // exclude the candidate's current stage and the terminal "rejected" stage
         $all = ['applied', 'screening', 'interview', 'offer', 'hired', 'offer_declined', 'withdrawn', 'on_hold'];
+
         return array_values(array_filter(
             $all,
             fn ($s) => $s !== $this->advanceCurrentStage && $s !== 'rejected'
         ));
     }
 
-    public function render()
+    public static function stageTone(string $stage): string
     {
-        return view('livewire.recruiter.candidates')
-            ->layout('layouts.portal', ['title' => 'Candidates', 'breadcrumb' => 'Candidates']);
+        return match ($stage) {
+            'applied' => 'muted',
+            'screening' => 'info',
+            'interview' => 'warning',
+            'offer' => 'purple',
+            'hired' => 'success',
+            'rejected', 'offer_declined' => 'danger',
+            'withdrawn' => 'muted',
+            'on_hold' => 'warning',
+            default => 'muted',
+        };
     }
-}
+
+    public

@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Support\Api;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class Clients extends Component
@@ -19,26 +20,29 @@ class Clients extends Component
     public array $clients = [];
     public array $pagination = [];
 
-    // view modal
+    public array $stats = [
+        'total' => 0,
+        'active' => 0,
+        'inactive' => 0,
+        'suspended' => 0,
+        'total_value' => 0.0,
+    ];
+
     public bool $showView = false;
     public ?array $viewClient = null;
 
-    // create modal
     public bool $showCreate = false;
     public array $createForm = [];
 
-    // edit modal
     public bool $showEdit = false;
     public ?int $editId = null;
     public array $editForm = [];
 
-    // deactivate modal — requires admin password
     public bool $showDeactivate = false;
     public ?int $deactivateId = null;
     public string $deactivateName = '';
     public string $deactivatePassword = '';
 
-    // add manager modal
     public bool $showAddManager = false;
     public ?int $managerClientId = null;
     public array $managerForm = [];
@@ -63,7 +67,7 @@ class Clients extends Component
 
         $response = Api::get('/client/list', $params);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load clients.';
             $this->loading = false;
             return;
@@ -77,7 +81,34 @@ class Clients extends Component
             'total' => $paginator['total'] ?? 0,
         ];
 
+        $this->computeStats();
         $this->loading = false;
+    }
+
+    protected function computeStats(): void
+    {
+        $stats = [
+            'total' => 0,
+            'active' => 0,
+            'inactive' => 0,
+            'suspended' => 0,
+            'total_value' => 0.0,
+        ];
+
+        foreach ($this->clients as $c) {
+            $stats['total']++;
+
+            match ($c['status'] ?? 'active') {
+                'active' => $stats['active']++,
+                'inactive' => $stats['inactive']++,
+                'suspended' => $stats['suspended']++,
+                default => null,
+            };
+
+            $stats['total_value'] += (float) ($c['contract_value'] ?? 0);
+        }
+
+        $this->stats = $stats;
     }
 
     public function applyFilters(): void
@@ -136,6 +167,7 @@ class Clients extends Component
         $this->flash = null;
 
         $required = ['company_name', 'registration_number', 'primary_contact_name', 'primary_contact_email', 'primary_contact_phone'];
+
         foreach ($required as $field) {
             if (empty($this->createForm[$field])) {
                 $this->error = 'Company name, registration number, and primary contact fields are required.';
@@ -143,17 +175,14 @@ class Clients extends Component
             }
         }
 
-        $payload = array_filter(
-            $this->createForm,
-            fn ($v) => $v !== '' && $v !== null
-        );
+        $payload = array_filter($this->createForm, fn ($v) => $v !== '' && $v !== null);
 
         $response = Api::post('/client/create', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to create client.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to create client.');
             return;
         }
 
@@ -168,8 +197,8 @@ class Clients extends Component
     {
         $client = collect($this->clients)->firstWhere('id', $id);
 
-        if (!$client) {
-            $this->error = 'Client not found in the current view.';
+        if (! $client) {
+            $this->error = 'Client not found.';
             return;
         }
 
@@ -190,8 +219,8 @@ class Clients extends Component
     {
         $client = collect($this->clients)->firstWhere('id', $id);
 
-        if (!$client) {
-            $this->error = 'Client not found in the current view.';
+        if (! $client) {
+            $this->error = 'Client not found.';
             return;
         }
 
@@ -223,19 +252,16 @@ class Clients extends Component
     public function submitEdit(): void
     {
         $this->error = null;
-        if (!$this->editId) return;
+        if (! $this->editId) return;
 
-        $payload = array_filter(
-            $this->editForm,
-            fn ($v) => $v !== '' && $v !== null
-        );
+        $payload = array_filter($this->editForm, fn ($v) => $v !== '' && $v !== null);
 
         $response = Api::put('/client/update/' . $this->editId, $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to update client.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to update client.');
             return;
         }
 
@@ -249,7 +275,8 @@ class Clients extends Component
     public function openDeactivate(int $id): void
     {
         $client = collect($this->clients)->firstWhere('id', $id);
-        if (!$client) {
+
+        if (! $client) {
             $this->error = 'Client not found.';
             return;
         }
@@ -279,8 +306,7 @@ class Clients extends Component
             return;
         }
 
-        // verify admin's own password before the destructive action
-        if (!\Illuminate\Support\Facades\Auth::validate([
+        if (! Auth::validate([
             'email' => auth()->user()->email,
             'password' => $this->deactivatePassword,
         ])) {
@@ -290,7 +316,7 @@ class Clients extends Component
 
         $response = Api::post('/client/deactivate/' . $this->deactivateId);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Failed to deactivate client.';
             return;
         }
@@ -339,23 +365,21 @@ class Clients extends Component
             'is_primary' => (bool) $this->managerForm['is_primary'],
         ];
 
-        if (!empty($this->managerForm['phone'])) {
+        if (! empty($this->managerForm['phone'])) {
             $payload['phone'] = $this->managerForm['phone'];
         }
 
         $response = Api::post('/client/manager/add', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to add client manager.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to add client manager.');
             return;
         }
 
         $this->flash = 'Manager added.';
         $this->closeAddManager();
-
-        // refresh the current view's client data so the manager shows immediately
         $this->load();
 
         if ($this->viewClient && (int) $this->viewClient['id'] === (int) $this->managerClientId) {
@@ -369,10 +393,10 @@ class Clients extends Component
     public static function statusTone(string $status): string
     {
         return match ($status) {
-            'active'    => 'success',
-            'inactive'  => 'muted',
-            'suspended' => 'gold',
-            default     => 'muted',
+            'active' => 'success',
+            'inactive' => 'muted',
+            'suspended' => 'warning',
+            default => 'muted',
         };
     }
 

@@ -4,8 +4,8 @@ namespace App\Livewire\Recruiter;
 
 use App\Support\Api;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Component;
 use Illuminate\Support\Facades\Hash;
+use Livewire\Component;
 
 class Requisitions extends Component
 {
@@ -23,31 +23,32 @@ class Requisitions extends Component
     public array $pagination = [];
     public array $managers = [];
 
-    // view
+    public array $stats = [
+        'total' => 0,
+        'open' => 0,
+        'pending' => 0,
+        'closed' => 0,
+    ];
+
     public bool $showView = false;
     public ?array $viewData = null;
 
-    // create
     public bool $showCreate = false;
     public array $createForm = [];
 
-    // edit
     public bool $showEdit = false;
     public ?int $editId = null;
     public array $editForm = [];
 
-    // approve
     public bool $showApprove = false;
     public ?int $approveId = null;
     public string $approvePassword = '';
 
-    // reject
     public bool $showReject = false;
     public ?int $rejectId = null;
     public string $rejectPassword = '';
     public string $rejectReason = '';
 
-    // close (from open/approved → closed/cancelled)
     public bool $showClose = false;
     public ?int $closeId = null;
     public string $closePassword = '';
@@ -63,14 +64,13 @@ class Requisitions extends Component
 
     protected function loadReferenceData(): void
     {
-        // hiring manager picker — manager / director / admin
         $response = Api::get('/employee/list', ['per_page' => 300, 'is_active' => 1]);
 
         if ($response['ok']) {
             $all = $response['data']['data'] ?? [];
             $this->managers = array_values(array_filter(
                 $all,
-                fn ($u) => in_array($u['role'] ?? '', ['manager', 'director', 'admin'], true)
+                fn ($u) => in_array($u['role'] ?? '', ['manager', 'director', 'operational_manager', 'admin'], true)
             ));
         }
     }
@@ -90,7 +90,7 @@ class Requisitions extends Component
 
         $response = Api::get('/recruitment/requisition/list', $params);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load requisitions.';
             $this->loading = false;
             return;
@@ -104,7 +104,26 @@ class Requisitions extends Component
             'total' => $paginator['total'] ?? 0,
         ];
 
+        $this->computeStats();
         $this->loading = false;
+    }
+
+    protected function computeStats(): void
+    {
+        $stats = ['total' => 0, 'open' => 0, 'pending' => 0, 'closed' => 0];
+
+        foreach ($this->requisitions as $r) {
+            $stats['total']++;
+
+            match ($r['status'] ?? '') {
+                'open' => $stats['open']++,
+                'pending_approval' => $stats['pending']++,
+                'closed', 'cancelled' => $stats['closed']++,
+                default => null,
+            };
+        }
+
+        $this->stats = $stats;
     }
 
     public function applyFilters(): void
@@ -129,15 +148,13 @@ class Requisitions extends Component
         $this->load();
     }
 
-    // ============ view ============
-
     public function openView(int $id): void
     {
         $this->error = null;
 
         $response = Api::get('/recruitment/requisition/' . $id);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load requisition.';
             return;
         }
@@ -151,8 +168,6 @@ class Requisitions extends Component
         $this->showView = false;
         $this->viewData = null;
     }
-
-    // ============ create ============
 
     public function resetCreateForm(): void
     {
@@ -205,10 +220,10 @@ class Requisitions extends Component
 
         $response = Api::post('/recruitment/requisition/create', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to create requisition.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to create requisition.');
             return;
         }
 
@@ -219,14 +234,12 @@ class Requisitions extends Component
         $this->load();
     }
 
-    // ============ edit ============
-
     public function openEdit(int $id): void
     {
         $row = collect($this->requisitions)->firstWhere('id', $id);
 
-        if (!$row) {
-            $this->error = 'Requisition not found in the current view.';
+        if (! $row) {
+            $this->error = 'Requisition not found.';
             return;
         }
 
@@ -238,9 +251,7 @@ class Requisitions extends Component
             'employee_type_target' => $row['employee_type_target'] ?? '',
             'experience_level' => $row['experience_level'] ?? '',
             'priority' => $row['priority'] ?? 'medium',
-            'required_skills' => is_array($row['required_skills'] ?? null)
-                ? implode(', ', $row['required_skills'])
-                : '',
+            'required_skills' => is_array($row['required_skills'] ?? null) ? implode(', ', $row['required_skills']) : '',
             'salary_range_min' => $row['salary_range_min'] ?? '',
             'salary_range_max' => $row['salary_range_max'] ?? '',
             'salary_currency' => $row['salary_currency'] ?? 'ZAR',
@@ -264,16 +275,16 @@ class Requisitions extends Component
     public function submitEdit(): void
     {
         $this->error = null;
-        if (!$this->editId) return;
+        if (! $this->editId) return;
 
         $payload = $this->buildPayload($this->editForm);
 
         $response = Api::put('/recruitment/requisition/update/' . $this->editId, $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to update requisition.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to update requisition.');
             return;
         }
 
@@ -281,8 +292,6 @@ class Requisitions extends Component
         $this->closeEdit();
         $this->load();
     }
-
-    // ============ approve ============
 
     public function openApprove(int $id): void
     {
@@ -310,9 +319,9 @@ class Requisitions extends Component
             return;
         }
 
-        $user = auth()->user();
+        $user = Auth::user();
 
-        if (!$user || !Hash::check($this->approvePassword, $user->password)) {
+        if (! $user || ! Hash::check($this->approvePassword, $user->password)) {
             $this->error = 'Password is incorrect.';
             return;
         }
@@ -321,10 +330,10 @@ class Requisitions extends Component
             'requisition_id' => $this->approveId,
         ]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to approve requisition.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to approve requisition.');
             return;
         }
 
@@ -332,8 +341,6 @@ class Requisitions extends Component
         $this->closeApprove();
         $this->load();
     }
-
-    // ============ reject ============
 
     public function openReject(int $id): void
     {
@@ -367,7 +374,7 @@ class Requisitions extends Component
             return;
         }
 
-        if (!Auth::validate([
+        if (! Auth::validate([
             'email' => auth()->user()->email,
             'password' => $this->rejectPassword,
         ])) {
@@ -380,10 +387,10 @@ class Requisitions extends Component
             'rejection_reason' => $this->rejectReason,
         ]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to reject requisition.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to reject requisition.');
             return;
         }
 
@@ -391,8 +398,6 @@ class Requisitions extends Component
         $this->closeReject();
         $this->load();
     }
-
-    // ============ close ============
 
     public function openClose(int $id, string $status = 'closed'): void
     {
@@ -423,7 +428,7 @@ class Requisitions extends Component
             return;
         }
 
-        if (!Auth::validate([
+        if (! Auth::validate([
             'email' => auth()->user()->email,
             'password' => $this->closePassword,
         ])) {
@@ -432,16 +437,17 @@ class Requisitions extends Component
         }
 
         $payload = ['status' => $this->closeStatus];
-        if (!empty($this->closeReason)) {
+
+        if (! empty($this->closeReason)) {
             $payload['rejection_reason'] = $this->closeReason;
         }
 
         $response = Api::put('/recruitment/requisition/update/' . $this->closeId, $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to update requisition.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to update requisition.');
             return;
         }
 
@@ -450,13 +456,10 @@ class Requisitions extends Component
         $this->load();
     }
 
-    // ============ helpers ============
-
     protected function buildPayload(array $form): array
     {
-        // split comma-separated skills into an array
         $skills = [];
-        if (!empty($form['required_skills'])) {
+        if (! empty($form['required_skills'])) {
             $skills = array_values(array_filter(array_map('trim', explode(',', $form['required_skills']))));
         }
 
@@ -465,40 +468,30 @@ class Requisitions extends Component
             'department' => $form['department'],
             'employment_type' => $form['employment_type'],
             'priority' => $form['priority'] ?: 'medium',
+            'required_skills' => $skills,
         ];
 
-        $optional = [
-            'employee_type_target', 'experience_level', 'salary_range_min',
-            'salary_range_max', 'salary_currency', 'reason_for_hire',
-            'hiring_manager_id', 'target_start_date', 'requisition_code',
-        ];
-
-        foreach ($optional as $field) {
-            if (!empty($form[$field])) {
+        foreach (['employee_type_target', 'experience_level', 'salary_range_min', 'salary_range_max', 'salary_currency', 'reason_for_hire', 'hiring_manager_id', 'target_start_date', 'requisition_code'] as $field) {
+            if (! empty($form[$field])) {
                 $payload[$field] = $form[$field];
             }
         }
-
-        $payload['required_skills'] = $skills;
 
         return $payload;
     }
 
     public function canApprove(?array $row): bool
     {
-        if (!$row) return false;
+        if (! $row) return false;
 
-        // only director/admin/super_admin
-        if (!in_array(auth()->user()->role, ['admin', 'super_admin', 'director'], true)) {
+        if (! in_array(auth()->user()->role, ['admin', 'super_admin', 'director', 'operational_manager'], true)) {
             return false;
         }
 
-        // only when pending approval
         if (($row['status'] ?? '') !== 'pending_approval') {
             return false;
         }
 
-        // not on your own requisition
         if ((int) ($row['created_by'] ?? 0) === (int) auth()->id()) {
             return false;
         }
@@ -508,14 +501,14 @@ class Requisitions extends Component
 
     public function canUpdate(?array $row): bool
     {
-        if (!$row) return false;
+        if (! $row) return false;
 
         return in_array($row['status'] ?? '', ['draft', 'pending_approval', 'approved', 'open'], true);
     }
 
     public function canClose(?array $row): bool
     {
-        if (!$row) return false;
+        if (! $row) return false;
 
         return in_array($row['status'] ?? '', ['open', 'approved'], true);
     }
@@ -523,24 +516,24 @@ class Requisitions extends Component
     public static function statusTone(string $status): string
     {
         return match ($status) {
-            'draft'             => 'muted',
-            'pending_approval'  => 'gold',
-            'approved'          => 'blue',
-            'open'              => 'success',
-            'closed'            => 'muted',
-            'cancelled'         => 'red',
-            default             => 'muted',
+            'draft' => 'muted',
+            'pending_approval' => 'warning',
+            'approved' => 'info',
+            'open' => 'success',
+            'closed' => 'muted',
+            'cancelled' => 'danger',
+            default => 'muted',
         };
     }
 
     public static function priorityTone(string $priority): string
     {
         return match ($priority) {
-            'low'      => 'muted',
-            'medium'   => 'blue',
-            'high'     => 'gold',
-            'critical' => 'red',
-            default    => 'muted',
+            'low' => 'muted',
+            'medium' => 'info',
+            'high' => 'warning',
+            'critical' => 'danger',
+            default => 'muted',
         };
     }
 
