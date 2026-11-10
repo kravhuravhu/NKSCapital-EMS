@@ -169,23 +169,92 @@ class GeminiService
     }
 
     public function autofillTimesheet(
-        string $projectName,
-        string $date,
-        ?string $hint = null
-    ): ?string {
+        string $description,
+        array $workDays,
+        array $projects
+    ): ?array {
 
-        $system = 'You are an assistant that generates professional timesheet entries. '
-            . 'Generate a realistic, concise description of work performed on the specified project. '
-            . 'Use one or two professional sentences. '
-            . 'Do not invent specific meetings, deliverables, or completed tasks. '
-            . 'Do not use emojis or em dashes.';
+        $system = 'You are an intelligent timesheet assistant.
+        Generate professional timesheet entries based strictly on the
+        supplied work description.
 
-        $prompt = "Project: {$projectName}\n"
-            . "Date: {$date}\n"
-            . ($hint ? "Additional information: {$hint}\n" : '')
-            . 'Generate a professional timesheet description. '
-            . 'Return only the description.';
+        Only use the supplied dates and projects.
+        Do not invent meetings, deliverables or achievements.
+        Return valid JSON only, without Markdown.';
 
-        return $this->generate($prompt, $system, 150);
+        $prompt = json_encode([
+            'description' => $description,
+            'work_days' => $workDays,
+            'projects' => $projects,
+            'required_format' => [
+                'entries' => [
+                    [
+                        'date' => 'YYYY-MM-DD',
+                        'project_id' => 1,
+                        'description' => 'Work description',
+                    ],
+                ],
+            ],
+        ], JSON_PRETTY_PRINT);
+
+        $response = $this->generate($prompt, $system, 2000);
+
+        if (!$response) {
+            return null;
+        }
+
+        $response = preg_replace(
+            '/^```(?:json)?\s*|\s*```$/i',
+            '',
+            trim($response)
+        );
+
+        $decoded = json_decode($response, true);
+
+        if (!is_array($decoded) || !isset($decoded['entries'])) {
+            Log::warning('Invalid Gemini timesheet response.');
+
+            return null;
+        }
+
+        $allowedDates = array_flip($workDays);
+
+        $allowedProjects = [];
+
+        foreach ($projects as $project) {
+            $allowedProjects[$project['id']] = $project['name'];
+        }
+
+        $validatedEntries = [];
+
+        foreach ($decoded['entries'] as $entry) {
+
+            if (
+                !isset($entry['date'], $entry['project_id'], $entry['description'])
+            ) {
+                continue;
+            }
+
+            $projectId = (int) $entry['project_id'];
+            $date = $entry['date'];
+
+            if (
+                !isset($allowedDates[$date]) ||
+                !isset($allowedProjects[$projectId]) ||
+                !is_string($entry['description']) ||
+                trim($entry['description']) === ''
+            ) {
+                continue;
+            }
+
+            $validatedEntries[] = [
+                'date' => $date,
+                'project_id' => $projectId,
+                'project_name' => $allowedProjects[$projectId],
+                'description' => trim($entry['description']),
+            ];
+        }
+
+        return empty($validatedEntries) ? null : $validatedEntries;
     }
 }

@@ -77,117 +77,55 @@ class AIController extends Controller
         ], 200);
     }
 
-    public function autofillTimesheet(
-        string $description,
-        array $workDays,
-        array $projects
-    ): ?array {
+    public function autofillTimesheet(Request $request, GeminiService $gemini)
+    {
+        $validator = Validator::make($request->all(), [
+            'month' => 'required|date',
+            'work_days' => 'required|array|min:1',
+            'work_days.*' => 'date_format:Y-m-d',
+            'projects' => 'required|array|min:1',
+            'projects.*.id' => 'required|integer',
+            'projects.*.name' => 'required|string',
+            'description' => 'required|string|min:20|max:3000',
+        ]);
 
-        $system = 'You are an intelligent timesheet assistant. Generate realistic, professional timesheet entries based strictly on the users supplied work description.
-
-        Rules:
-        1. Generate entries only for the supplied working dates.
-        2. Use only the supplied projects.
-        3. Distribute work reasonably across the available dates and projects.
-        4. Do not invent specific meetings, deliverables or achievements.
-        5. Keep descriptions concise and professional.
-        6. Return valid JSON only, without Markdown or code fences.';
-
-        $prompt = json_encode([
-            'description' => $description,
-            'work_days' => $workDays,
-            'projects' => $projects,
-            'required_format' => [
-                'entries' => [
-                    [
-                        'date' => 'YYYY-MM-DD',
-                        'project_id' => 1,
-                        'project_name' => 'Project name',
-                        'description' => 'Professional work description',
-                    ],
-                ],
-            ],
-        ], JSON_PRETTY_PRINT);
-
-        $response = $this->generate($prompt, $system, 2000);
-
-        if (!$response) {
-            return null;
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
-        // Remove Markdown code fences if Gemini includes them.
-        $response = preg_replace(
-            '/^```(?:json)?\s*|\s*```$/i',
-            '',
-            trim($response)
+        $entries = $gemini->autofillTimesheet(
+            $request->description,
+            $request->work_days,
+            $request->projects
         );
 
-        $decoded = json_decode($response, true);
-
-        if (!is_array($decoded)) {
-            Log::warning('Gemini returned invalid timesheet JSON.', [
-                'response' => substr($response, 0, 1000),
-            ]);
-
-            return null;
+        if ($entries === null) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'AI is unavailable or returned an unusable response.',
+            ], 503);
         }
 
-        $entries = $decoded['entries'] ?? null;
+        AuditService::log(
+            action: 'AI_TIMESHEET_AUTOFILLED',
+            tableName: 'timesheet_details',
+            recordId: 0,
+            newValues: [
+                'month' => $request->month,
+                'entry_count' => count($entries),
+            ],
+            logType: 'success'
+        );
 
-        if (!is_array($entries)) {
-            return null;
-        }
-
-        // Validate generated entries against the supplied data.
-        $allowedDates = array_flip($workDays);
-
-        $allowedProjects = [];
-
-        foreach ($projects as $project) {
-            $allowedProjects[$project['id']] = $project['name'];
-        }
-
-        $validatedEntries = [];
-
-        foreach ($entries as $entry) {
-
-            if (
-                !isset(
-                    $entry['date'],
-                    $entry['project_id'],
-                    $entry['description']
-                )
-            ) {
-                continue;
-            }
-
-            $projectId = (int) $entry['project_id'];
-            $date = $entry['date'];
-
-            if (
-                !isset($allowedDates[$date]) ||
-                !isset($allowedProjects[$projectId]) ||
-                !is_string($entry['description']) ||
-                trim($entry['description']) === ''
-            ) {
-                continue;
-            }
-
-            $validatedEntries[] = [
-                'date' => $date,
-                'project_id' => $projectId,
-                'project_name' => $allowedProjects[$projectId],
-                'description' => trim($entry['description']),
-            ];
-        }
-
-        if (empty($validatedEntries)) {
-            Log::warning('Gemini returned no valid timesheet entries.');
-
-            return null;
-        }
-
-        return $validatedEntries;
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'entries' => $entries,
+            ],
+        ], 200);
     }
 
     public function describeIssue(Request $request, GeminiService $gemini)
