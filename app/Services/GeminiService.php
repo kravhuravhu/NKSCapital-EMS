@@ -7,18 +7,18 @@ use Illuminate\Support\Facades\Log;
 
 class GeminiService
 {
-    protected string $endpoint =
-        'https://generativelanguage.googleapis.com/v1beta/models/';
-
-
-    public function generate(string $prompt,?string $system = null,int $maxTokens = 400): ?string {
+    public function generate(
+        string $prompt,
+        ?string $system = null,
+        int $maxTokens = 400
+    ): ?string {
 
         $apiKey = config('services.gemini.key');
 
-        $models = array_unique([
-            config('services.gemini.model'),
-            config('services.gemini.fallback_model'),
-        ]);
+        $models = array_unique(array_filter([
+            config('services.gemini.model', 'gemini-3.5-flash-lite'),
+            config('services.gemini.fallback_model', 'gemini-3.8-flash'),
+        ]));
 
         if (empty($apiKey)) {
             Log::error('Gemini API key is missing.');
@@ -45,10 +45,7 @@ class GeminiService
         }
 
         foreach ($models as $model) {
-
-            // Two attempts per model
             for ($attempt = 1; $attempt <= 2; $attempt++) {
-
                 try {
                     $response = Http::connectTimeout(15)
                         ->timeout(35)
@@ -62,7 +59,6 @@ class GeminiService
                         );
 
                     if ($response->successful()) {
-
                         $parts = $response->json(
                             'candidates.0.content.parts',
                             []
@@ -85,6 +81,9 @@ class GeminiService
 
                         Log::warning('Gemini returned empty output', [
                             'model' => $model,
+                            'finish_reason' => $response->json(
+                                'candidates.0.finishReason'
+                            ),
                         ]);
 
                         break;
@@ -99,23 +98,18 @@ class GeminiService
                         'body' => substr($response->body(), 0, 500),
                     ]);
 
-                    // Retry temporary server errors
-                    if (in_array($status, [500, 502, 503, 504])) {
-
+                    if (in_array($status, [429, 500, 502, 503, 504])) {
                         if ($attempt < 2) {
                             sleep(1);
                             continue;
                         }
 
-                        // Try the fallback model
                         break;
                     }
 
-                    // Do not retry permanent errors or quota errors
                     return null;
 
                 } catch (\Throwable $e) {
-
                     Log::error('Gemini connection error', [
                         'model' => $model,
                         'attempt' => $attempt,
@@ -127,7 +121,6 @@ class GeminiService
                         continue;
                     }
 
-                    // Move to the fallback model
                     break;
                 }
             }
