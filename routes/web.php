@@ -51,6 +51,7 @@ use App\Livewire\Recruiter\Reports;
 use App\Livewire\Recruiter\ConvertToEmployee;
 use App\Livewire\Manager\HalfDayNotices;
 use App\Livewire\Admin\LeaveReasons;
+use App\Livewire\Employee\TimesheetHistory;
 
 Route::get('/', function () {
     return auth()->check()
@@ -89,6 +90,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
         ->prefix('employee')->name('employee.')->group(function () {
             Route::get('/dashboard', EmployeeDashboard::class)->name('dashboard');
             Route::get('/timesheet', Timesheet::class)->name('timesheet');
+            Route::get('/timesheet-history', TimesheetHistory::class)->name('timesheet-history');
             Route::get('/projects', Projects::class)->name('projects');
             Route::get('/leave', Leave::class)->name('leave');
             Route::get('/assets', Assets::class)->name('assets');

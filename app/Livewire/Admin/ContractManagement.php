@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Support\Api;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -25,30 +26,32 @@ class ContractManagement extends Component
     public array $pagination = [];
     public array $employees = [];
 
-    // upload modal
+    public array $stats = [
+        'total' => 0,
+        'active' => 0,
+        'expiring' => 0,
+        'pending_signature' => 0,
+    ];
+
     public bool $showUpload = false;
     public array $uploadForm = [];
     public $uploadFile = null;
 
-    // renew modal
     public bool $showRenew = false;
     public ?int $renewId = null;
     public string $renewLabel = '';
     public array $renewForm = [];
 
-    // status modal
     public bool $showStatus = false;
     public ?int $statusId = null;
     public string $statusLabel = '';
     public array $statusForm = [];
 
-    // delete confirmation
     public bool $showDelete = false;
     public ?int $deleteId = null;
     public string $deleteLabel = '';
     public string $deletePassword = '';
 
-    // view modal
     public bool $showView = false;
     public ?array $viewData = null;
 
@@ -83,7 +86,7 @@ class ContractManagement extends Component
 
         $response = Api::get('/contract/list', $params);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load contracts.';
             $this->loading = false;
             return;
@@ -97,7 +100,29 @@ class ContractManagement extends Component
             'total' => $paginator['total'] ?? 0,
         ];
 
+        $this->computeStats();
         $this->loading = false;
+    }
+
+    protected function computeStats(): void
+    {
+        $stats = ['total' => 0, 'active' => 0, 'expiring' => 0, 'pending_signature' => 0];
+
+        foreach ($this->contracts as $c) {
+            $stats['total']++;
+
+            match ($c['status'] ?? '') {
+                'active' => $stats['active']++,
+                'pending_signature' => $stats['pending_signature']++,
+                default => null,
+            };
+
+            if (! empty($c['days_until_expiry']) && $c['days_until_expiry'] >= 0 && $c['days_until_expiry'] <= 30) {
+                $stats['expiring']++;
+            }
+        }
+
+        $this->stats = $stats;
     }
 
     public function applyFilters(): void
@@ -120,6 +145,12 @@ class ContractManagement extends Component
     {
         $this->page = max(1, $page);
         $this->load();
+    }
+
+    public function selectStatus(string $status): void
+    {
+        $this->statusFilter = $status;
+        $this->applyFilters();
     }
 
     // ============ upload ============
@@ -162,7 +193,7 @@ class ContractManagement extends Component
             $this->error = 'Select an employee.';
             return;
         }
-        if (!$this->uploadFile) {
+        if (! $this->uploadFile) {
             $this->error = 'Select a PDF file to upload.';
             return;
         }
@@ -171,19 +202,14 @@ class ContractManagement extends Component
             return;
         }
 
-        $payload = array_filter(
-            $this->uploadForm,
-            fn ($v) => $v !== '' && $v !== null
-        );
+        $payload = array_filter($this->uploadForm, fn ($v) => $v !== '' && $v !== null);
 
-        $response = Api::upload('/contract/upload', $payload, [
-            'file' => $this->uploadFile,
-        ]);
+        $response = Api::upload('/contract/upload', $payload, ['file' => $this->uploadFile]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to upload contract.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to upload contract.');
             return;
         }
 
@@ -198,13 +224,13 @@ class ContractManagement extends Component
     {
         $row = collect($this->contracts)->firstWhere('id', $id);
 
-        if (!$row) {
+        if (! $row) {
             $this->error = 'Contract not found.';
             return;
         }
 
         $this->renewId = $id;
-        $this->renewLabel = 'v' . ($row['version'] ?? '?') . ' — ' .
+        $this->renewLabel = 'v' . ($row['version'] ?? '?') . ' &middot; ' .
             trim(($row['user']['first_name'] ?? '') . ' ' . ($row['user']['last_name'] ?? ''));
 
         $this->renewForm = [
@@ -234,18 +260,15 @@ class ContractManagement extends Component
         $this->error = null;
         $this->flash = null;
 
-        $payload = array_filter(
-            $this->renewForm,
-            fn ($v) => $v !== '' && $v !== null
-        );
+        $payload = array_filter($this->renewForm, fn ($v) => $v !== '' && $v !== null);
         $payload['contract_id'] = $this->renewId;
 
         $response = Api::post('/contract/renew', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to renew contract.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to renew contract.');
             return;
         }
 
@@ -260,13 +283,13 @@ class ContractManagement extends Component
     {
         $row = collect($this->contracts)->firstWhere('id', $id);
 
-        if (!$row) {
+        if (! $row) {
             $this->error = 'Contract not found.';
             return;
         }
 
         $this->statusId = $id;
-        $this->statusLabel = 'v' . ($row['version'] ?? '?') . ' — ' .
+        $this->statusLabel = 'v' . ($row['version'] ?? '?') . ' &middot; ' .
             trim(($row['user']['first_name'] ?? '') . ' ' . ($row['user']['last_name'] ?? ''));
 
         $this->statusForm = [
@@ -302,19 +325,20 @@ class ContractManagement extends Component
             'contract_id' => $this->statusId,
             'status' => $this->statusForm['status'],
         ];
-        if (!empty($this->statusForm['reason'])) {
+
+        if (! empty($this->statusForm['reason'])) {
             $payload['reason'] = $this->statusForm['reason'];
         }
-        if (!empty($this->statusForm['effective_date'])) {
+        if (! empty($this->statusForm['effective_date'])) {
             $payload['effective_date'] = $this->statusForm['effective_date'];
         }
 
         $response = Api::post('/contract/status/update', $payload);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to update status.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to update status.');
             return;
         }
 
@@ -329,19 +353,18 @@ class ContractManagement extends Component
     {
         $row = collect($this->contracts)->firstWhere('id', $id);
 
-        if (!$row) {
+        if (! $row) {
             $this->error = 'Contract not found.';
             return;
         }
 
-        $status = $row['status'] ?? '';
-        if (!in_array($status, ['draft', 'pending_signature'], true)) {
+        if (! in_array($row['status'] ?? '', ['draft', 'pending_signature'], true)) {
             $this->error = 'Only draft or pending-signature contracts can be deleted. Use status update to terminate active contracts.';
             return;
         }
 
         $this->deleteId = $id;
-        $this->deleteLabel = 'v' . ($row['version'] ?? '?') . ' — ' .
+        $this->deleteLabel = 'v' . ($row['version'] ?? '?') . ' &middot; ' .
             trim(($row['user']['first_name'] ?? '') . ' ' . ($row['user']['last_name'] ?? ''));
         $this->deletePassword = '';
         $this->error = null;
@@ -365,7 +388,8 @@ class ContractManagement extends Component
             $this->error = 'Enter your admin password to confirm.';
             return;
         }
-        if (!Auth::validate([
+
+        if (! Auth::validate([
             'email' => auth()->user()->email,
             'password' => $this->deletePassword,
         ])) {
@@ -375,7 +399,7 @@ class ContractManagement extends Component
 
         $response = Api::delete('/contract/delete/' . $this->deleteId);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Failed to delete contract.';
             return;
         }
@@ -393,17 +417,17 @@ class ContractManagement extends Component
 
         $response = Api::get('/contract/view/' . $id);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load contract.';
             return;
         }
 
         $data = $response['data'] ?? null;
 
-        if ($data && !empty($data['file_path'])) {
+        if ($data && ! empty($data['file_path'])) {
             $data['download_url'] = asset('storage/' . $data['file_path']);
         }
-        if ($data && !empty($data['signed_file_path'])) {
+        if ($data && ! empty($data['signed_file_path'])) {
             $data['signed_download_url'] = asset('storage/' . $data['signed_file_path']);
         }
 
@@ -417,30 +441,50 @@ class ContractManagement extends Component
         $this->viewData = null;
     }
 
-    // ============ helpers ============
+    public function daysUntilExpiry(array $row): ?int
+    {
+        if (empty($row['expiry_date'])) return null;
+
+        return (int) now()->startOfDay()->diffInDays(
+            Carbon::parse($row['expiry_date'])->startOfDay(),
+            false
+        );
+    }
+
+    public function expiryTone(array $row): string
+    {
+        $days = $this->daysUntilExpiry($row);
+
+        if ($days === null) return 'muted';
+        if ($days < 0) return 'danger';
+        if ($days <= 14) return 'danger';
+        if ($days <= 30) return 'warning';
+        if ($days <= 60) return 'gold';
+
+        return 'success';
+    }
 
     public static function statusTone(string $status): string
     {
         return match ($status) {
-            'active'            => 'success',
-            'draft'             => 'muted',
-            'pending_signature' => 'gold',
-            'expired'           => 'red',
-            'terminated'        => 'red',
-            'renewed'           => 'blue',
-            'superseded'        => 'muted',
-            default             => 'muted',
+            'active' => 'success',
+            'draft' => 'muted',
+            'pending_signature' => 'warning',
+            'expired', 'terminated' => 'danger',
+            'renewed' => 'info',
+            'superseded' => 'muted',
+            default => 'muted',
         };
     }
 
     public static function typeTone(string $type): string
     {
         return match ($type) {
-            'permanent'  => 'success',
-            'fixed_term' => 'blue',
+            'permanent' => 'success',
+            'fixed_term' => 'info',
             'consulting' => 'purple',
             'internship' => 'gold',
-            default      => 'muted',
+            default => 'muted',
         };
     }
 
