@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Support\Api;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -20,6 +21,7 @@ class Projects extends Component
 
     public array $projects = [];
     public array $pagination = [];
+
     public array $clients = [];
     public array $managers = [];
     public array $assignableUsers = [];
@@ -28,7 +30,8 @@ class Projects extends Component
         'total' => 0,
         'active' => 0,
         'planning' => 0,
-        'archived' => 0,
+        'completed' => 0,
+        'total_budget' => 0.0,
     ];
 
     public bool $showView = false;
@@ -126,7 +129,7 @@ class Projects extends Component
 
     protected function computeStats(): void
     {
-        $stats = ['total' => 0, 'active' => 0, 'planning' => 0, 'archived' => 0];
+        $stats = ['total' => 0, 'active' => 0, 'planning' => 0, 'completed' => 0, 'total_budget' => 0.0];
 
         foreach ($this->projects as $p) {
             $stats['total']++;
@@ -134,9 +137,11 @@ class Projects extends Component
             match ($p['status'] ?? '') {
                 'active' => $stats['active']++,
                 'planning' => $stats['planning']++,
-                'archived' => $stats['archived']++,
+                'completed' => $stats['completed']++,
                 default => null,
             };
+
+            $stats['total_budget'] += (float) ($p['budgeted_hours'] ?? 0);
         }
 
         $this->stats = $stats;
@@ -191,7 +196,6 @@ class Projects extends Component
     public function loadHours(): void
     {
         $projectId = $this->viewProject['project']['id'] ?? null;
-
         if (! $projectId) return;
 
         $this->hoursLoading = true;
@@ -240,7 +244,8 @@ class Projects extends Component
         $this->error = null;
         $this->flash = null;
 
-        foreach (['client_id', 'project_code', 'name', 'project_type'] as $field) {
+        $required = ['client_id', 'project_code', 'name', 'project_type'];
+        foreach ($required as $field) {
             if (empty($this->createForm[$field])) {
                 $this->error = 'Client, project code, name, and type are required.';
                 return;
@@ -525,6 +530,14 @@ class Projects extends Component
         $this->load();
     }
 
+    public function budgetUsage(array $project, float $logged = 0): int
+    {
+        $budgeted = (float) ($project['budgeted_hours'] ?? 0);
+        if ($budgeted <= 0) return 0;
+
+        return min(100, (int) round(($logged / $budgeted) * 100));
+    }
+
     public static function statusTone(string $status): string
     {
         return match ($status) {
@@ -545,6 +558,14 @@ class Projects extends Component
             'hybrid' => 'info',
             default => 'muted',
         };
+    }
+
+    public static function allocationTone(float $pct): string
+    {
+        if ($pct >= 80) return 'success';
+        if ($pct >= 50) return 'gold';
+
+        return 'muted';
     }
 
     public function render()

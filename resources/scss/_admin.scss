@@ -1414,7 +1414,7 @@
     flex-direction: column;
     gap: 20px;
     max-width: 1280px;
-
+    
     .ap-stats {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1432,6 +1432,7 @@
 
         &--success { border-left: 3px solid var(--nks-success); }
         &--info    { border-left: 3px solid var(--nks-info); }
+        &--gold    { border-left: 3px solid var(--nks-gold); }
     }
 
     .ap-stat-icon {
@@ -1484,13 +1485,124 @@
         margin-left: auto;
     }
 
-    .ap-row { cursor: pointer; transition: background var(--nks-transition); }
-    .ap-row:hover td { background: var(--nks-elevated); }
+    .ap-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+    }
 
-    .ap-meta { font-size: 11px; color: var(--nks-muted); margin-top: 2px; }
-    .ap-muted { color: var(--nks-muted); font-size: 12px; }
+    .ap-card {
+        background: var(--nks-surface);
+        border: 1px solid var(--nks-border);
+        border-radius: var(--nks-radius);
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        transition: border-color var(--nks-transition);
 
-    .ap-row-actions { display: flex; gap: 4px; }
+        &:hover { border-color: var(--nks-border-strong); }
+
+        &--success { border-left: 3px solid var(--nks-success); }
+        &--info    { border-left: 3px solid var(--nks-info); }
+        &--warning { border-left: 3px solid var(--nks-warning); }
+    }
+
+    .ap-card-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .ap-card-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: var(--nks-radius-sm);
+        background: var(--nks-gold-tint);
+        color: var(--nks-gold-deep);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+
+    .ap-card-title {
+        flex: 1;
+        min-width: 0;
+
+        h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--nks-ink);
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        span {
+            display: block;
+            font-family: 'Roboto Mono', ui-monospace, monospace;
+            font-size: 11px;
+            color: var(--nks-muted);
+            margin-top: 2px;
+        }
+    }
+
+    .ap-card-client {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--nks-body);
+
+        i { color: var(--nks-muted); font-size: 11px; }
+    }
+
+    .ap-card-badges {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .ap-card-manager {
+        font-size: 11px;
+        color: var(--nks-muted);
+    }
+
+    .ap-card-meta {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 14px;
+        margin: 0;
+
+        > div { display: flex; flex-direction: column; gap: 2px; }
+
+        dt {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--nks-muted);
+        }
+
+        dd {
+            margin: 0;
+            font-size: 12px;
+            color: var(--nks-ink);
+            font-weight: 500;
+        }
+    }
+
+    .ap-card-foot {
+        padding-top: 12px;
+        border-top: 1px solid var(--nks-border);
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+    }
 
     .ap-pagination {
         display: flex;
@@ -1531,26 +1643,26 @@
         background: var(--nks-elevated);
         padding: 14px 16px;
         border-radius: var(--nks-radius);
-        margin-bottom: 18px;
+        margin-bottom: 16px;
     }
 
     .ap-budget-head {
         display: flex;
-        align-items: center;
         justify-content: space-between;
+        align-items: center;
         margin-bottom: 8px;
     }
 
     .ap-budget-label {
         font-size: 11px;
-        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: var(--nks-muted);
+        font-weight: 700;
+        color: var(--nks-ink);
     }
 
     .ap-budget-value {
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 800;
         color: var(--nks-gold-deep);
     }
@@ -1560,22 +1672,21 @@
         background: var(--nks-border);
         border-radius: 3px;
         overflow: hidden;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
 
     .ap-budget-fill {
         height: 100%;
         background: var(--nks-gold);
         border-radius: 3px;
-        transition: width 300ms ease;
     }
 
     .ap-budget-meta {
         display: flex;
         justify-content: space-between;
-        gap: 12px;
         font-size: 11px;
         color: var(--nks-muted);
+        gap: 12px;
 
         strong { color: var(--nks-ink); font-weight: 700; }
     }
@@ -1585,17 +1696,17 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        margin: 16px 0 10px;
-        flex-wrap: wrap;
+        margin-bottom: 10px;
+        margin-top: 16px;
     }
 
     .ap-section-title {
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
         color: var(--nks-ink);
         margin: 0;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
     }
 
     .ap-section-value {
@@ -1605,10 +1716,16 @@
         margin-top: 4px;
     }
 
+    .ap-muted {
+        color: var(--nks-muted);
+        font-size: 12px;
+    }
+
     .ap-hours-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 14px;
+        gap: 16px;
+        margin-top: 8px;
     }
 
     .ap-hours-title {
@@ -1617,7 +1734,7 @@
         text-transform: uppercase;
         letter-spacing: 0.06em;
         color: var(--nks-muted);
-        margin: 0 0 8px;
+        margin-bottom: 8px;
     }
 
     .ap-form-grid {
@@ -1632,6 +1749,7 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
+        grid-column: 1 / -1;
     }
 }
 

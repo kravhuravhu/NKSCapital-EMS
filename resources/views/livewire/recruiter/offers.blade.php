@@ -13,6 +13,51 @@
         </div>
     @endif
 
+    <div class="pl-page-stats">
+        <div class="pl-page-stat">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-file-signature" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Total</div>
+                <div class="pl-page-stat-value">{{ count($offers) }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--warning">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Extended</div>
+                <div class="pl-page-stat-value">{{ collect($offers)->where('status', 'extended')->count() }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--success">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Accepted</div>
+                <div class="pl-page-stat-value">{{ collect($offers)->where('status', 'accepted')->count() }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--danger">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-circle-xmark" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Declined</div>
+                <div class="pl-page-stat-value">{{ collect($offers)->where('status', 'declined')->count() }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--info">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Acceptance rate</div>
+                <div class="pl-page-stat-value">
+                    @php
+                        $totalOffers = count($offers);
+                        $accepted = collect($offers)->where('status', 'accepted')->count();
+                        $rate = $totalOffers > 0 ? round(($accepted / $totalOffers) * 100) : 0;
+                    @endphp
+                    {{ $rate }}%
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="panel of-panel">
         <div class="of-header">
             <i class="fa-solid fa-file-signature of-header-icon"></i>
