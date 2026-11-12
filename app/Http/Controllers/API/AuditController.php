@@ -19,7 +19,7 @@ class AuditController extends Controller
      */
     public function search(Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'director']);
+        $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager']);
 
         $validator = Validator::make($request->all(), [
             'user_id' => 'nullable|exists:users,id',
@@ -84,7 +84,7 @@ class AuditController extends Controller
      */
     public function export(Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'director']);
+        $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager']);
 
         $validator = Validator::make($request->all(), [
             'from' => 'required|date',
@@ -190,7 +190,7 @@ class AuditController extends Controller
      */
     public function verifyChain()
     {
-        $this->requireRole(['admin', 'super_admin', 'director']);
+        $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager']);
 
         $result = AuditService::verifyChain();
 
@@ -214,7 +214,7 @@ class AuditController extends Controller
      */
     public function report(Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'director']);
+        $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager']);
 
         $validator = Validator::make($request->all(), [
             'from' => 'nullable|date',
@@ -283,7 +283,7 @@ class AuditController extends Controller
      */
     public function userAudit($userId, Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'director']);
+        $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager']);
 
         $target = User::findOrFail($userId);
 
@@ -320,7 +320,7 @@ class AuditController extends Controller
      */
     public function tableAudit($tableName, Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'director']);
+        $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager']);
 
         $validator = Validator::make($request->all(), [
             'record_id' => 'nullable|integer',

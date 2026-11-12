@@ -700,7 +700,7 @@ class PRTimesheetController extends Controller
         if ($user->id !== $timesheet->user_id 
             && $user->id !== $timesheet->level1_approver_id
             && $user->id !== $timesheet->level2_approver_id
-            && !in_array($user->role, ['admin', 'director', 'manager'])) {
+            && !in_array($user->role, ['admin', 'director', 'operational_manager', 'manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to view this timesheet'
@@ -803,7 +803,7 @@ class PRTimesheetController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['director', 'admin'])) {
+        if (!in_array($user->role, ['director', 'operational_manager', 'admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
@@ -871,7 +871,7 @@ class PRTimesheetController extends Controller
         $user = Auth::user();
 
         // role gate — only director or super_admin may override
-        if (!in_array($user->role, ['director', 'super_admin'])) {
+        if (!in_array($user->role, ['director', 'super_admin', 'operational_manager'])) {
             AuditService::logWarning('PR_OVERRIDE_UNAUTHORIZED', 'pr_timesheets', 0, [
                 'actor_id' => $user->id,
                 'actor_role' => $user->role,

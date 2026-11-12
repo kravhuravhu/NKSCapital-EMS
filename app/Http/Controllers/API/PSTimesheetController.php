@@ -413,7 +413,7 @@ class PSTimesheetController extends Controller
         $timesheet = PSTimesheet::with(['details.project', 'user.client', 'clientManager'])
             ->findOrFail($id);
 
-        if ($user->id !== $timesheet->user_id && !in_array($user->role, ['admin', 'director', 'manager'])) {
+        if ($user->id !== $timesheet->user_id && !in_array($user->role, ['admin', 'director', 'manager', 'operational_manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to view this timesheet'
