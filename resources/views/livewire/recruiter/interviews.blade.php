@@ -13,6 +13,44 @@
         </div>
     @endif
 
+    <div class="pl-page-stats">
+        <div class="pl-page-stat">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-comments" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Total</div>
+                <div class="pl-page-stat-value">{{ count($interviews) }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--info">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-calendar-day" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Scheduled</div>
+                <div class="pl-page-stat-value">{{ collect($interviews)->whereIn('status', ['scheduled', 'rescheduled'])->count() }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--success">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Completed</div>
+                <div class="pl-page-stat-value">{{ collect($interviews)->where('status', 'completed')->count() }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--warning">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-pen" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Feedback pending</div>
+                <div class="pl-page-stat-value">{{ collect($interviews)->where('status', 'feedback_pending')->count() }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--danger">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-xmark" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Cancelled</div>
+                <div class="pl-page-stat-value">{{ collect($interviews)->where('status', 'cancelled')->count() }}</div>
+            </div>
+        </div>
+    </div>
+
     <div class="panel iv-panel">
         <div class="iv-header">
             <i class="fa-solid fa-comments iv-header-icon"></i>

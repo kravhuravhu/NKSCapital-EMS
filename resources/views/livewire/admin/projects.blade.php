@@ -32,17 +32,24 @@
                 </div>
             </div>
             <div class="ap-stat ap-stat--info">
-                <div class="ap-stat-icon"><i class="fa-solid fa-compass-drafting" aria-hidden="true"></i></div>
+                <div class="ap-stat-icon"><i class="fa-solid fa-hourglass-start" aria-hidden="true"></i></div>
                 <div>
                     <div class="ap-stat-label">Planning</div>
                     <div class="ap-stat-value">{{ $stats['planning'] }}</div>
                 </div>
             </div>
             <div class="ap-stat">
-                <div class="ap-stat-icon"><i class="fa-solid fa-box-archive" aria-hidden="true"></i></div>
+                <div class="ap-stat-icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></div>
                 <div>
-                    <div class="ap-stat-label">Archived</div>
-                    <div class="ap-stat-value">{{ $stats['archived'] }}</div>
+                    <div class="ap-stat-label">Completed</div>
+                    <div class="ap-stat-value">{{ $stats['completed'] }}</div>
+                </div>
+            </div>
+            <div class="ap-stat ap-stat--gold">
+                <div class="ap-stat-icon"><i class="fa-solid fa-clock" aria-hidden="true"></i></div>
+                <div>
+                    <div class="ap-stat-label">Budgeted hours</div>
+                    <div class="ap-stat-value">{{ number_format($stats['total_budget'], 0) }}</div>
                 </div>
             </div>
         </div>
@@ -63,7 +70,7 @@
                 <div class="nks-field ap-filter-search">
                     <label class="nks-label">Search</label>
                     <input type="text" wire:model="search" wire:keydown.enter="applyFilters"
-                           class="nks-input" placeholder="Name or code">
+                           class="nks-input" placeholder="Name or project code">
                 </div>
                 <div class="nks-field">
                     <label class="nks-label">Status</label>
@@ -112,66 +119,74 @@
                     <p>No projects match your filters.</p>
                 </div>
             @else
-                <div class="nks-table-wrapper">
-                    <table class="nks-table">
-                        <thead>
-                            <tr>
-                                <th>Project</th>
-                                <th>Client</th>
-                                <th>Type</th>
-                                <th>Manager</th>
-                                <th>Team</th>
-                                <th>Budget</th>
-                                <th>Status</th>
-                                <th style="width: 140px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($projects as $p)
-                                <tr wire:key="ap-{{ $p['id'] }}" wire:click="openView({{ $p['id'] }})" class="ap-row">
-                                    <td>
-                                        <strong>{{ $p['name'] ?? '—' }}</strong>
-                                        <div class="ap-meta">{{ $p['project_code'] ?? '' }}</div>
-                                    </td>
-                                    <td>{{ $p['client']['company_name'] ?? '—' }}</td>
-                                    <td>
-                                        <x-nks.badge :tone="self::typeTone($p['project_type'] ?? '')">
-                                            {{ ucfirst($p['project_type'] ?? '—') }}
-                                        </x-nks.badge>
-                                    </td>
-                                    <td>
-                                        @if (! empty($p['project_manager']))
-                                            {{ $p['project_manager']['first_name'] ?? '' }}
-                                            {{ $p['project_manager']['last_name'] ?? '' }}
-                                        @else
-                                            <span class="ap-muted">Unassigned</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $p['assignments_count'] ?? 0 }}</td>
-                                    <td>{{ \App\Livewire\Employee\Timesheet::formatHours((float) ($p['budgeted_hours'] ?? 0)) }}</td>
-                                    <td>
-                                        <x-nks.badge :tone="self::statusTone($p['status'] ?? '')">
-                                            {{ ucfirst(str_replace('_', ' ', $p['status'] ?? '')) }}
-                                        </x-nks.badge>
-                                    </td>
-                                    <td @click.stop>
-                                        <div class="ap-row-actions">
-                                            <button type="button" wire:click="openEdit({{ $p['id'] }})"
-                                                    class="nks-btn nks-btn--outline nks-btn--sm" title="Edit">
-                                                <i class="fa-solid fa-pen"></i>
-                                            </button>
-                                            @if (($p['status'] ?? '') !== 'archived')
-                                                <button type="button" wire:click="openArchive({{ $p['id'] }})"
-                                                        class="nks-btn nks-btn--danger nks-btn--sm" title="Archive">
-                                                    <i class="fa-solid fa-box-archive"></i>
-                                                </button>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                <div class="ap-grid">
+                    @foreach ($projects as $p)
+                        @php
+                            $status = $p['status'] ?? 'planning';
+                            $type = $p['project_type'] ?? 'client';
+                        @endphp
+                        <article class="ap-card ap-card--{{ self::statusTone($status) }}">
+                            <header class="ap-card-head">
+                                <div class="ap-card-icon">
+                                    <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+                                </div>
+                                <div class="ap-card-title">
+                                    <h3>{{ $p['name'] ?? '—' }}</h3>
+                                    <span>{{ $p['project_code'] ?? '' }}</span>
+                                </div>
+                                <x-nks.badge :tone="self::statusTone($status)">
+                                    {{ ucfirst(str_replace('_', ' ', $status)) }}
+                                </x-nks.badge>
+                            </header>
+
+                            <div class="ap-card-client">
+                                <i class="fa-solid fa-building" aria-hidden="true"></i>
+                                {{ $p['client']['company_name'] ?? '—' }}
+                            </div>
+
+                            <div class="ap-card-badges">
+                                <x-nks.badge :tone="self::typeTone($type)">
+                                    {{ ucfirst($type) }}
+                                </x-nks.badge>
+                                @if (! empty($p['project_manager']))
+                                    <span class="ap-card-manager">
+                                        {{ $p['project_manager']['first_name'] ?? '' }}
+                                        {{ $p['project_manager']['last_name'] ?? '' }}
+                                    </span>
+                                @endif
+                            </div>
+
+                            <dl class="ap-card-meta">
+                                <div>
+                                    <dt>Budget</dt>
+                                    <dd>{{ \App\Livewire\Employee\Timesheet::formatHours((float) ($p['budgeted_hours'] ?? 0)) }}</dd>
+                                </div>
+                                <div>
+                                    <dt>Team</dt>
+                                    <dd>{{ $p['assignments_count'] ?? 0 }}</dd>
+                                </div>
+                                <div>
+                                    <dt>Start</dt>
+                                    <dd>{{ ! empty($p['start_date']) ? \Carbon\Carbon::parse($p['start_date'])->format('d M Y') : '—' }}</dd>
+                                </div>
+                                <div>
+                                    <dt>End</dt>
+                                    <dd>{{ ! empty($p['end_date']) ? \Carbon\Carbon::parse($p['end_date'])->format('d M Y') : '—' }}</dd>
+                                </div>
+                            </dl>
+
+                            <footer class="ap-card-foot">
+                                <button type="button" wire:click="openView({{ $p['id'] }})" class="nks-btn nks-btn--outline nks-btn--sm">
+                                    <i class="fa-solid fa-eye"></i>
+                                    View
+                                </button>
+                                <button type="button" wire:click="openEdit({{ $p['id'] }})" class="nks-btn nks-btn--primary nks-btn--sm">
+                                    <i class="fa-solid fa-pen"></i>
+                                    Edit
+                                </button>
+                            </footer>
+                        </article>
+                    @endforeach
                 </div>
 
                 @if (($pagination['last_page'] ?? 1) > 1)
@@ -198,13 +213,14 @@
         </div>
     @endif
 
+    {{-- View modal --}}
     @if ($showView && $viewProject)
         @php
             $p = $viewProject['project'] ?? [];
             $team = $viewProject['assigned_employees'] ?? [];
             $budgeted = (float) ($p['budgeted_hours'] ?? 0);
             $logged = (float) ($viewProject['total_hours_logged'] ?? 0);
-            $usage = $budgeted > 0 ? min(100, round(($logged / $budgeted) * 100)) : 0;
+            $usage = $this->budgetUsage($p, $logged);
         @endphp
         <div class="nks-modal-backdrop" wire:click.self="closeView" @keydown.escape.window="$wire.closeView()">
             <div class="nks-modal nks-modal--lg" role="dialog" aria-modal="true" x-trap>
@@ -219,30 +235,18 @@
                 </header>
                 <div class="nks-modal-body">
                     <div class="ap-detail-grid">
-                        <div>
-                            <span class="ap-detail-label">Status</span>
-                            <span class="ap-detail-value">
-                                <x-nks.badge :tone="self::statusTone($p['status'] ?? '')">
-                                    {{ ucfirst(str_replace('_', ' ', $p['status'] ?? '')) }}
-                                </x-nks.badge>
-                            </span>
-                        </div>
-                        <div>
-                            <span class="ap-detail-label">Type</span>
-                            <span class="ap-detail-value">{{ ucfirst($p['project_type'] ?? '—') }}</span>
-                        </div>
-                        <div>
-                            <span class="ap-detail-label">Start</span>
-                            <span class="ap-detail-value">
-                                {{ ! empty($p['start_date']) ? \Carbon\Carbon::parse($p['start_date'])->format('d M Y') : '—' }}
-                            </span>
-                        </div>
-                        <div>
-                            <span class="ap-detail-label">End</span>
-                            <span class="ap-detail-value">
-                                {{ ! empty($p['end_date']) ? \Carbon\Carbon::parse($p['end_date'])->format('d M Y') : '—' }}
-                            </span>
-                        </div>
+                        <div><span class="ap-detail-label">Status</span><span class="ap-detail-value">
+                            <x-nks.badge :tone="self::statusTone($p['status'] ?? '')">
+                                {{ ucfirst(str_replace('_', ' ', $p['status'] ?? '')) }}
+                            </x-nks.badge>
+                        </span></div>
+                        <div><span class="ap-detail-label">Type</span><span class="ap-detail-value">{{ ucfirst($p['project_type'] ?? '—') }}</span></div>
+                        <div><span class="ap-detail-label">Start</span><span class="ap-detail-value">
+                            {{ ! empty($p['start_date']) ? \Carbon\Carbon::parse($p['start_date'])->format('d M Y') : '—' }}
+                        </span></div>
+                        <div><span class="ap-detail-label">End</span><span class="ap-detail-value">
+                            {{ ! empty($p['end_date']) ? \Carbon\Carbon::parse($p['end_date'])->format('d M Y') : '—' }}
+                        </span></div>
                     </div>
 
                     <div class="ap-budget-block">
@@ -272,26 +276,29 @@
                                 <span class="ap-muted">Not assigned</span>
                             @endif
                         </div>
-                        <button type="button" wire:click="openAssignManager({{ $p['id'] }}, {{ $p['project_manager_id'] ?? 'null' }})"
+                        <button type="button"
+                                wire:click="openAssignManager({{ $p['id'] }}, {{ $p['project_manager_id'] ?? 'null' }})"
                                 class="nks-btn nks-btn--outline nks-btn--sm">
                             <i class="fa-solid fa-user-shield"></i>
-                            {{ ! empty($p['project_manager']) ? 'Change manager' : 'Assign manager' }}
+                            {{ ! empty($p['project_manager']) ? 'Change' : 'Assign' }}
                         </button>
                     </div>
 
                     <div class="ap-section-head">
-                        <h4 class="ap-section-title">Team ({{ count($team) }})</h4>
+                        <div>
+                            <h4 class="ap-section-title">Team ({{ count($team) }})</h4>
+                        </div>
                         <button type="button" wire:click="openAssignEmployee({{ $p['id'] }})"
                                 class="nks-btn nks-btn--primary nks-btn--sm">
                             <i class="fa-solid fa-user-plus"></i>
-                            Assign employee
+                            Assign
                         </button>
                     </div>
 
                     @if (count($team) === 0)
                         <div class="nks-card-empty" style="padding: 20px 12px;">
                             <i class="fa-solid fa-users-slash"></i>
-                            <p>No active team members yet.</p>
+                            <p>No active team members. Assign employees to start tracking hours.</p>
                         </div>
                     @else
                         <div class="nks-table-wrapper">
@@ -315,17 +322,21 @@
                                         <tr>
                                             <td>
                                                 <strong>{{ $fullName ?: '—' }}</strong>
-                                                <div class="ap-meta">{{ $u['employee_number'] ?? '' }}</div>
+                                                <div class="ap-muted" style="font-size: 11px; margin-top: 2px;">
+                                                    {{ $u['employee_number'] ?? '' }}
+                                                </div>
                                             </td>
                                             <td>{{ ucfirst(str_replace('_', ' ', $row['role'] ?? '—')) }}</td>
-                                            <td>{{ (int) $pct }}%</td>
                                             <td>
-                                                {{ ! empty($row['assigned_date']) ? \Carbon\Carbon::parse($row['assigned_date'])->format('d M Y') : '—' }}
+                                                <x-nks.badge :tone="self::allocationTone($pct)">
+                                                    {{ (int) $pct }}%
+                                                </x-nks.badge>
                                             </td>
+                                            <td>{{ ! empty($row['assigned_date']) ? \Carbon\Carbon::parse($row['assigned_date'])->format('d M Y') : '—' }}</td>
                                             <td>
                                                 <button type="button"
                                                         wire:click="openRemoveEmployee({{ $p['id'] }}, {{ $u['id'] ?? 0 }}, '{{ addslashes($fullName) }}')"
-                                                        class="nks-btn nks-btn--danger nks-btn--sm" title="Remove">
+                                                        class="nks-btn nks-btn--danger nks-btn--sm">
                                                     <i class="fa-solid fa-user-minus"></i>
                                                 </button>
                                             </td>
@@ -337,11 +348,14 @@
                     @endif
 
                     <div class="ap-section-head">
-                        <h4 class="ap-section-title">Hours breakdown</h4>
+                        <div>
+                            <h4 class="ap-section-title">Hours breakdown</h4>
+                        </div>
                         @if (! $hoursData)
                             <button type="button" wire:click="loadHours" wire:loading.attr="disabled" wire:target="loadHours"
                                     class="nks-btn nks-btn--outline nks-btn--sm">
-                                <i class="fa-solid fa-clock"></i>
+                                <i class="fa-solid fa-clock" wire:loading.remove wire:target="loadHours"></i>
+                                <span class="nks-btn-spinner" wire:loading wire:target="loadHours"></span>
                                 Load hours
                             </button>
                         @endif
@@ -361,59 +375,39 @@
                         @endphp
                         <div class="ap-hours-grid">
                             <div>
-                                <h5 class="ap-hours-title">By employee</h5>
+                                <div class="ap-hours-title">By employee</div>
                                 @if (empty($byEmp))
-                                    <div class="nks-card-empty" style="padding: 16px 12px;">
-                                        <i class="fa-solid fa-circle-info"></i>
-                                        <p>No hours logged yet.</p>
-                                    </div>
+                                    <div class="ap-muted">No hours logged yet.</div>
                                 @else
-                                    <div class="nks-table-wrapper">
-                                        <table class="nks-table">
-                                            <thead>
+                                    <table class="nks-table">
+                                        <thead><tr><th>Employee</th><th style="text-align: right;">Hours</th></tr></thead>
+                                        <tbody>
+                                            @foreach ($byEmp as $row)
                                                 <tr>
-                                                    <th>Employee</th>
-                                                    <th style="text-align: right;">Hours</th>
+                                                    <td>{{ $row['user']['first_name'] ?? '' }} {{ $row['user']['last_name'] ?? '' }}</td>
+                                                    <td style="text-align: right;">{{ \App\Livewire\Employee\Timesheet::formatHours((float) ($row['total_hours'] ?? 0)) }}</td>
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($byEmp as $row)
-                                                    <tr>
-                                                        <td>{{ $row['user']['first_name'] ?? '' }} {{ $row['user']['last_name'] ?? '' }}</td>
-                                                        <td style="text-align: right;">{{ \App\Livewire\Employee\Timesheet::formatHours((float) ($row['total_hours'] ?? 0)) }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
                                 @endif
                             </div>
                             <div>
-                                <h5 class="ap-hours-title">By month</h5>
+                                <div class="ap-hours-title">By month</div>
                                 @if (empty($byMonth))
-                                    <div class="nks-card-empty" style="padding: 16px 12px;">
-                                        <i class="fa-solid fa-circle-info"></i>
-                                        <p>No monthly data.</p>
-                                    </div>
+                                    <div class="ap-muted">No monthly data.</div>
                                 @else
-                                    <div class="nks-table-wrapper">
-                                        <table class="nks-table">
-                                            <thead>
+                                    <table class="nks-table">
+                                        <thead><tr><th>Month</th><th style="text-align: right;">Hours</th></tr></thead>
+                                        <tbody>
+                                            @foreach ($byMonth as $row)
                                                 <tr>
-                                                    <th>Month</th>
-                                                    <th style="text-align: right;">Hours</th>
+                                                    <td>{{ $row['month'] ?? '—' }}</td>
+                                                    <td style="text-align: right;">{{ \App\Livewire\Employee\Timesheet::formatHours((float) ($row['total_hours'] ?? 0)) }}</td>
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($byMonth as $row)
-                                                    <tr>
-                                                        <td>{{ $row['month'] ?? '—' }}</td>
-                                                        <td style="text-align: right;">{{ \App\Livewire\Employee\Timesheet::formatHours((float) ($row['total_hours'] ?? 0)) }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
                                 @endif
                             </div>
                         </div>
@@ -430,6 +424,7 @@
         </div>
     @endif
 
+    {{-- Create modal --}}
     @if ($showCreate)
         <div class="nks-modal-backdrop" wire:click.self="closeCreate" @keydown.escape.window="$wire.closeCreate()">
             <div class="nks-modal nks-modal--lg" role="dialog" aria-modal="true" x-trap>
@@ -510,6 +505,7 @@
         </div>
     @endif
 
+    {{-- Edit modal --}}
     @if ($showEdit && $editId)
         <div class="nks-modal-backdrop" wire:click.self="closeEdit" @keydown.escape.window="$wire.closeEdit()">
             <div class="nks-modal nks-modal--lg" role="dialog" aria-modal="true" x-trap>
@@ -588,10 +584,8 @@
                 </div>
                 <footer class="nks-modal-foot">
                     <button type="button" wire:click="closeEdit" class="nks-btn nks-btn--outline">Cancel</button>
-                    <button type="button" wire:click="submitEdit" class="nks-btn nks-btn--primary"
-                            wire:loading.attr="disabled" wire:target="submitEdit">
-                        <i class="fa-solid fa-check" wire:loading.remove wire:target="submitEdit"></i>
-                        <span class="nks-btn-spinner" wire:loading wire:target="submitEdit"></span>
+                    <button type="button" wire:click="submitEdit" class="nks-btn nks-btn--primary">
+                        <i class="fa-solid fa-check"></i>
                         Save changes
                     </button>
                 </footer>
@@ -599,6 +593,7 @@
         </div>
     @endif
 
+    {{-- Assign manager --}}
     @if ($showAssignManager)
         <div class="nks-modal-backdrop" wire:click.self="closeAssignManager" @keydown.escape.window="$wire.closeAssignManager()">
             <div class="nks-modal nks-modal--sm" role="dialog" aria-modal="true" x-trap>
@@ -614,7 +609,7 @@
                         <select wire:model="assignManagerId" class="nks-select">
                             <option value="">Select a manager</option>
                             @foreach ($managers as $m)
-                                <option value="{{ $m['id'] }}">{{ $m['first_name'] }} {{ $m['last_name'] }} &middot; {{ ucfirst($m['role']) }}</option>
+                                <option value="{{ $m['id'] }}">{{ $m['first_name'] }} {{ $m['last_name'] }} &middot; {{ ucfirst(str_replace('_', ' ', $m['role'])) }}</option>
                             @endforeach
                         </select>
                         <span class="nks-help">The assigned manager becomes the L1 approver for PR timesheets on this project.</span>
@@ -631,6 +626,7 @@
         </div>
     @endif
 
+    {{-- Assign employee --}}
     @if ($showAssignEmployee)
         <div class="nks-modal-backdrop" wire:click.self="closeAssignEmployee" @keydown.escape.window="$wire.closeAssignEmployee()">
             <div class="nks-modal nks-modal--md" role="dialog" aria-modal="true" x-trap>
@@ -685,6 +681,7 @@
         </div>
     @endif
 
+    {{-- Remove employee --}}
     @if ($showRemoveEmployee)
         <div class="nks-modal-backdrop" wire:click.self="closeRemoveEmployee" @keydown.escape.window="$wire.closeRemoveEmployee()">
             <div class="nks-modal nks-modal--sm" role="dialog" aria-modal="true" x-trap>
@@ -695,7 +692,7 @@
                     </button>
                 </header>
                 <div class="nks-modal-body">
-                    <p>Remove <strong>{{ $removeName }}</strong> from this project? Their historical timesheet entries stay attached.</p>
+                    <p>Remove <strong>{{ $removeName }}</strong> from this project? Their historical timesheet entries stay attached to the project.</p>
                 </div>
                 <footer class="nks-modal-foot">
                     <button type="button" wire:click="closeRemoveEmployee" class="nks-btn nks-btn--outline">Cancel</button>
@@ -708,6 +705,7 @@
         </div>
     @endif
 
+    {{-- Archive --}}
     @if ($showArchive)
         <div class="nks-modal-backdrop" wire:click.self="closeArchive" @keydown.escape.window="$wire.closeArchive()">
             <div class="nks-modal nks-modal--sm" role="dialog" aria-modal="true" x-trap>
@@ -718,7 +716,7 @@
                     </button>
                 </header>
                 <div class="nks-modal-body">
-                    <p>Archive <strong>{{ $archiveName }}</strong>? It stays visible in historical reports but cannot accept new timesheets or assignments.</p>
+                    <p>Archive <strong>{{ $archiveName }}</strong>? The project remains visible in historical reports but cannot accept new timesheets or assignments.</p>
                     <div class="nks-field">
                         <label class="nks-label">Admin password <span class="nks-required">*</span></label>
                         <input type="password" wire:model="archivePassword" class="nks-input" autocomplete="current-password">

@@ -15,7 +15,7 @@ class Pipeline extends Component
     public string $search = '';
 
     public array $requisitions = [];
-    public array $columns = [];   // stage => [candidates]
+    public array $columns = [];
     public int $total = 0;
     public bool $truncated = false;
 
@@ -27,20 +27,27 @@ class Pipeline extends Component
     public string $rejectName = '';
     public string $rejectReason = '';
 
-    // canonical column order for the board
     public array $stageOrder = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'];
 
     public array $stageLabels = [
-        'applied'   => 'Applied',
+        'applied' => 'Applied',
         'screening' => 'Screening',
         'interview' => 'Interview',
-        'offer'     => 'Offer',
-        'hired'     => 'Hired',
-        'rejected'  => 'Rejected',
+        'offer' => 'Offer',
+        'hired' => 'Hired',
+        'rejected' => 'Rejected',
     ];
 
-    // linear progression (rejected is out-of-band)
     public array $linearFlow = ['applied', 'screening', 'interview', 'offer', 'hired'];
+
+    public array $stats = [
+        'total' => 0,
+        'applied' => 0,
+        'interview' => 0,
+        'offer' => 0,
+        'hired' => 0,
+        'rejected' => 0,
+    ];
 
     public function mount(): void
     {
@@ -64,16 +71,12 @@ class Pipeline extends Component
 
         $params = ['per_page' => 200];
 
-        if ($this->requisitionFilter !== '') {
-            $params['requisition_id'] = $this->requisitionFilter;
-        }
-        if ($this->search !== '') {
-            $params['search'] = $this->search;
-        }
+        if ($this->requisitionFilter !== '') $params['requisition_id'] = $this->requisitionFilter;
+        if ($this->search !== '')            $params['search'] = $this->search;
 
         $response = Api::get('/recruitment/candidate/list', $params);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load pipeline.';
             $this->loading = false;
             return;
@@ -84,7 +87,6 @@ class Pipeline extends Component
         $this->total = $paginator['total'] ?? 0;
         $this->truncated = $this->total > count($rows);
 
-        // bucket candidates into stage columns
         $columns = [];
         foreach ($this->stageOrder as $stage) {
             $columns[$stage] = [];
@@ -92,14 +94,27 @@ class Pipeline extends Component
 
         foreach ($rows as $row) {
             $stage = $row['current_stage'] ?? 'applied';
-            if (!isset($columns[$stage])) {
+            if (! isset($columns[$stage])) {
                 $columns[$stage] = [];
             }
             $columns[$stage][] = $row;
         }
 
         $this->columns = $columns;
+        $this->computeStats();
         $this->loading = false;
+    }
+
+    protected function computeStats(): void
+    {
+        $this->stats = [
+            'total' => $this->total,
+            'applied' => count($this->columns['applied'] ?? []),
+            'interview' => count($this->columns['interview'] ?? []),
+            'offer' => count($this->columns['offer'] ?? []),
+            'hired' => count($this->columns['hired'] ?? []),
+            'rejected' => count($this->columns['rejected'] ?? []),
+        ];
     }
 
     public function refreshBoard(): void
@@ -119,8 +134,6 @@ class Pipeline extends Component
         $this->load();
     }
 
-    // ---- drag-and-drop target ----
-
     public function moveCard($candidateId, string $newStage): void
     {
         $this->error = null;
@@ -128,13 +141,13 @@ class Pipeline extends Component
 
         $candidateId = (int) $candidateId;
 
-        if ($candidateId <= 0 || !in_array($newStage, $this->stageOrder, true)) {
+        if ($candidateId <= 0 || ! in_array($newStage, $this->stageOrder, true)) {
             return;
         }
 
         $candidate = $this->findCandidate($candidateId);
 
-        if (!$candidate) {
+        if (! $candidate) {
             return;
         }
 
@@ -144,13 +157,11 @@ class Pipeline extends Component
             return;
         }
 
-        // rejections must go through the reject action so a reason is captured
         if ($newStage === 'rejected') {
             $this->openReject($candidateId);
             return;
         }
 
-        // terminal stages cannot be moved out of
         if (in_array($current, ['hired', 'rejected', 'withdrawn'], true)) {
             $this->error = 'Cannot move a candidate that is already ' . ucfirst($current) . '.';
             return;
@@ -161,34 +172,27 @@ class Pipeline extends Component
             'stage' => $newStage,
         ]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to move candidate.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to move candidate.');
             return;
         }
 
         $name = trim(($candidate['first_name'] ?? '') . ' ' . ($candidate['last_name'] ?? ''));
-        $this->flash = $name . ' → ' . ucfirst($newStage);
+        $this->flash = $name . ' moved to ' . ucfirst($newStage);
         $this->load();
     }
-
-    // ---- arrow buttons ----
 
     public function advanceCard(int $candidateId): void
     {
         $candidate = $this->findCandidate($candidateId);
-
-        if (!$candidate) {
-            return;
-        }
+        if (! $candidate) return;
 
         $current = $candidate['current_stage'] ?? 'applied';
         $idx = array_search($current, $this->linearFlow, true);
 
-        if ($idx === false || $idx >= count($this->linearFlow) - 1) {
-            return;
-        }
+        if ($idx === false || $idx >= count($this->linearFlow) - 1) return;
 
         $this->moveCard($candidateId, $this->linearFlow[$idx + 1]);
     }
@@ -196,22 +200,15 @@ class Pipeline extends Component
     public function regressCard(int $candidateId): void
     {
         $candidate = $this->findCandidate($candidateId);
-
-        if (!$candidate) {
-            return;
-        }
+        if (! $candidate) return;
 
         $current = $candidate['current_stage'] ?? 'applied';
         $idx = array_search($current, $this->linearFlow, true);
 
-        if ($idx === false || $idx === 0) {
-            return;
-        }
+        if ($idx === false || $idx === 0) return;
 
         $this->moveCard($candidateId, $this->linearFlow[$idx - 1]);
     }
-
-    // ---- view ----
 
     public function openView(int $id): void
     {
@@ -219,7 +216,7 @@ class Pipeline extends Component
 
         $response = Api::get('/recruitment/candidate/' . $id);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load candidate.';
             return;
         }
@@ -234,15 +231,10 @@ class Pipeline extends Component
         $this->viewData = null;
     }
 
-    // ---- reject ----
-
     public function openReject(int $id): void
     {
         $candidate = $this->findCandidate($id);
-
-        if (!$candidate) {
-            return;
-        }
+        if (! $candidate) return;
 
         $this->rejectId = $id;
         $this->rejectName = trim(($candidate['first_name'] ?? '') . ' ' . ($candidate['last_name'] ?? ''));
@@ -274,10 +266,10 @@ class Pipeline extends Component
             'reason' => $this->rejectReason,
         ]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
-            $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to reject candidate.');
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to reject candidate.');
             return;
         }
 
@@ -286,11 +278,9 @@ class Pipeline extends Component
         $this->load();
     }
 
-    // ---- helpers ----
-
     protected function findCandidate(int $id): ?array
     {
-        foreach ($this->columns as $stage => $rows) {
+        foreach ($this->columns as $rows) {
             foreach ($rows as $row) {
                 if ((int) ($row['id'] ?? 0) === $id) {
                     return $row;
@@ -303,7 +293,7 @@ class Pipeline extends Component
 
     public function canMoveOut(array $candidate): bool
     {
-        return !in_array($candidate['current_stage'] ?? '', ['hired', 'rejected', 'withdrawn'], true);
+        return ! in_array($candidate['current_stage'] ?? '', ['hired', 'rejected', 'withdrawn'], true);
     }
 
     public function canAdvanceInLinear(array $candidate): bool
@@ -325,21 +315,19 @@ class Pipeline extends Component
     public static function stageTone(string $stage): string
     {
         return match ($stage) {
-            'applied'   => 'muted',
-            'screening' => 'blue',
+            'applied' => 'muted',
+            'screening' => 'info',
             'interview' => 'gold',
-            'offer'     => 'purple',
-            'hired'     => 'success',
-            'rejected'  => 'red',
-            default     => 'muted',
+            'offer' => 'purple',
+            'hired' => 'success',
+            'rejected' => 'danger',
+            default => 'muted',
         };
     }
 
     public static function ageLabel(?string $appliedDate): string
     {
-        if (!$appliedDate) {
-            return '—';
-        }
+        if (! $appliedDate) return '—';
 
         $days = (int) \Carbon\Carbon::parse($appliedDate)->diffInDays(now());
 

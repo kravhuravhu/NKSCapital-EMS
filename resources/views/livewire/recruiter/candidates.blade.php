@@ -13,6 +13,44 @@
         </div>
     @endif
 
+    <div class="pl-page-stats">
+        <div class="pl-page-stat">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-user-plus" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Total</div>
+                <div class="pl-page-stat-value">{{ count($candidates) }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--info">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-user-check" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Active</div>
+                <div class="pl-page-stat-value">{{ collect($candidates)->whereNotIn('current_stage', ['hired', 'rejected', 'withdrawn'])->count() }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--warning">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-comments" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Interviewing</div>
+                <div class="pl-page-stat-value">{{ collect($candidates)->where('current_stage', 'interview')->count() }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--success">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-trophy" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Hired</div>
+                <div class="pl-page-stat-value">{{ collect($candidates)->where('current_stage', 'hired')->count() }}</div>
+            </div>
+        </div>
+        <div class="pl-page-stat pl-page-stat--danger">
+            <div class="pl-page-stat-icon"><i class="fa-solid fa-user-xmark" aria-hidden="true"></i></div>
+            <div>
+                <div class="pl-page-stat-label">Rejected</div>
+                <div class="pl-page-stat-value">{{ collect($candidates)->where('current_stage', 'rejected')->count() }}</div>
+            </div>
+        </div>
+    </div>
+
     <div class="panel cd-panel">
         <div class="cd-header">
             <i class="fa-solid fa-user-plus cd-header-icon"></i>

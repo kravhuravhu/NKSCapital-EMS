@@ -16,33 +16,33 @@
     @if ($loading)
         <x-nks.spinner block label="Loading requisitions..." />
     @else
-        <div class="rq-stats">
-            <div class="rq-stat">
-                <div class="rq-stat-icon"><i class="fa-solid fa-briefcase" aria-hidden="true"></i></div>
+        <div class="pl-page-stats">
+            <div class="pl-page-stat">
+                <div class="pl-page-stat-icon"><i class="fa-solid fa-briefcase" aria-hidden="true"></i></div>
                 <div>
-                    <div class="rq-stat-label">Total</div>
-                    <div class="rq-stat-value">{{ $stats['total'] }}</div>
+                    <div class="pl-page-stat-label">Total</div>
+                    <div class="pl-page-stat-value">{{ count($requisitions) }}</div>
                 </div>
             </div>
-            <div class="rq-stat rq-stat--success">
-                <div class="rq-stat-icon"><i class="fa-solid fa-bullhorn" aria-hidden="true"></i></div>
+            <div class="pl-page-stat pl-page-stat--success">
+                <div class="pl-page-stat-icon"><i class="fa-solid fa-circle-play" aria-hidden="true"></i></div>
                 <div>
-                    <div class="rq-stat-label">Open</div>
-                    <div class="rq-stat-value">{{ $stats['open'] }}</div>
+                    <div class="pl-page-stat-label">Open</div>
+                    <div class="pl-page-stat-value">{{ collect($requisitions)->where('status', 'open')->count() }}</div>
                 </div>
             </div>
-            <div class="rq-stat rq-stat--warning">
-                <div class="rq-stat-icon"><i class="fa-solid fa-clock" aria-hidden="true"></i></div>
+            <div class="pl-page-stat pl-page-stat--warning">
+                <div class="pl-page-stat-icon"><i class="fa-solid fa-clock" aria-hidden="true"></i></div>
                 <div>
-                    <div class="rq-stat-label">Pending</div>
-                    <div class="rq-stat-value">{{ $stats['pending'] }}</div>
+                    <div class="pl-page-stat-label">Pending approval</div>
+                    <div class="pl-page-stat-value">{{ collect($requisitions)->where('status', 'pending_approval')->count() }}</div>
                 </div>
             </div>
-            <div class="rq-stat">
-                <div class="rq-stat-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></div>
+            <div class="pl-page-stat">
+                <div class="pl-page-stat-icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></div>
                 <div>
-                    <div class="rq-stat-label">Closed</div>
-                    <div class="rq-stat-value">{{ $stats['closed'] }}</div>
+                    <div class="pl-page-stat-label">Closed</div>
+                    <div class="pl-page-stat-value">{{ collect($requisitions)->where('status', 'closed')->count() }}</div>
                 </div>
             </div>
         </div>
