@@ -34,7 +34,7 @@ class ReportController extends Controller
     public function employeePSTimesheet(Request $request)
     {
         $user = Auth::user();
-        $this->requireRole($user, ['employee', 'manager', 'director', 'admin', 'super_admin']);
+        $this->requireRole($user, ['employee', 'manager', 'director', 'operational_manager', 'admin', 'super_admin']);
         $this->requireEmployeeType($user, 'ps');
 
         [$from, $to] = $this->parsePeriod($request);
@@ -50,7 +50,7 @@ class ReportController extends Controller
     public function employeePRTimesheet(Request $request)
     {
         $user = Auth::user();
-        $this->requireRole($user, ['employee', 'manager', 'director', 'admin', 'super_admin']);
+        $this->requireRole($user, ['employee', 'manager', 'director', 'operational_manager', 'admin', 'super_admin']);
         $this->requireEmployeeType($user, 'pr');
 
         [$from, $to] = $this->parsePeriod($request);
@@ -70,7 +70,7 @@ class ReportController extends Controller
     public function teamPerformance(Request $request)
     {
         $user = Auth::user();
-        $this->requireRole($user, ['manager', 'director', 'admin', 'super_admin']);
+        $this->requireRole($user, ['manager', 'director', 'operational_manager', 'admin', 'super_admin']);
 
         [$from, $to] = $this->parsePeriod($request);
 
@@ -89,7 +89,7 @@ class ReportController extends Controller
     public function companyKpi(Request $request)
     {
         $user = Auth::user();
-        $this->requireRole($user, ['director', 'admin', 'super_admin']);
+        $this->requireRole($user, ['director', 'operational_manager', 'admin', 'super_admin']);
 
         [$from, $to] = $this->parsePeriod($request);
 
@@ -104,7 +104,7 @@ class ReportController extends Controller
     public function financial(Request $request)
     {
         $user = Auth::user();
-        $this->requireRole($user, ['director', 'admin', 'super_admin']);
+        $this->requireRole($user, ['director', 'operational_manager', 'admin', 'super_admin']);
 
         [$from, $to] = $this->parsePeriod($request);
 

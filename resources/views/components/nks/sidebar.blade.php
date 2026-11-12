@@ -2,8 +2,17 @@
 
 @php
     $userRoles = $user->getRoleNames()->toArray();
-    if (empty($userRoles) && $user->role) {
-        $userRoles = [$user->role];
+
+    if (! empty($user->role) && ! in_array($user->role, $userRoles, true)) {
+        $userRoles[] = $user->role;
+    }
+
+    if (in_array('operational_manager', $userRoles, true) && ! in_array('director', $userRoles, true)) {
+        $userRoles[] = 'director';
+    }
+
+    if (in_array('director', $userRoles, true) && ! in_array('operational_manager', $userRoles, true)) {
+        $userRoles[] = 'operational_manager';
     }
 
     $badges = \App\Support\PortalBadges::for($user);

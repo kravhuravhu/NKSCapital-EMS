@@ -54,7 +54,7 @@ class DashboardController extends Controller
     public function manager(Request $request)
     {
         $user = Auth::user();
-        $this->requireRole($user, ['manager', 'director', 'admin', 'super_admin']);
+        $this->requireRole($user, ['manager', 'director', 'operational_manager', 'admin', 'super_admin']);
 
         return response()->json([
             'status' => 'success',
@@ -96,7 +96,7 @@ class DashboardController extends Controller
     public function recruiter(Request $request)
     {
         $user = Auth::user();
-        $this->requireRole($user, ['recruiter', 'manager', 'director', 'admin', 'super_admin']);
+        $this->requireRole($user, ['recruiter', 'manager', 'director', 'operational_manager', 'admin', 'super_admin']);
 
         return response()->json([
             'status' => 'success',
@@ -186,7 +186,7 @@ class DashboardController extends Controller
     protected function requireEmployeeType($user, string $type): void
     {
         if ($user->employee_type !== $type
-            && !in_array($user->role, ['admin', 'super_admin', 'director', 'manager'])) {
+            && !in_array($user->role, ['admin', 'super_admin', 'director', 'operational_manager', 'manager'])) {
             abort(response()->json([
                 'status' => 'error',
                 'message' => "Dashboard is only available for {$type} employees"

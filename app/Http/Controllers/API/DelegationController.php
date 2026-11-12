@@ -25,7 +25,7 @@ class DelegationController extends Controller
      */
     public function list(Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'director', 'manager']);
+        $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager', 'manager']);
 
         $validator = Validator::make($request->all(), [
             'status' => 'nullable|in:active,upcoming,expired,revoked,all',
@@ -86,7 +86,7 @@ class DelegationController extends Controller
      */
     public function show($id)
     {
-        $this->requireRole(['admin', 'super_admin', 'director', 'manager']);
+        $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager', 'manager']);
 
         $delegation = ApprovalDelegation::with([
             'originalApprover:id,first_name,last_name,email,role',
@@ -103,7 +103,7 @@ class DelegationController extends Controller
      */
     public function create(Request $request)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'director', 'manager']);
+        $user = $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager', 'manager']);
 
         $validator = Validator::make($request->all(), [
             'original_approver_id' => 'required|exists:users,id',
@@ -141,7 +141,7 @@ class DelegationController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'director']);
+        $user = $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager', 'manager']);
 
         $delegation = ApprovalDelegation::findOrFail($id);
 
@@ -180,7 +180,7 @@ class DelegationController extends Controller
      */
     public function activate(Request $request, $id)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'director']);
+        $user = $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager', 'manager']);
 
         $delegation = ApprovalDelegation::findOrFail($id);
 
@@ -202,7 +202,7 @@ class DelegationController extends Controller
      */
     public function revoke(Request $request)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'director']);
+        $user = $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager', 'manager']);
 
         $validator = Validator::make($request->all(), [
             'delegation_id' => 'required|exists:approval_delegations,id',

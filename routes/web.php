@@ -52,6 +52,7 @@ use App\Livewire\Recruiter\ConvertToEmployee;
 use App\Livewire\Manager\HalfDayNotices;
 use App\Livewire\Admin\LeaveReasons;
 use App\Livewire\Employee\TimesheetHistory;
+use App\Support\RouteRole;
 
 Route::get('/', function () {
     return auth()->check()
@@ -72,7 +73,7 @@ Route::middleware(['auth'])->prefix('portal/documents')->name('portal.documents.
 Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->group(function () {
 
     Route::get('/dashboard', function () {
-        return redirect()->route('portal.' . auth()->user()->role . '.dashboard');
+        return redirect()->route(RouteRole::dashboardRouteForUser(auth()->user()));
     })->name('dashboard');
 
     Route::get('/smoke-test', SmokeTest::class)->name('smoke-test');
@@ -86,7 +87,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
     });
 
     // employee
-    Route::middleware('role:employee,manager,director,admin,super_admin')
+    Route::middleware('role:employee,manager,director,operational_manager,admin,super_admin')
         ->prefix('employee')->name('employee.')->group(function () {
             Route::get('/dashboard', EmployeeDashboard::class)->name('dashboard');
             Route::get('/timesheet', Timesheet::class)->name('timesheet');
@@ -101,7 +102,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
         });
 
     // manager
-    Route::middleware('role:manager,director,admin,super_admin')
+    Route::middleware('role:manager,director,operational_manager,admin,super_admin')
         ->prefix('manager')->name('manager.')->group(function () {
             Route::get('/dashboard', ManagerDashboard::class)->name('dashboard');
             Route::get('/pending-l1', PendingL1::class)->name('pending-l1');
@@ -114,10 +115,10 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/projects', ManagerProjects::class)->name('projects');
         });
 
-    // director
-    Route::middleware('role:director,admin,super_admin')
+    // director and operational manager share the same portal surface
+    Route::middleware('role:director,operational_manager,admin,super_admin')
         ->prefix('director')->name('director.')->group(function () {
-            Route::get('/dashboard',          DirectorDashboard::class)->name('dashboard');
+            Route::get('/dashboard', DirectorDashboard::class)->name('dashboard');
             Route::get('/pending-l2', PendingL2::class)->name('pending-l2');
             Route::get('/audit-log', AuditLog::class)->name('audit-log');
             Route::get('/delegation', Delegations::class)->name('delegation');
@@ -145,7 +146,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
         });
 
     // recruiter
-    Route::middleware('role:recruiter,manager,director,admin,super_admin')
+    Route::middleware('role:recruiter,manager,director,operational_manager,admin,super_admin')
         ->prefix('recruiter')->name('recruiter.')->group(function () {
             Route::get('/dashboard', RecruiterDashboard::class)->name('dashboard');
             Route::get('/requisitions', Requisitions::class)->name('requisitions');
