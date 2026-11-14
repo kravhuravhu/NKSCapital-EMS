@@ -1,29 +1,6 @@
-<div class="page-payroll-export">
-    @if ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">
-                <strong style="color: #1F6B45; display: block;">{{ $flash }}</strong>
-                @if ($syncResult)
-                    <span style="font-size: 11px; opacity: 0.85;">
-                        {{ $syncResult['records_count'] ?? 0 }} records
-                        · R {{ number_format((float) ($syncResult['total_amount'] ?? 0), 2) }}
-                        · Status: {{ ucfirst($syncResult['status'] ?? 'pending') }}
-                        @if (!empty($syncResult['external_reference']))
-                            · Ref: {{ $syncResult['external_reference'] }}
-                        @endif
-                    </span>
-                @endif
-            </div>
-        </div>
-    @endif
+<div class="page-payroll-export" wire:init="load">
+    <x-nks.loading-overlay targets="load,initPage" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($lastDownload)
         <div class="nks-notice" style="background: var(--nks-gold-tint); color: #7A6023;">
@@ -240,6 +217,16 @@
                         <span>These timesheets will be marked as exported and cannot be re-synced.</span>
                     </div>
                 </div>
+                <div class="nks-field">
+                    <label class="nks-label">
+                        Admin password <span class="nks-required">*</span>
+                    </label>
+                    <input type="password"
+                           wire:model="syncPassword"
+                           class="nks-input"
+                           autocomplete="current-password"
+                           placeholder="Required to sync to payroll">
+                </div>
                 <footer class="px-modal-foot">
                     <button type="button" wire:click="closeSync" class="nks-btn nks-btn--outline">
                         Cancel
@@ -249,7 +236,8 @@
                             wire:loading.attr="disabled"
                             wire:target="submitSync"
                             class="nks-btn nks-btn--primary">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <i class="fa-solid fa-cloud-arrow-up" wire:loading.remove wire:target="submitSync"></i>
+                        <span class="nks-btn-spinner" wire:loading wire:target="submitSync"></span>
                         Confirm Sync
                     </button>
                 </footer>

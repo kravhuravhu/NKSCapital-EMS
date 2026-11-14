@@ -28,7 +28,7 @@ class Dashboard extends Component
 
     public function mount(): void
     {
-        $this->load();
+        // load() fires from wire:init so the overlay renders during the initial API round-trip.
     }
 
     public function load(): void

@@ -3,14 +3,15 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Request;
 
 class AuditService
 {
-    /**
-     * Log an audit event with hash chaining
-     */
+    protected const LOCK_ROW_ID = 1;
+
     public static function log(
         string $action,
         string $tableName,
@@ -35,74 +36,83 @@ class AuditService
         ?string $severity = null,
         ?string $sessionId = null
     ): AuditLog {
-        // Chain
-        $lastLog = AuditLog::orderBy('id', 'desc')->first();
-        $previousHash = $lastLog ? $lastLog->chain_hash : '0';
+        return DB::transaction(function () use (
+            $action, $tableName, $recordId, $oldValues, $newValues, $userId,
+            $ipAddress, $userAgent, $logType, $httpStatus, $requestMethod,
+            $requestPath, $requestId, $durationMs, $errorMessage, $errorTrace,
+            $responseStatus, $responseSize, $memoryPeakKb, $isSlow, $severity, $sessionId
+        ) {
+            // Serialize chain appends. The lock is released when the
+            // outermost transaction commits or rolls back.
+            DB::table('audit_chain_locks')
+                ->where('id', self::LOCK_ROW_ID)
+                ->lockForUpdate()
+                ->first();
 
-        // Prepare payload
-        $userId = $userId ?? (Auth::id() ?? null);
-        $ipAddress = $ipAddress ?? Request::ip();
-        $userAgent = $userAgent ?? Request::userAgent();
-        $timestamp = now();
-        $severity = $severity ?? self::severityFromLogType($logType);
-        $environment = app()->environment();
+            // Safe to read: any concurrent writer is blocked on the lock row
+            // above, so no other insert can land between this read and the
+            // create below.
+            $lastLog = AuditLog::orderBy('id', 'desc')->first();
+            $previousHash = $lastLog ? $lastLog->chain_hash : '0';
 
-        // Build payload for hashing
-        $payload = json_encode([
-            'previous_hash' => $previousHash,
-            'user_id' => $userId,
-            'ip_address' => $ipAddress,
-            'action' => $action,
-            'log_type' => $logType,
-            'severity' => $severity,
-            'http_status' => $httpStatus,
-            'table_name' => $tableName,
-            'record_id' => $recordId,
-            'old_values' => $oldValues,
-            'new_values' => $newValues,
-            'user_agent' => $userAgent,
-            'timestamp' => $timestamp->toIso8601String(),
-        ]);
+            $userId = $userId ?? Auth::id();
+            $ipAddress = $ipAddress ?? Request::ip();
+            $userAgent = $userAgent ?? Request::userAgent();
+            $timestamp = now();
+            $severity = $severity ?? self::severityFromLogType($logType);
+            $environment = app()->environment();
 
-        // Generate hashes
-        $payloadHash = hash('sha256', $payload);
-        $chainHash = hash('sha256', $previousHash . $payloadHash);
+            $payload = self::buildPayload([
+                'previous_hash' => $previousHash,
+                'user_id' => $userId,
+                'ip_address' => $ipAddress,
+                'action' => $action,
+                'log_type' => $logType,
+                'severity' => $severity,
+                'http_status' => $httpStatus,
+                'table_name' => $tableName,
+                'record_id' => $recordId,
+                'old_values' => $oldValues,
+                'new_values' => $newValues,
+                'user_agent' => $userAgent,
+                'timestamp' => $timestamp,
+            ]);
 
-        // Create audit log
-        return AuditLog::create([
-            'previous_hash' => $previousHash,
-            'payload_hash' => $payloadHash,
-            'chain_hash' => $chainHash,
-            'timestamp' => $timestamp,
-            'user_id' => $userId,
-            'ip_address' => $ipAddress,
-            'action' => $action,
-            'log_type' => $logType,
-            'severity' => $severity,
-            'http_status' => $httpStatus,
-            'response_status' => $responseStatus ?? $httpStatus,
-            'response_size' => $responseSize,
-            'memory_peak_kb' => $memoryPeakKb,
-            'is_slow' => $isSlow,
-            'duration_ms' => $durationMs,
-            'environment' => $environment,
-            'table_name' => $tableName,
-            'record_id' => $recordId,
-            'old_values' => $oldValues ? json_encode($oldValues) : null,
-            'new_values' => $newValues ? json_encode($newValues) : null,
-            'user_agent' => $userAgent,
-            'request_method' => $requestMethod,
-            'request_path' => $requestPath,
-            'request_id' => $requestId,
-            'session_id' => $sessionId,
-            'error_message' => $errorMessage,
-            'error_trace' => $errorTrace,
-        ]);
+            $payloadHash = hash('sha256', $payload);
+            $chainHash = hash('sha256', $previousHash . $payloadHash);
+
+            return AuditLog::create([
+                'previous_hash' => $previousHash,
+                'payload_hash' => $payloadHash,
+                'chain_hash' => $chainHash,
+                'timestamp' => $timestamp,
+                'user_id' => $userId,
+                'ip_address' => $ipAddress,
+                'action' => $action,
+                'log_type' => $logType,
+                'severity' => $severity,
+                'http_status' => $httpStatus,
+                'response_status' => $responseStatus ?? $httpStatus,
+                'response_size' => $responseSize,
+                'memory_peak_kb' => $memoryPeakKb,
+                'is_slow' => $isSlow,
+                'duration_ms' => $durationMs,
+                'environment' => $environment,
+                'table_name' => $tableName,
+                'record_id' => $recordId,
+                'old_values' => $oldValues ? json_encode($oldValues) : null,
+                'new_values' => $newValues ? json_encode($newValues) : null,
+                'user_agent' => $userAgent,
+                'request_method' => $requestMethod,
+                'request_path' => $requestPath,
+                'request_id' => $requestId,
+                'session_id' => $sessionId,
+                'error_message' => $errorMessage,
+                'error_trace' => $errorTrace,
+            ]);
+        });
     }
 
-    /**
-     * Log a warning event.
-     */
     public static function logWarning(
         string $action,
         string $tableName,
@@ -119,9 +129,6 @@ class AuditService
         );
     }
 
-    /**
-     * Log an error event.
-     */
     public static function logError(
         string $action,
         string $tableName,
@@ -144,9 +151,6 @@ class AuditService
         );
     }
 
-    /**
-     * Log a critical event.
-     */
     public static function logCritical(
         string $action,
         string $tableName,
@@ -167,7 +171,8 @@ class AuditService
     }
 
     /**
-     * Verify the integrity of the audit chain.
+     * Verify the integrity of the audit chain. Uses the same payload format
+     * as log() so hashes are reproducible.
      */
     public static function verifyChain(): array
     {
@@ -177,8 +182,7 @@ class AuditService
         $brokenAt = null;
 
         foreach ($logs as $log) {
-            // Rebuild payload
-            $payload = json_encode([
+            $payload = self::buildPayload([
                 'previous_hash' => $log->previous_hash,
                 'user_id' => $log->user_id,
                 'ip_address' => $log->ip_address,
@@ -188,10 +192,10 @@ class AuditService
                 'http_status' => $log->http_status,
                 'table_name' => $log->table_name,
                 'record_id' => $log->record_id,
-                'old_values' => $log->old_values ? json_decode($log->old_values, true) : null,
-                'new_values' => $log->new_values ? json_decode($log->new_values, true) : null,
+                'old_values' => $log->old_values,
+                'new_values' => $log->new_values,
                 'user_agent' => $log->user_agent,
-                'timestamp' => $log->timestamp->toIso8601String(),
+                'timestamp' => $log->timestamp,
             ]);
 
             $expectedPayloadHash = hash('sha256', $payload);
@@ -212,6 +216,23 @@ class AuditService
             'broken_at' => $brokenAt,
             'verified_at' => now()->toIso8601String(),
         ];
+    }
+
+    /**
+     * Canonical JSON of the fields that enter the hash. Microsecond
+     * timestamp so two identical events in the same second do not collide
+     * on payload_hash.
+     */
+    protected static function buildPayload(array $fields): string
+    {
+        $fields['timestamp'] = self::formatTimestamp($fields['timestamp']);
+
+        return json_encode($fields);
+    }
+
+    protected static function formatTimestamp(Carbon $ts): string
+    {
+        return $ts->format('Y-m-d\TH:i:s.uP');
     }
 
     protected static function severityFromLogType(string $logType): string

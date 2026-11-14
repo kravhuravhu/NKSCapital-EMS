@@ -13,6 +13,7 @@ use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class IntegrationController extends Controller
 {
@@ -231,14 +232,29 @@ class IntegrationController extends Controller
      */
     public function payrollExport(Request $request)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'director']);
+        $user = $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager']);
 
         $validator = Validator::make($request->all(), [
             'month_year' => 'nullable|date_format:Y-m-d',
+            'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['status' => 'error', 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        if (!Hash::check($request->password, $user->password)) {
+            AuditService::logWarning('PAYROLL_EXPORT_PASSWORD_FAILED', 'payroll_sync_logs', 0, [
+                'actor_id' => $user->id,
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Password is incorrect',
+            ], 422);
         }
 
         try {

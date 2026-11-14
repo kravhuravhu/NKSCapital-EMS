@@ -1,20 +1,9 @@
-<div class="page-security">
-    @if ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-security" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
-        <x-nks.spinner block label="Loading security settings..." />
+        <div class="panel" style="min-height: 400px;"></div>
     @else
         <div class="sc-layout">
             <div class="sc-left">
@@ -85,8 +74,8 @@
                                     @foreach ($activity as $log)
                                         <tr>
                                             <td>{{ $log['action'] }}</td>
-                                            <td><span style="font-family: 'Roboto Mono', monospace; font-size: 11px;">{{ $log['ip_address'] ?? '—' }}</span></td>
-                                            <td>{{ isset($log['timestamp']) ? \Carbon\Carbon::parse($log['timestamp'])->format('d M Y H:i') : '—' }}</td>
+                                            <td><span style="font-family: 'Roboto Mono', monospace; font-size: 11px;">{{ $log['ip_address'] ?? '-' }}</span></td>
+                                            <td>{{ isset($log['timestamp']) ? \Carbon\Carbon::parse($log['timestamp'])->format('d M Y H:i') : '-' }}</td>
                                             <td>
                                                 <x-nks.badge :tone="$log['log_type'] === 'error' ? 'red' : ($log['log_type'] === 'warning' ? 'gold' : 'success')">
                                                     {{ ucfirst($log['log_type'] ?? 'info') }}
@@ -116,7 +105,7 @@
                         </div>
                         <p class="sc-strength-hint">
                             Last changed
-                            {{ ! empty($passwordInfo['last_changed_fmt']) ? $passwordInfo['last_changed_fmt'] : '—' }}
+                            {{ ! empty($passwordInfo['last_changed_fmt']) ? $passwordInfo['last_changed_fmt'] : '-' }}
                             @if (! empty($passwordInfo['days_since']))
                                 ({{ (int) $passwordInfo['days_since'] }} days ago)
                             @endif
@@ -190,7 +179,10 @@
                             <label class="nks-label">Password</label>
                             <input type="password" wire:model="disablePassword" class="nks-input">
                         </div>
-                        <button type="button" wire:click="disable2fa" class="nks-btn nks-btn--danger nks-btn--block">
+                        <button type="button" wire:click="disable2fa" class="nks-btn nks-btn--danger nks-btn--block"
+                                wire:loading.attr="disabled" wire:target="disable2fa">
+                            <i class="fa-solid fa-power-off" wire:loading.remove wire:target="disable2fa"></i>
+                            <span class="nks-btn-spinner" wire:loading wire:target="disable2fa"></span>
                             Disable two factor
                         </button>
                     @else

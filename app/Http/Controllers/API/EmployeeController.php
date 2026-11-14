@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use App\Services\AuditService; 
+use App\Services\AuditService;
+use App\Services\EmployeeNumberService;
 
 class EmployeeController extends Controller
 {
@@ -68,7 +69,7 @@ class EmployeeController extends Controller
         }
 
         // Generate employee number if not provided
-        $employeeNumber = $request->employee_number ?? $this->generateEmployeeNumber();
+        $employeeNumber = $request->employee_number ?? app(EmployeeNumberService::class)->generate();
 
         // Generate temporary password
         $tempPassword = Str::random(10);

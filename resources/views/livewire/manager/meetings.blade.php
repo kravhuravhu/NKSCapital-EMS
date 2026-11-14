@@ -1,17 +1,6 @@
-<div class="page-meetings">
-    @if ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-meetings" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
         <x-nks.spinner block label="Loading meetings…" />

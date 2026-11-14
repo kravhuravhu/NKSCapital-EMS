@@ -36,7 +36,7 @@ class RecruitmentController extends Controller
      */
     public function listRequisitions(Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $query = Requisition::with(['createdBy:id,first_name,last_name', 'approvedBy:id,first_name,last_name', 'hiringManager:id,first_name,last_name'])
             ->withCount('candidates');
@@ -66,7 +66,7 @@ class RecruitmentController extends Controller
      */
     public function showRequisition($id)
     {
-        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $requisition = Requisition::with([
             'createdBy:id,first_name,last_name,email',
@@ -94,7 +94,7 @@ class RecruitmentController extends Controller
      */
     public function createRequisition(Request $request)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
@@ -121,8 +121,10 @@ class RecruitmentController extends Controller
         $requisition = $this->recruitment->createRequisition($request->all(), $user);
 
         return response()->json([
-            'status' => $data['status'] ?? 'pending_approval',
-            'message' => 'Requisition created and pending approval',
+            'status' => 'success',
+            'message' => $requisition->status === 'draft'
+                ? 'Requisition saved as draft'
+                : 'Requisition submitted for approval',
             'data' => $requisition,
         ], 201);
     }
@@ -164,7 +166,7 @@ class RecruitmentController extends Controller
      */
     public function updateRequisition(Request $request, $id)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
         $requisition = Requisition::findOrFail($id);
 
         if (!$requisition->canUpdate()) {
@@ -217,7 +219,7 @@ class RecruitmentController extends Controller
      */
     public function listCandidates(Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $query = Candidate::with(['requisition:id,requisition_code,title,department']);
 
@@ -250,7 +252,7 @@ class RecruitmentController extends Controller
      */
     public function showCandidate($id)
     {
-        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $candidate = Candidate::with([
             'requisition:id,requisition_code,title,department,status',
@@ -274,7 +276,7 @@ class RecruitmentController extends Controller
      */
     public function addCandidate(Request $request)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $validator = Validator::make($request->all(), [
             'requisition_id' => 'required|exists:requisitions,id',
@@ -332,7 +334,7 @@ class RecruitmentController extends Controller
      */
     public function parseResume(Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $validator = Validator::make($request->all(), [
             'resume' => 'required|file|mimes:pdf,docx,txt|max:10240',
@@ -368,7 +370,7 @@ class RecruitmentController extends Controller
      */
     public function advanceStage(Request $request)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $validator = Validator::make($request->all(), [
             'candidate_id' => 'required|exists:candidates,id',
@@ -396,7 +398,7 @@ class RecruitmentController extends Controller
      */
     public function rejectCandidate(Request $request)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $validator = Validator::make($request->all(), [
             'candidate_id' => 'required|exists:candidates,id',
@@ -427,7 +429,7 @@ class RecruitmentController extends Controller
      */
     public function listInterviews(Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $query = Interview::with([
             'candidate:id,first_name,last_name,email,current_stage',
@@ -450,7 +452,7 @@ class RecruitmentController extends Controller
      */
     public function showInterview($id)
     {
-        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $interview = Interview::with([
             'candidate.requisition:id,requisition_code,title,department',
@@ -466,7 +468,7 @@ class RecruitmentController extends Controller
      */
     public function interviewCalendar(Request $request)
     {
-        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $validator = Validator::make($request->all(), [
             'month' => 'nullable|date_format:Y-m',
@@ -524,7 +526,7 @@ class RecruitmentController extends Controller
      */
     public function scheduleInterview(Request $request)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $validator = Validator::make($request->all(), [
             'candidate_id' => 'required|exists:candidates,id',
@@ -562,7 +564,7 @@ class RecruitmentController extends Controller
      */
     public function submitFeedback(Request $request)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $validator = Validator::make($request->all(), [
             'interview_id' => 'required|exists:interviews,id',
@@ -591,7 +593,7 @@ class RecruitmentController extends Controller
      */
     public function rescheduleInterview(Request $request, $id)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $validator = Validator::make($request->all(), [
             'scheduled_at' => 'required|date|after:now',
@@ -620,7 +622,7 @@ class RecruitmentController extends Controller
      */
     public function cancelInterview(Request $request, $id)
     {
-        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'recruiter']);
+        $user = $this->requireRole(['admin', 'super_admin', 'manager', 'director', 'operational_manager','recruiter']);
 
         $validator = Validator::make($request->all(), [
             'reason' => 'required|string|max:2000',

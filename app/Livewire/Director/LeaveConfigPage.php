@@ -18,6 +18,9 @@ class LeaveConfigPage extends Component
     public ?string $editingType = null;
     public array $form = [];
 
+    public bool $showSavePassword = false;
+    public string $savePassword = '';
+
     public bool $showReset = false;
     public ?int $resetUserId = null;
     public string $resetUserName = '';
@@ -28,6 +31,11 @@ class LeaveConfigPage extends Component
     public string $employeeSearch = '';
 
     public function mount(): void
+    {
+        // load() fires from wire:init.
+    }
+
+    public function initPage(): void
     {
         $this->load();
         $this->loadEmployees();
@@ -122,10 +130,14 @@ class LeaveConfigPage extends Component
         $this->error = null;
         $this->flash = null;
 
+        if (empty($this->savePassword)) {
+            $this->error = 'Enter your admin password to confirm.';
+            return;
+        }
+
         $payload = [
-            'configs' => [
-                $this->form,
-            ],
+            'password' => $this->savePassword,
+            'configs' => [$this->form],
         ];
 
         $this->saving = true;
@@ -134,7 +146,7 @@ class LeaveConfigPage extends Component
 
         $this->saving = false;
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
             $first = collect($errs)->flatten()->first();
             $this->error = $first ?: ($response['message'] ?? 'Failed to save config.');
@@ -142,6 +154,7 @@ class LeaveConfigPage extends Component
         }
 
         $this->flash = 'Leave configuration saved.';
+        $this->savePassword = '';
         $this->closeEdit();
         $this->load();
     }

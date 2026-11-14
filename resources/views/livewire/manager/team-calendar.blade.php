@@ -1,10 +1,6 @@
-<div class="page-team-calendar">
-    @if ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
+<div class="page-team-calendar" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
         <x-nks.spinner block label="Loading team calendar…" />
@@ -74,6 +70,24 @@
 
                                             @if ($cell['count'] > 3)
                                                 <span class="cal-event-more">+{{ $cell['count'] - 3 }} more</span>
+                                            @endif
+                                        </div>
+                                    @endif
+
+                                                                        @php
+                                        $halfDay = $this->halfDayForDate($cell['date'] ?? null);
+                                    @endphp
+
+                                    @if ($halfDay)
+                                        <div class="cal-day-events" style="margin-top: 4px;">
+                                            @foreach (array_slice($halfDay['employees'], 0, 2) as $emp)
+                                                <span class="cal-event cal-event--gold" title="Half day at {{ $emp['leave_time'] }}">
+                                                    <i class="fa-solid fa-clock"></i>
+                                                    {{ \Illuminate\Support\Str::limit($emp['name'] ?? '', 12) }} {{ $emp['leave_time'] }}
+                                                </span>
+                                            @endforeach
+                                            @if ($halfDay['count'] > 2)
+                                                <span class="cal-event-more">+{{ $halfDay['count'] - 2 }} half day</span>
                                             @endif
                                         </div>
                                     @endif

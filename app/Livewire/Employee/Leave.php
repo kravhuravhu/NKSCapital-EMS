@@ -35,6 +35,8 @@ class Leave extends Component
 
     public array $conflicts = [];
 
+    public array $selfConflicts = [];
+
     public bool $showHalfDay = false;
     public array $halfDayForm = [];
 
@@ -47,8 +49,7 @@ class Leave extends Component
             'leave_time' => '14:00',
             'reason' => '',
         ];
-
-        $this->load();
+        // load() fires via wire:init.
     }
 
     public function load(): void
@@ -126,6 +127,7 @@ class Leave extends Component
     {
         if (! $this->startDate || ! $this->endDate) {
             $this->conflicts = [];
+            $this->selfConflicts = [];
             return;
         }
 
@@ -133,7 +135,8 @@ class Leave extends Component
         $response = Api::get('/leave/conflicts/' . $range);
 
         if ($response['ok']) {
-            $this->conflicts = $response['data']['conflicts'] ?? [];
+            $this->selfConflicts = $response['data']['self_conflicts'] ?? [];
+            $this->conflicts = $response['data']['team_conflicts'] ?? ($response['data']['conflicts'] ?? []);
         }
     }
 
@@ -170,6 +173,33 @@ class Leave extends Component
             ->keys()
             ->mapWithKeys(fn ($key) => [$key => ucfirst($key) . ' Leave'])
             ->toArray();
+    }
+
+        public function getPendingRequestsProperty(): array
+    {
+        return array_values(array_filter(
+            $this->myRequests,
+            fn ($r) => in_array($r['status'] ?? '', ['pending', 'hold'], true)
+        ));
+    }
+
+    public function getHalfDayBannerProperty(): ?array
+    {
+        foreach ($this->myHalfDays as $notice) {
+            $status = $notice['status'] ?? '';
+
+            if ($status === 'pending') {
+                return $notice;
+            }
+
+            if ($status === 'acknowledged'
+                && isset($notice['notice_date'])
+                && \Carbon\Carbon::parse($notice['notice_date'])->isToday()) {
+                return $notice;
+            }
+        }
+
+        return null;
     }
 
     public function switchTab(string $tab): void
@@ -216,6 +246,7 @@ class Leave extends Component
         $this->flash = null;
         $this->error = null;
         $this->conflicts = [];
+        $this->selfConflicts = [];
         $this->loadReasons();
     }
 

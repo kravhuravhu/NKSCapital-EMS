@@ -8,31 +8,36 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Laravel\Sanctum\PersonalAccessToken;
+use App\Models\AuditLog;
+use Illuminate\Support\Facades\Schema;
+use Laravel\Sanctum\TransientToken;
 
 class SecurityController extends Controller
 {
     public function sessions(Request $request)
     {
-        $user     = Auth::user();
-        $current  = $request->user()->currentAccessToken();
+        $user = Auth::user();
+        $current = $this->currentPersonalAccessToken($request);
 
         $sessions = $user->tokens()
             ->orderByDesc('last_used_at')
             ->limit(10)
             ->get()
-            ->map(fn ($t) => [
-                'id'           => $t->id,
-                'name'         => $t->name,
+            ->map(fn (PersonalAccessToken $t) => [
+                'id' => $t->id,
+                'name' => $t->name,
                 'last_used_at' => $t->last_used_at?->toIso8601String(),
-                'created_at'   => $t->created_at?->toIso8601String(),
-                'is_current'   => $current && $current->id === $t->id,
+                'created_at' => $t->created_at?->toIso8601String(),
+                'is_current' => $current !== null && $current->id === $t->id,
             ]);
 
         return response()->json([
             'status' => 'success',
-            'data'   => [
+            'data' => [
                 'sessions' => $sessions,
-                'total'    => $sessions->count(),
+                'total' => $sessions->count(),
+                'is_session_authenticated' => $current === null,
             ],
         ], 200);
     }
@@ -110,8 +115,10 @@ class SecurityController extends Controller
         $user->save();
 
         // revoke all tokens except the current one
-        $currentId = $request->user()->currentAccessToken()?->id;
-        $user->tokens()->when($currentId, fn ($q) => $q->where('id', '!=', $currentId))->delete();
+        $current = $this->currentPersonalAccessToken($request);
+        if ($current) {
+            $user->tokens()->where('id', '!=', $current->id)->delete();
+        }
 
         AuditService::log(
             action: 'PASSWORD_CHANGED',
@@ -226,7 +233,7 @@ class SecurityController extends Controller
     public function activity(Request $request)
     {
         $user     = Auth::user();
-        $response = \App\Models\AuditLog::where('user_id', $user->id)
+        $response = AuditLog::where('user_id', $user->id)
             ->orderByDesc('timestamp')
             ->limit(10)
             ->get()
@@ -243,5 +250,16 @@ class SecurityController extends Controller
             'status' => 'success',
             'data'   => ['activity' => $response],
         ], 200);
+    }
+
+    /**
+     * Returns the PersonalAccessToken for the current request, or null when
+     * the user is authenticated by the web session (TransientToken).
+     */
+    protected function currentPersonalAccessToken(Request $request): ?PersonalAccessToken
+    {
+        $token = $request->user()?->currentAccessToken();
+
+        return $token instanceof PersonalAccessToken ? $token : null;
     }
 }

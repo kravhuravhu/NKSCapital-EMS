@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Models\LeaveCalendar;
+use App\Models\SystemConfig;
 
 class PRTimesheetController extends Controller
 {
@@ -122,11 +123,13 @@ class PRTimesheetController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
-        if ($request->has('entries') && !empty($request->entries)) {
+        $user = Auth::user();
+
+        if (!empty($request->entries)) {
             $leaveConflicts = $this->validateAgainstLeave($user, $request->entries);
             if ($leaveConflicts) {
                 return response()->json([
@@ -137,26 +140,33 @@ class PRTimesheetController extends Controller
             }
         }
 
-        $user = Auth::user();
         $timesheet = PRTimesheet::where('user_id', $user->id)
             ->findOrFail($request->timesheet_id);
 
-        if ($timesheet->status !== 'draft') {
+        if (!in_array($timesheet->status, ['draft', 'rejected'], true)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Only draft timesheets can be edited',
-                'current_status' => $timesheet->status
+                'message' => 'Only draft or rejected timesheets can be edited',
+                'current_status' => $timesheet->status,
             ], 422);
         }
 
         $timesheet->details()->delete();
         $this->saveEntries($timesheet, $request->entries);
 
+        $totalRegular = (float) $timesheet->details()->where('is_overtime', false)->sum('hours_worked');
+        $totalOvertime = (float) $timesheet->details()->where('is_overtime', true)->sum('hours_worked');
+
+        $timesheet->total_regular_hours = $totalRegular;
+        $timesheet->total_overtime_hours = $totalOvertime;
+        $timesheet->save();
+
         AuditService::log(
             action: 'PR_DRAFT_SAVED',
             tableName: 'pr_timesheets',
             recordId: $timesheet->id,
-            newValues: ['entries_count' => count($request->entries)]
+            newValues: ['entries_count' => count($request->entries), 'was_rejected' => $timesheet->wasChanged('status')],
+            logType: 'success'
         );
 
         return response()->json([
@@ -166,7 +176,7 @@ class PRTimesheetController extends Controller
                 'timesheet_id' => $timesheet->id,
                 'total_hours' => $timesheet->total_hours,
                 'entries_count' => count($request->entries),
-            ]
+            ],
         ], 200);
     }
 
@@ -212,37 +222,42 @@ class PRTimesheetController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $user = Auth::user();
-        $timesheet = PRTimesheet::with('details')->where('user_id', $user->id)
+        $timesheet = PRTimesheet::with('details')
+            ->where('user_id', $user->id)
             ->findOrFail($request->timesheet_id);
 
         if (!$timesheet->canSubmit()) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Timesheet cannot be submitted in current status',
-                'current_status' => $timesheet->status
+                'current_status' => $timesheet->status,
             ], 422);
         }
 
-        $totalRegular = $timesheet->details()->where('is_overtime', false)->sum('hours_worked');
-        $totalOvertime = $timesheet->details()->where('is_overtime', true)->sum('hours_worked');
+        $maxRegular = (float) SystemConfig::get('timesheet.max_regular_hours', 45);
+        $maxOvertime = (float) SystemConfig::get('timesheet.max_overtime_hours', 15);
+        $maxTotal = $maxRegular + $maxOvertime;
 
-        if ($totalRegular > 45) {
+        $totalRegular = (float) $timesheet->details()->where('is_overtime', false)->sum('hours_worked');
+        $totalOvertime = (float) $timesheet->details()->where('is_overtime', true)->sum('hours_worked');
+
+        if ($totalRegular > $maxRegular) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Regular hours cannot exceed 45 hours',
+                'message' => "Regular hours cannot exceed {$maxRegular} hours",
                 'regular_hours' => $totalRegular,
             ], 422);
         }
 
-        if ($totalRegular + $totalOvertime > 60) {
+        if ($totalRegular + $totalOvertime > $maxTotal) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Total hours cannot exceed 60 hours',
+                'message' => "Total hours cannot exceed {$maxTotal} hours",
                 'total_hours' => $totalRegular + $totalOvertime,
             ], 422);
         }
@@ -250,7 +265,7 @@ class PRTimesheetController extends Controller
         if ($timesheet->details()->count() === 0) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Cannot submit empty timesheet'
+                'message' => 'Cannot submit empty timesheet',
             ], 422);
         }
 
@@ -259,8 +274,17 @@ class PRTimesheetController extends Controller
 
         $timesheet->status = 'pending_l1';
         $timesheet->level1_approver_id = $l1ApproverId;
+        $timesheet->level2_approver_id = null;
         $timesheet->total_regular_hours = $totalRegular;
         $timesheet->total_overtime_hours = $totalOvertime;
+        // Clear stale rejection and approval timestamps so a resubmitted
+        // rejected timesheet does not carry its prior rejection reason.
+        $timesheet->level1_rejection_reason = null;
+        $timesheet->level2_rejection_reason = null;
+        $timesheet->level1_approved_at = null;
+        $timesheet->level2_approved_at = null;
+        $timesheet->level1_approval_comment = null;
+        $timesheet->level2_approval_comment = null;
         $timesheet->save();
 
         if ($l1ApproverId) {
@@ -294,7 +318,7 @@ class PRTimesheetController extends Controller
                 'total_regular_hours' => $totalRegular,
                 'total_overtime_hours' => $totalOvertime,
                 'l1_approver_id' => $l1ApproverId,
-            ]
+            ],
         ], 200);
     }
 
@@ -312,7 +336,7 @@ class PRTimesheetController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -322,7 +346,7 @@ class PRTimesheetController extends Controller
         if ($user->id !== $timesheet->level1_approver_id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'You are not authorized to approve this timesheet as L1'
+                'message' => 'You are not authorized to approve this timesheet as L1',
             ], 403);
         }
 
@@ -330,27 +354,46 @@ class PRTimesheetController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Timesheet is not pending L1 approval',
-                'current_status' => $timesheet->status
+                'current_status' => $timesheet->status,
             ], 422);
         }
 
-        $l2Approver = User::where('role', 'operational_manager')->where('is_active', true)->first() ?? User::where('role', 'director')->where('is_active', true)->first();
+        $l2Approver = User::where('role', 'operational_manager')
+                ->where('is_active', true)
+                ->first()
+            ?? User::where('role', 'director')
+                ->where('is_active', true)
+                ->first();
+
+        if (!$l2Approver) {
+            AuditService::logError(
+                action: 'PR_L1_APPROVE_NO_L2',
+                tableName: 'pr_timesheets',
+                recordId: $timesheet->id,
+                errorMessage: 'No active L2 approver (operational_manager or director) exists.',
+                context: ['l1_approver_id' => $user->id]
+            );
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No active L2 approver is configured. Ask an administrator to activate an operational manager or director before this timesheet can proceed.',
+            ], 422);
+        }
 
         $timesheet->status = 'pending_l2';
         $timesheet->level1_approved_at = now();
-        $timesheet->level2_approver_id = $l2Approver ? $l2Approver->id : null;
+        $timesheet->level2_approver_id = $l2Approver->id;
+        $timesheet->level1_approval_comment = $request->comment;
         $timesheet->save();
 
-        if ($l2Approver) {
-            Notification::create([
-                'user_id' => $l2Approver->id,
-                'type' => 'TIMESHEET_PENDING_L2',
-                'title' => 'Timesheet Pending L2 Approval',
-                'message' => "Timesheet for {$timesheet->user->full_name} ({$timesheet->month_year->format('F Y')}) is awaiting your final approval.",
-                'reference_id' => $timesheet->id,
-                'reference_type' => PRTimesheet::class,
-            ]);
-        }
+        Notification::create([
+            'user_id' => $l2Approver->id,
+            'type' => 'TIMESHEET_PENDING_L2',
+            'title' => 'Timesheet Pending L2 Approval',
+            'message' => "Timesheet for {$timesheet->user->full_name} ({$timesheet->month_year->format('F Y')}) is awaiting your final approval.",
+            'reference_id' => $timesheet->id,
+            'reference_type' => PRTimesheet::class,
+        ]);
 
         Notification::create([
             'user_id' => $timesheet->user_id,
@@ -366,7 +409,11 @@ class PRTimesheetController extends Controller
             tableName: 'pr_timesheets',
             recordId: $timesheet->id,
             oldValues: ['status' => 'pending_l1'],
-            newValues: ['status' => 'pending_l2', 'comment' => $request->comment]
+            newValues: [
+                'status' => 'pending_l2',
+                'comment' => $request->comment,
+                'level2_approver_id' => $l2Approver->id,
+            ]
         );
 
         return response()->json([
@@ -376,8 +423,8 @@ class PRTimesheetController extends Controller
                 'timesheet_id' => $timesheet->id,
                 'status' => $timesheet->status,
                 'level1_approved_at' => $timesheet->level1_approved_at,
-                'l2_approver_id' => $timesheet->level2_approver_id,
-            ]
+                'l2_approver_id' => $l2Approver->id,
+            ],
         ], 200);
     }
 
@@ -463,26 +510,27 @@ class PRTimesheetController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $user = Auth::user();
 
-        if (!$user->two_factor_secret) {
+        if (!$user->two_factor_enabled || !$user->two_factor_secret) {
             return response()->json([
                 'status' => 'error',
-                'message' => '2FA is not enabled. Please enable 2FA first.'
+                'message' => '2FA is not enabled. Enable it on your security page first.',
+                'requires_2fa_setup' => true,
             ], 403);
         }
 
         $secret = decrypt($user->two_factor_secret);
         $google2fa = new \PragmaRX\Google2FA\Google2FA();
-        
+
         if (!$google2fa->verifyKey($secret, $request->input('2fa_code'))) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Invalid 2FA code'
+                'message' => 'Invalid 2FA code',
             ], 422);
         }
 
@@ -491,14 +539,14 @@ class PRTimesheetController extends Controller
         if ($timesheet->level2_approver_id !== $user->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'You are not the assigned L2 approver'
+                'message' => 'You are not the assigned L2 approver',
             ], 403);
         }
 
         if (!$timesheet->canApproveL2()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Timesheet is not pending L2 approval'
+                'message' => 'Timesheet is not pending L2 approval',
             ], 422);
         }
 
@@ -519,6 +567,7 @@ class PRTimesheetController extends Controller
         $timesheet->level2_approved_at = now();
         $timesheet->pdf_path = $path;
         $timesheet->pdf_hash = $pdfHash;
+        $timesheet->level2_approval_comment = $request->comment;
         $timesheet->save();
 
         Notification::create([
@@ -864,14 +913,13 @@ class PRTimesheetController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $user = Auth::user();
 
-        // role gate — only director or super_admin may override
-        if (!in_array($user->role, ['director', 'super_admin', 'operational_manager'])) {
+        if (!\App\Support\RoleCheck::has($user, ['director', 'operational_manager', 'super_admin'])) {
             AuditService::logWarning('PR_OVERRIDE_UNAUTHORIZED', 'pr_timesheets', 0, [
                 'actor_id' => $user->id,
                 'actor_role' => $user->role,
@@ -879,15 +927,15 @@ class PRTimesheetController extends Controller
             ]);
             return response()->json([
                 'status' => 'error',
-                'message' => 'Only a Director may override a rejection.'
+                'message' => 'Only a Director or Operational Manager may override a rejection.',
             ], 403);
         }
 
-        // 2FA gate — same requirement as approveL2
-        if (!$user->two_factor_secret) {
+        if (!$user->two_factor_enabled || !$user->two_factor_secret) {
             return response()->json([
                 'status' => 'error',
-                'message' => '2FA is not enabled. Please enable 2FA first.'
+                'message' => '2FA is not enabled. Enable it on your security page first.',
+                'requires_2fa_setup' => true,
             ], 403);
         }
 
@@ -897,27 +945,43 @@ class PRTimesheetController extends Controller
         if (!$google2fa->verifyKey($secret, $request->input('2fa_code'))) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Invalid 2FA code'
+                'message' => 'Invalid 2FA code',
             ], 422);
         }
 
         $timesheet = PRTimesheet::findOrFail($request->timesheet_id);
 
-        // must be currently rejected — cannot override anything else
         if ($timesheet->status !== 'rejected') {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Only rejected timesheets can be overridden.',
-                'current_status' => $timesheet->status
+                'current_status' => $timesheet->status,
             ], 422);
         }
 
-        // capture the original rejection reason before overwriting anything
+        // Conflict of interest: the person who rejected at L1 or L2 cannot
+        // also override.
+        $rejectedAtL2ByUser = (int) $timesheet->level2_approver_id === (int) $user->id
+            && !empty($timesheet->level2_rejection_reason);
+        $rejectedAtL1ByUser = (int) $timesheet->level1_approver_id === (int) $user->id
+            && !empty($timesheet->level1_rejection_reason);
+
+        if ($rejectedAtL2ByUser || $rejectedAtL1ByUser) {
+            AuditService::logWarning('PR_OVERRIDE_CONFLICT_OF_INTEREST', 'pr_timesheets', $timesheet->id, [
+                'actor_id' => $user->id,
+                'rejected_at_l1' => $rejectedAtL1ByUser,
+                'rejected_at_l2' => $rejectedAtL2ByUser,
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You cannot override your own rejection. Another director must review this timesheet.',
+            ], 403);
+        }
+
         $originalReason = $timesheet->level2_rejection_reason
             ?? $timesheet->level1_rejection_reason
             ?? null;
 
-        // regenerate the PDF — the same view used by the normal L2 approval
         $pdf = Pdf::loadView('pdf.pr-timesheet', [
             'timesheet' => $timesheet,
             'user' => $timesheet->user,
@@ -929,7 +993,6 @@ class PRTimesheetController extends Controller
         Storage::disk('public')->put($path, $pdf->output());
         $pdfHash = hash('sha256', $pdf->output());
 
-        // transition to approved — preserve the L1 approval that already happened
         $timesheet->status = 'approved';
         $timesheet->level2_approver_id = $user->id;
         $timesheet->level2_approved_at = now();
@@ -938,7 +1001,6 @@ class PRTimesheetController extends Controller
         $timesheet->pdf_hash = $pdfHash;
         $timesheet->save();
 
-        // audit as a distinct, critical event
         AuditService::log(
             action: 'PR_OVERRIDE_APPROVED',
             tableName: 'pr_timesheets',
@@ -957,7 +1019,6 @@ class PRTimesheetController extends Controller
             severity: 'critical'
         );
 
-        // notify the employee
         Notification::create([
             'user_id' => $timesheet->user_id,
             'type' => 'TIMESHEET_OVERRIDE_APPROVED',
@@ -967,7 +1028,6 @@ class PRTimesheetController extends Controller
             'reference_type' => PRTimesheet::class,
         ]);
 
-        // notify payroll so it can be picked up by the next export
         $financeUsers = User::where('role', 'finance')->orWhere('role', 'admin')->get();
         foreach ($financeUsers as $finance) {
             Notification::create([
@@ -982,7 +1042,7 @@ class PRTimesheetController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Rejection overridden — timesheet approved.',
+            'message' => 'Rejection overridden, timesheet approved.',
             'data' => [
                 'timesheet_id' => $timesheet->id,
                 'status' => $timesheet->status,
@@ -990,7 +1050,7 @@ class PRTimesheetController extends Controller
                 'pdf_url' => Storage::url($path),
                 'pdf_hash' => $pdfHash,
                 'original_rejection_reason' => $originalReason,
-            ]
+            ],
         ], 200);
     }
 }

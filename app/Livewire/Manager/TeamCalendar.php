@@ -22,10 +22,12 @@ class TeamCalendar extends Component
     public ?string $dayDate = null;
     public array $dayEmployees = [];
 
+    public array $halfDaysByDate = [];
+
     public function mount(): void
     {
         $this->month = now()->format('Y-m');
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
@@ -33,11 +35,9 @@ class TeamCalendar extends Component
         $this->loading = true;
         $this->error = null;
 
-        $response = Api::get('/leave/calendar', [
-            'month' => $this->month,
-        ]);
+        $response = Api::get('/leave/calendar', ['month' => $this->month]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load team calendar.';
             $this->loading = false;
             return;
@@ -49,10 +49,20 @@ class TeamCalendar extends Component
         $this->totalLeaves = (int) ($data['total_leaves'] ?? 0);
         $this->byType = $data['by_type'] ?? [];
 
-        // build the 7-column grid, padding empty cells at start and end
+        $this->halfDaysByDate = collect($data['half_days_by_date'] ?? [])
+            ->keyBy('date')
+            ->toArray();
+
         $this->days = $this->buildCalendar($data['by_date'] ?? []);
 
         $this->loading = false;
+    }
+
+    public function halfDayForDate(?string $date): ?array
+    {
+        if (!$date) return null;
+
+        return $this->halfDaysByDate[$date] ?? null;
     }
 
     protected function buildCalendar(array $byDate): array

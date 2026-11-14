@@ -7,6 +7,7 @@ use App\Models\WebhookLog;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Jobs\DispatchWebhookJob;
 
 class WebhookService
 {
@@ -43,25 +44,28 @@ class WebhookService
     }
 
     /**
-     * Dispatch an event to all subscribed webhooks.
+     * Dispatch an event to all subscribed webhooks. Each delivery is queued,
+     * so the caller (typically a controller) does not wait for HTTP. Returns
+     * the number of jobs queued.
      */
     public function dispatch(string $event, array $payload): int
     {
         $webhooks = Webhook::active()->get()
             ->filter(fn ($w) => $w->subscribesTo($event));
 
-        $delivered = 0;
+        $queued = 0;
         foreach ($webhooks as $webhook) {
-            $this->deliver($webhook, $event, $payload, 1);
-            $delivered++;
+            DispatchWebhookJob::dispatch($webhook->id, $event, $payload);
+            $queued++;
         }
-        return $delivered;
+        return $queued;
     }
 
     /**
-     * Deliver to a single webhook with retry logic.
+     * One delivery attempt, one log row. No internal retry. Used by the
+     * queued job, which lets the queue handle backoff and retries.
      */
-    public function deliver(Webhook $webhook, string $event, array $payload, int $attempt = 1): WebhookLog
+    public function deliverOnce(Webhook $webhook, string $event, array $payload, int $attempt = 1): WebhookLog
     {
         $start = microtime(true);
 
@@ -89,18 +93,18 @@ class WebhookService
                 'X-NKS-Signature' => $signature,
                 'X-NKS-Event' => $event,
                 'X-NKS-Delivery' => (string) $log->id,
+                'X-NKS-Attempt' => (string) $attempt,
             ])
                 ->timeout(15)
                 ->withBody($body, 'application/json')
                 ->post($webhook->target_url);
 
             $duration = (int) round((microtime(true) - $start) * 1000);
-
             $success = $response->successful();
 
             $log->update([
                 'response_status' => $response->status(),
-                'response_body' => Str::limit($response->body(), 5000),
+                'response_body' => \Illuminate\Support\Str::limit($response->body(), 5000),
                 'duration_ms' => $duration,
                 'status' => $success ? 'success' : 'failed',
                 'error_message' => $success ? null : 'Non-2xx response',
@@ -113,21 +117,13 @@ class WebhookService
                 'failure_count' => $webhook->failure_count + ($success ? 0 : 1),
             ]);
 
-            if (!$success && $attempt < $this->maxAttempts) {
-                usleep($this->backoffBaseMs * 1000 * (2 ** ($attempt - 1)));
-                return $this->deliver($webhook, $event, $payload, $attempt + 1);
-            }
-
-            if (!$success) {
-                $log->update(['status' => 'dead_letter']);
-            }
-
-            return $log;
+            return $log->fresh();
         } catch (\Throwable $e) {
             $duration = (int) round((microtime(true) - $start) * 1000);
+
             $log->update([
                 'duration_ms' => $duration,
-                'status' => $attempt < $this->maxAttempts ? 'retrying' : 'dead_letter',
+                'status' => 'failed',
                 'error_message' => $e->getMessage(),
             ]);
 
@@ -136,13 +132,32 @@ class WebhookService
                 'failure_count' => $webhook->failure_count + 1,
             ]);
 
-            if ($attempt < $this->maxAttempts) {
-                usleep($this->backoffBaseMs * 1000 * (2 ** ($attempt - 1)));
-                return $this->deliver($webhook, $event, $payload, $attempt + 1);
-            }
+            return $log->fresh();
+        }
+    }
 
+    /**
+     * Synchronous delivery with in-process retry. Used by test() and retry()
+     * where the caller needs the final log before returning. Not used by
+     * dispatch(), which is queued.
+     */
+    public function deliver(Webhook $webhook, string $event, array $payload, int $attempt = 1): WebhookLog
+    {
+        $log = $this->deliverOnce($webhook, $event, $payload, $attempt);
+
+        if ($log->status === 'success') {
             return $log;
         }
+
+        if ($attempt < $this->maxAttempts) {
+            usleep($this->backoffBaseMs * 1000 * (2 ** ($attempt - 1)));
+            return $this->deliver($webhook, $event, $payload, $attempt + 1);
+        }
+
+        $log->status = 'dead_letter';
+        $log->save();
+
+        return $log;
     }
 
     /**

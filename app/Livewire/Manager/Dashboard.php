@@ -26,6 +26,8 @@ class Dashboard extends Component
     public int $pendingLeave = 0;
     public int $overdueAssets = 0;
 
+    public array $receivedDelegations = [];
+
     public array $statusBuckets = [
         'approved' => 0,
         'pending' => 0,
@@ -35,7 +37,7 @@ class Dashboard extends Component
 
     public function mount(): void
     {
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
@@ -75,6 +77,16 @@ class Dashboard extends Component
         $counts = Api::get('/dashboard/pending-counts');
         if ($counts['ok']) {
             $this->counts = $counts['data'] ?? [];
+        }
+
+        $received = Api::get('/admin/delegation/list', [
+            'delegate_id' => auth()->id(),
+            'status' => 'active',
+            'per_page' => 10,
+        ]);
+
+        if ($received['ok']) {
+            $this->receivedDelegations = $received['data']['data'] ?? [];
         }
 
         $activity = Api::get('/dashboard/recent-activity', ['limit' => 10]);

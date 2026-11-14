@@ -205,18 +205,82 @@ class AssetController extends Controller
 
     /**
      * GET /api/v1/asset/track
-     * Dashboard of all loaned assets.
+     * Returns assets with optional status filter and custody history.
+     * The default status is "all" so callers that want loaned only pass
+     * status=loaned explicitly.
      */
     public function track(Request $request)
     {
         $user = Auth::user();
 
-        $query = Asset::with(['currentAssignee:id,first_name,last_name,employee_number,email,department'])
-            ->where('status', 'loaned');
+        $validator = Validator::make($request->all(), [
+            'status' => 'nullable|string|max:255',
+            'search' => 'nullable|string|max:255',
+            'with_history' => 'nullable|boolean',
+        ]);
 
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
-            // Employees see only their own loaned assets
-            $query->where('current_assignee_id', $user->id);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $allowedStatuses = [
+            'loaned', 'available', 'maintenance', 'retired',
+            'lost', 'damaged', 'pending_return', 'repair_requested',
+        ];
+
+        $statusInput = (string) $request->input('status', 'all');
+        $requestedStatuses = array_values(array_filter(
+            array_map('trim', explode(',', $statusInput)),
+            fn ($s) => $s !== ''
+        ));
+
+        if (empty($requestedStatuses)) {
+            $requestedStatuses = ['all'];
+        }
+
+        $invalid = array_diff($requestedStatuses, array_merge(['all'], $allowedStatuses));
+
+        if (!empty($invalid)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid status values: ' . implode(', ', $invalid),
+            ], 422);
+        }
+
+        $isAll = in_array('all', $requestedStatuses, true);
+        $withHistory = $request->boolean('with_history');
+
+        $query = Asset::with([
+            'currentAssignee:id,first_name,last_name,employee_number,email,department',
+            'activeLoan',
+        ]);
+
+        if ($withHistory) {
+            $query->with([
+                'custodyHistory.assignedTo:id,first_name,last_name,employee_number',
+            ]);
+        }
+
+        if (!$isAll) {
+            $query->whereIn('status', $requestedStatuses);
+        }
+
+        $isPrivileged = \App\Support\RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director', 'operational_manager']);
+
+        if (!$isPrivileged) {
+            // Employees see assets they currently hold, plus assets they have
+            // ever held. A pure "current_assignee_id = me" clause would hide
+            // their history tab.
+            $query->where(function ($q) use ($user) {
+                $q->where('current_assignee_id', $user->id)
+                  ->orWhereHas('custodyHistory', function ($qq) use ($user) {
+                      $qq->where('assigned_to_id', $user->id);
+                  });
+            });
         }
 
         if ($request->filled('search')) {
@@ -233,13 +297,15 @@ class AssetController extends Controller
             });
         }
 
-        $assets = $query->get()->map(function ($asset) {
+        $rows = $query->orderByDesc('created_at')->get()->map(function ($asset) use ($withHistory) {
             $days = $asset->daysOverdue();
-            return [
+
+            $row = [
                 'id' => $asset->id,
                 'asset_tag' => $asset->asset_tag,
                 'model' => $asset->model,
                 'serial_number' => $asset->serial_number,
+                'manufacturer' => $asset->manufacturer,
                 'condition' => $asset->condition,
                 'status' => $asset->status,
                 'current_assignee' => $asset->currentAssignee,
@@ -248,14 +314,35 @@ class AssetController extends Controller
                 'is_overdue' => $days > 0,
                 'overdue_notification_level' => $asset->overdue_notification_level,
             ];
+
+            if ($withHistory) {
+                $row['custody_history'] = $asset->custodyHistory->map(function ($h) {
+                    return [
+                        'id' => $h->id,
+                        'checkout_date' => $h->checkout_date?->toDateString(),
+                        'expected_return_date' => $h->expected_return_date?->toDateString(),
+                        'actual_return_date' => $h->actual_return_date?->toDateString(),
+                        'checkout_condition' => $h->checkout_condition,
+                        'return_condition' => $h->return_condition,
+                        'assigned_to' => $h->assignedTo?->only([
+                            'id', 'first_name', 'last_name', 'employee_number',
+                        ]),
+                    ];
+                })->toArray();
+            }
+
+            return $row;
         });
 
         return response()->json([
             'status' => 'success',
             'data' => [
-                'count' => $assets->count(),
-                'loaned_assets' => $assets,
-            ]
+                'count' => $rows->count(),
+                'status_filter' => $requestedStatuses,
+                'assets' => $rows,
+                // Backwards compatible key for callers still reading loaned_assets.
+                'loaned_assets' => $rows,
+            ],
         ], 200);
     }
 

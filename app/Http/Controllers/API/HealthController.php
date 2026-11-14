@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use App\Support\RoleCheck;
+use App\Services\BackupService;
+use App\Services\AuditService;
 
 class HealthController extends Controller
 {
@@ -18,6 +21,11 @@ class HealthController extends Controller
     {
         $checks = [];
         $overall = 'healthy';
+
+        $user = Auth::user();
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
+            abort(response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403));
+        }
 
         // 1. Database
         try {
@@ -107,7 +115,8 @@ class HealthController extends Controller
      */
     public function queueStats()
     {
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'director'])) {
+        $user = Auth::user();
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             abort(response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403));
         }
 
@@ -129,29 +138,40 @@ class HealthController extends Controller
     public function triggerBackup()
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin'])) {
+
+        if (!RoleCheck::has($user, ['admin', 'super_admin'])) {
             abort(response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403));
         }
 
-        $filename = 'backup-' . now()->format('Ymd-His') . '.sql';
-        $path = 'backups/' . $filename;
+        try {
+            $meta = app(BackupService::class)->createBackup('manual');
+        } catch (\Throwable $e) {
+            AuditService::logError(
+                action: 'BACKUP_TRIGGERED_FAILED',
+                tableName: 'system',
+                recordId: $user->id,
+                errorMessage: $e->getMessage(),
+                context: ['triggered_by' => $user->id]
+            );
 
-        \App\Services\AuditService::log(
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Backup failed: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        AuditService::log(
             action: 'BACKUP_TRIGGERED',
             tableName: 'system',
             recordId: $user->id,
-            newValues: ['filename' => $filename],
+            newValues: $meta,
             logType: 'success'
         );
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Backup queued',
-            'data' => [
-                'filename' => $filename,
-                'path' => $path,
-                'queued_at' => now()->toIso8601String(),
-            ]
+            'message' => 'Backup created',
+            'data' => $meta,
         ], 200);
     }
 }

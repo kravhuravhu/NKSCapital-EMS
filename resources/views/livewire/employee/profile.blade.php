@@ -1,20 +1,9 @@
-<div class="page-profile">
-    @if ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-profile" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
-        <x-nks.spinner block label="Loading profile..." />
+        <div class="panel" style="min-height: 400px;"></div>
     @else
         <div class="pf-layout">
             <div class="pf-left">
@@ -45,9 +34,9 @@
                     </div>
 
                     <div class="pf-hero-details">
-                        <h1>{{ $profile['full_name'] ?? '—' }}</h1>
+                        <h1>{{ $profile['full_name'] ?? '-' }}</h1>
                         <p class="pf-hero-role">
-                            {{ $profile['position'] ?? '—' }}
+                            {{ $profile['position'] ?? '-' }}
                             @if (! empty($profile['department']))
                                 &middot; {{ $profile['department'] }}
                             @endif
@@ -56,7 +45,7 @@
                         <div class="pf-hero-chips">
                             <span class="pf-chip">
                                 <i class="fa-solid fa-hashtag" aria-hidden="true"></i>
-                                {{ $profile['employee_number'] ?? '—' }}
+                                {{ $profile['employee_number'] ?? '-' }}
                             </span>
                             @if (! empty($profile['employee_type']))
                                 <span class="pf-chip">{{ strtoupper($profile['employee_type']) }}</span>
@@ -89,7 +78,7 @@
                     <dl class="pf-details">
                         <div>
                             <dt>Work email</dt>
-                            <dd>{{ $profile['email'] ?? '—' }}</dd>
+                            <dd>{{ $profile['email'] ?? '-' }}</dd>
                         </div>
                         <div>
                             <dt>Phone</dt>
@@ -127,13 +116,13 @@
                 <div class="panel">
                     <h2>Employment</h2>
                     <dl class="pf-details pf-details--compact">
-                        <div><dt>Manager</dt><dd>{{ $profile['manager'] ?? '—' }}</dd></div>
-                        <div><dt>Client</dt><dd>{{ $profile['client'] ?? '—' }}</dd></div>
-                        <div><dt>Project</dt><dd>{{ $profile['project'] ?? '—' }}</dd></div>
+                        <div><dt>Manager</dt><dd>{{ $profile['manager'] ?? '-' }}</dd></div>
+                        <div><dt>Client</dt><dd>{{ $profile['client'] ?? '-' }}</dd></div>
+                        <div><dt>Project</dt><dd>{{ $profile['project'] ?? '-' }}</dd></div>
                         <div>
                             <dt>Hire date</dt>
                             <dd>
-                                {{ ! empty($profile['hire_date']) ? \Carbon\Carbon::parse($profile['hire_date'])->format('d M Y') : '—' }}
+                                {{ ! empty($profile['hire_date']) ? \Carbon\Carbon::parse($profile['hire_date'])->format('d M Y') : '-' }}
                             </dd>
                         </div>
                         <div>

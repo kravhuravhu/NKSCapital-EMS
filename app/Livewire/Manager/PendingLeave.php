@@ -29,7 +29,16 @@ class PendingLeave extends Component
     public string $partialDays = '';
     public string $partialComment = '';
 
+    public bool $showApprove = false;
+    public ?int $approveId = null;
+    public string $approveComment = '';
+
     public function mount(): void
+    {
+        // initPage() fires from wire:init.
+    }
+
+    public function initPage(): void
     {
         $this->loadConfigs();
         $this->load();
@@ -285,6 +294,42 @@ class PendingLeave extends Component
             'hold'    => 'blue',
             default   => 'muted',
         };
+    }
+
+    public function openApprove(int $id): void
+    {
+        $this->approveId = $id;
+        $this->approveComment = '';
+        $this->error = null;
+        $this->showApprove = true;
+    }
+
+    public function closeApprove(): void
+    {
+        $this->showApprove = false;
+        $this->approveId = null;
+        $this->approveComment = '';
+    }
+
+    public function submitApprove(): void
+    {
+        $this->error = null;
+        $this->flash = null;
+
+        $response = Api::post('/leave/approve', [
+            'leave_request_id' => $this->approveId,
+            'comment' => $this->approveComment ?: null,
+        ]);
+
+        if (! $response['ok']) {
+            $this->error = $response['message'] ?? 'Failed to approve leave request.';
+            return;
+        }
+
+        $this->flash = 'Leave request approved.';
+        $this->closeApprove();
+        $this->closeView();
+        $this->load();
     }
 
     public function render()

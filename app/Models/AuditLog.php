@@ -49,16 +49,16 @@ class AuditLog extends Model
         'is_slow' => 'boolean',
     ];
 
-    // Disable mass assignment protection bypass for immutable logs
-    protected $guarded = [];
-
+    /**
+     * Get the user that owns the audit log.
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
     /**
-     * Prevent updates to audit logs
+     * prevent updates and deletions of audit logs, ensuring immutability.
      */
     protected static function booted(): void
     {
@@ -71,48 +71,73 @@ class AuditLog extends Model
         });
     }
 
-    // Scopes
+    /**
+     * Filter the query to only include error logs.
+     */
     public function scopeErrors($query)
     {
         return $query->where('log_type', 'error');
     }
 
+    /**
+     * Filter the query to only include success logs.
+     */
     public function scopeSuccess($query)
     {
         return $query->where('log_type', 'success');
     }
 
+    /**
+     * Filter the query to only include logs for a specific user.
+     */
     public function scopeForRequest($query, string $requestId)
     {
         return $query->where('request_id', $requestId);
     }
 
-    // Notification scopes
+    /**
+     * Filter the query to only include logs for a specific user.
+     */
     public function scopeCritical($query)
     {
         return $query->where('severity', 'critical');
     }
 
+    /**
+     * Filter the query to only include warning logs.
+     */
     public function scopeWarnings($query)
     {
         return $query->where('severity', 'warning');
     }
 
+    /**
+     * Filter the query to only include info logs.
+     */
     public function scopeSeverity($query, string $severity)
     {
         return $query->where('severity', $severity);
     }
 
+    /**
+     * Filter the query to only include slow logs.
+     */
     public function scopeSlow($query)
     {
         return $query->where('is_slow', true);
     }
 
+    /**
+     * Only include logs between two dates.
+     */
     public function scopeBetweenDates($query, $from, $to)
     {
         return $query->whereBetween('timestamp', [$from, $to]);
     }
 
+    /**
+     * Include logs for a specific action.
+     */
     public function scopeActionLike($query, string $term)
     {
         return $query->where('action', 'like', "%{$term}%");

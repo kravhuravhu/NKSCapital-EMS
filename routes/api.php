@@ -53,10 +53,14 @@ Route::get('/meeting/checkin/{secret}', function ($secret) {
 
 // No authentication required
 Route::prefix('v1/auth')->group(function () {
-    Route::post('login', [AuthController::class, 'login']);
+    Route::middleware('throttle:api-login')->post('login', [AuthController::class, 'login']);
+    Route::middleware('throttle:api-otp')->post('verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::middleware('throttle:api-otp')->post('resend-otp', [AuthController::class, 'resendOtp']);
+    Route::middleware('throttle:api-qr')->post('qr/initiate', [AuthController::class, 'qrInitiate']);
+    Route::middleware('throttle:api-qr')->get('qr/status/{challenge}', [AuthController::class, 'qrStatus']);
+
     Route::post('password/forgot', [AuthController::class, 'forgotPassword']);
     Route::post('password/reset', [AuthController::class, 'resetPassword']);
-    Route::post('2fa/login-verify', [AuthController::class, 'loginVerify2FA']);
 });
 
 // Authentication required
@@ -67,7 +71,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('refresh', [AuthController::class, 'refresh']);
         Route::get('permissions', [AuthController::class, 'permissions']);
-        
+        Route::post('qr/approve', [AuthController::class, 'qrApprove']);
+
         // 2FA routes (require password verification)
         Route::middleware(['password.confirm'])->group(function () {
             Route::post('2fa/enable', [AuthController::class, 'enable2FA']);
@@ -145,6 +150,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('assign-employee', [ProjectController::class, 'assignEmployee']);
         Route::post('remove-employee', [ProjectController::class, 'removeEmployee']);
         Route::post('assign-manager', [ProjectController::class, 'assignProjectManager']);
+        Route::post('request-change', [ProjectController::class, 'requestChange']);
+        Route::get('requests', [ProjectController::class, 'listRequests']);
     });
 
     // ========================================
@@ -276,7 +283,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('history/{assetId}', [AssetController::class, 'history']);
         Route::get('report', [AssetController::class, 'report']);
         Route::get('list', [AssetController::class, 'listAssets']);
-        Route::put('update/{id}', [AssetController::class, 'update'])->whereNumber('id');
+        Route::put('update/{id}', [AssetController::class, 'updateAsset'])->whereNumber('id');
         Route::post('retire/{id}', [AssetController::class, 'retireAsset'])->whereNumber('id');
     });
 
@@ -350,7 +357,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('list', [MeetingController::class, 'list']);
         Route::get('qr/{meetingId}', [MeetingController::class, 'qr']);
         Route::get('ical/{meetingId}', [MeetingController::class, 'ical']);
-        Route::post('checkin', [MeetingController::class, 'checkin']);
+        Route::middleware('throttle:meeting-checkin')->post('checkin', [MeetingController::class, 'checkin']);
         Route::post('override', [MeetingController::class, 'override']);
         Route::post('cancel/{id}', [MeetingController::class, 'cancel']);
         Route::put('update/{id}', [MeetingController::class, 'update']);
@@ -445,7 +452,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('calendar/sync', [IntegrationController::class, 'calendarSync']);
 
         // Payroll (Admin/Director)
-        Route::get('payroll/export', [IntegrationController::class, 'payrollExport']);
+        Route::post('payroll/export', [IntegrationController::class, 'payrollExport']);
     });
 
     // ========================================
@@ -494,7 +501,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     });
 
     // Payroll webhook (external system) — no auth, separate group
-    Route::post('/v1/integrations/payroll/webhook', [IntegrationController::class, 'payrollWebhook']);
+    Route::middleware('throttle:api-payroll-webhook')->post('/v1/integrations/payroll/webhook', [IntegrationController::class, 'payrollWebhook']);
 
     Route::prefix('leave/reasons')->group(function () {
         Route::get('{type}', [LeaveReasonsController::class, 'forType']);

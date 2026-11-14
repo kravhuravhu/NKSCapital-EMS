@@ -1,10 +1,6 @@
-<div class="page-team-assets">
-    @if ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
+<div class="page-team-assets" wire:init="initPage">
+    <x-nks.loading-overlay targets="initPage" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
         <x-nks.spinner block label="Loading team assets..." />

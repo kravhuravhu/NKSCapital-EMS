@@ -37,7 +37,7 @@ class Meetings extends Component
     public function mount(): void
     {
         $this->resetForm();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function resetForm(): void

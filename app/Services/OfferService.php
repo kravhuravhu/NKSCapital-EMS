@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\AuditService;
+use App\Services\EmployeeNumberService;
+use App\Models\LeaveConfig;
 
 class OfferService
 {
@@ -332,15 +335,15 @@ class OfferService
                 ?? $this->mapEmploymentTypeToServiceType($requisition->employment_type);
 
             // Generate employee number
-            $employeeNumber = $this->generateEmployeeNumber();
+            $employeeNumber = EmployeeNumberService::generate();
 
             // Generate a temporary password
             $tempPassword = Str::random(12);
 
             // pull default entitlements so new employees are immediately usable
-            $annualConfig = \App\Models\LeaveConfig::where('leave_type', 'annual')->first();
-            $sickConfig   = \App\Models\LeaveConfig::where('leave_type', 'sick')->first();
-            $familyConfig = \App\Models\LeaveConfig::where('leave_type', 'family')->first();
+            $annualConfig = LeaveConfig::where('leave_type', 'annual')->first();
+            $sickConfig   = LeaveConfig::where('leave_type', 'sick')->first();
+            $familyConfig = LeaveConfig::where('leave_type', 'family')->first();
 
             $employee = User::create([
                 'employee_number' => $employeeNumber,

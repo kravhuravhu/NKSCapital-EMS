@@ -9,6 +9,7 @@ use App\Http\Middleware\TwoFactorMiddleware;
 use App\Http\Middleware\AuditLogMiddleware;
 use App\Http\Middleware\RateLimitMiddleware;
 use App\Http\Middleware\EnsureApiToken;
+use App\Http\Middleware\EnsureTwoFactorEnrolled;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => RoleMiddleware::class,
             '2fa' => TwoFactorMiddleware::class,
+            '2fa.enrolled' => EnsureTwoFactorEnrolled::class,
             'audit' => AuditLogMiddleware::class,
             'rate.limit' => RateLimitMiddleware::class,
             'api.token' => EnsureApiToken::class,

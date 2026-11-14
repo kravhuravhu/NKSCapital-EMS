@@ -61,6 +61,14 @@ class FortifyServiceProvider extends ServiceProvider
             );
         });
 
+        Fortify::authenticateUsing(function (Request $request) {
+            // Password alone never authenticates. The API is the source of truth
+            // for the multi-step login flow (password + OTP or passkey).
+            return null;
+        });
+
+        Fortify::loginView(fn () => view('auth.login'));
+
         Event::listen(Login::class, IssueSanctumTokenOnLogin::class);
     }
 }

@@ -48,6 +48,13 @@ class AuditLogMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
+        // Internal requests from Api::dispatch already carry their own
+        // audit trail from the outer Livewire request. Logging them again
+        // would double every UI action.
+        if ($request->header('X-Internal-Request') === '1') {
+            return $next($request);
+        }
+
         // Skip noisy / non-business endpoints
         foreach ($this->skipPaths as $skip) {
             if ($request->is($skip) || $request->is($skip . '/*')) {

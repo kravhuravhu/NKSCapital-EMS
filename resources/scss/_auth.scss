@@ -8,12 +8,12 @@
     background:
         radial-gradient(ellipse at top, rgba(200, 169, 81, 0.06), transparent 60%),
         var(--nks-page);
-}
 
-html.dark .nks-auth-shell {
-    background:
-        radial-gradient(ellipse at top, rgba(200, 169, 81, 0.08), transparent 60%),
-        var(--nks-page);
+    html.dark & {
+        background:
+            radial-gradient(ellipse at top, rgba(200, 169, 81, 0.08), transparent 60%),
+            var(--nks-page);
+    }
 }
 
 .nks-auth-card {
@@ -29,8 +29,8 @@ html.dark .nks-auth-shell {
 .nks-auth-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
     justify-content: center;
+    gap: 12px;
     margin-bottom: 32px;
 
     .nks-logo-mark {
@@ -41,11 +41,8 @@ html.dark .nks-auth-shell {
 
     .nks-brand-name {
         font-size: 26px;
+        color: var(--nks-ink);
     }
-}
-
-.nks-auth-brand .nks-brand-name {
-    color: var(--nks-ink);
 }
 
 .nks-auth-heading {
@@ -53,16 +50,23 @@ html.dark .nks-auth-shell {
     text-align: center;
 
     h1 {
+        margin: 0 0 6px;
         font-size: 22px;
         font-weight: 700;
         color: var(--nks-ink);
         letter-spacing: -0.02em;
-        margin-bottom: 6px;
     }
 
     p {
+        margin: 0;
         font-size: 13px;
+        line-height: 1.5;
         color: var(--nks-muted);
+
+        strong {
+            color: var(--nks-ink);
+            font-weight: 600;
+        }
     }
 }
 
@@ -71,14 +75,18 @@ html.dark .nks-auth-shell {
     align-items: flex-start;
     gap: 10px;
     padding: 12px 14px;
+    border-radius: var(--nks-radius-sm);
     background: rgba(63, 161, 104, 0.1);
     color: var(--nks-success);
-    border-radius: var(--nks-radius-sm);
-    margin-bottom: 20px;
     font-size: 13px;
     line-height: 1.5;
+    margin-bottom: 20px;
 
-    i { font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+    > i {
+        font-size: 14px;
+        margin-top: 2px;
+        flex-shrink: 0;
+    }
 
     &--error {
         background: rgba(194, 91, 91, 0.1);
@@ -97,10 +105,14 @@ html.dark .nks-auth-shell {
     flex-direction: column;
     gap: 8px;
 
-    label {
+    > label {
         font-size: 13px;
         font-weight: 600;
         color: var(--nks-ink);
+    }
+
+    > small {
+        display: block;
     }
 }
 
@@ -108,14 +120,19 @@ html.dark .nks-auth-shell {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
 }
 
 .nks-auth-forgot {
     font-size: 12px;
     font-weight: 500;
     color: var(--nks-muted);
+    transition: color var(--nks-transition);
 
-    &:hover { color: var(--nks-gold-deep); text-decoration: underline; }
+    &:hover {
+        color: var(--nks-gold-deep);
+        text-decoration: underline;
+    }
 }
 
 .nks-auth-input-wrap {
@@ -143,7 +160,9 @@ html.dark .nks-auth-shell {
         font-size: 14px;
         transition: border-color var(--nks-transition), box-shadow var(--nks-transition);
 
-        &::placeholder { color: var(--nks-faint); }
+        &::placeholder {
+            color: var(--nks-faint);
+        }
 
         &:focus {
             outline: none;
@@ -153,137 +172,24 @@ html.dark .nks-auth-shell {
 
         &[aria-invalid="true"] {
             border-color: var(--nks-danger);
-            &:focus { box-shadow: 0 0 0 3px rgba(194, 91, 91, 0.15); }
+
+            &:focus {
+                box-shadow: 0 0 0 3px rgba(194, 91, 91, 0.15);
+            }
         }
     }
 
-    &:focus-within > i { color: var(--nks-gold-deep); }
+    &:focus-within > i {
+        color: var(--nks-gold-deep);
+    }
 }
 
 .nks-auth-error {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
     color: var(--nks-danger);
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.nks-auth-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    color: var(--nks-body);
-    cursor: pointer;
-    font-weight: 500;
-
-    input {
-        width: 16px;
-        height: 16px;
-        accent-color: var(--nks-gold);
-        cursor: pointer;
-    }
-}
-
-.nks-auth-submit {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    height: 46px;
-    width: 100%;
-    margin-top: 8px;
-    padding: 0 20px;
-    background: var(--nks-navy);
-    color: white;
-    border: 1px solid var(--nks-navy);
-    border-radius: var(--nks-radius-sm);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background var(--nks-transition), transform var(--nks-transition);
-
-    i { font-size: 12px; transition: transform var(--nks-transition); }
-
-    &:hover:not(:disabled) {
-        background: var(--nks-navy-deep);
-        border-color: var(--nks-navy-deep);
-
-        i { transform: translateX(2px); }
-    }
-
-    &:active { transform: translateY(1px); }
-
-    &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-}
-
-.nks-auth-footer {
-    margin-top: 32px;
-    text-align: center;
-    font-size: 11px;
-    color: var(--nks-faint);
-}
-
-.nks-auth-links {
-    margin-top: 24px;
-    text-align: center;
-    font-size: 13px;
-
-    a {
-        color: var(--nks-muted);
-        font-weight: 500;
-        margin: 0 8px;
-
-        &:hover { color: var(--nks-gold-deep); text-decoration: underline; }
-    }
-}
-
-.nks-auth-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 8px;
-    flex-wrap: wrap;
-
-    .nks-auth-submit { flex: 1; min-width: 140px; margin-top: 0; }
-}
-
-.nks-auth-alt-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    height: 46px;
-    padding: 0 18px;
-    background: transparent;
-    color: var(--nks-body);
-    border: 1px solid var(--nks-border);
-    border-radius: var(--nks-radius-sm);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background var(--nks-transition), color var(--nks-transition), border-color var(--nks-transition);
-
-    &:hover {
-        background: var(--nks-elevated);
-        color: var(--nks-ink);
-        border-color: var(--nks-border-strong);
-    }
-}
-
-.nks-auth-hint {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 14px;
-    background: var(--nks-elevated);
-    color: var(--nks-body);
-    border-radius: var(--nks-radius-sm);
-    font-size: 12px;
-    line-height: 1.55;
-    margin-bottom: 18px;
-
-    i { color: var(--nks-gold-deep); font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+    line-height: 1.4;
 }
 
 .nks-auth-code-input {
@@ -299,6 +205,7 @@ html.dark .nks-auth-shell {
     text-align: center;
     letter-spacing: 12px;
     font-family: 'Roboto Mono', ui-monospace, monospace;
+    transition: border-color var(--nks-transition), box-shadow var(--nks-transition);
 
     &:focus {
         outline: none;
@@ -306,5 +213,185 @@ html.dark .nks-auth-shell {
         box-shadow: 0 0 0 3px rgba(200, 169, 81, 0.15);
     }
 
-    &::placeholder { color: var(--nks-faint); letter-spacing: 12px; font-weight: 400; }
+    &::placeholder {
+        color: var(--nks-faint);
+        letter-spacing: 12px;
+        font-weight: 400;
+    }
+}
+
+.nks-auth-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    background: var(--nks-elevated);
+    color: var(--nks-body);
+    border-radius: var(--nks-radius-sm);
+    font-size: 12px;
+    line-height: 1.55;
+
+    > i {
+        color: var(--nks-gold-deep);
+        font-size: 13px;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    strong {
+        color: var(--nks-ink);
+        font-weight: 600;
+    }
+}
+
+.nks-auth-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--nks-body);
+    cursor: pointer;
+
+    input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--nks-gold);
+        cursor: pointer;
+    }
+}
+
+.nks-auth-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    height: 46px;
+    padding: 0 20px;
+    margin-top: 8px;
+    background: var(--nks-navy);
+    color: #FFFFFF;
+    border: 1px solid var(--nks-navy);
+    border-radius: var(--nks-radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--nks-transition), border-color var(--nks-transition), transform var(--nks-transition);
+
+    > i {
+        font-size: 12px;
+        transition: transform var(--nks-transition);
+    }
+
+    .nks-btn-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: nks-spin 700ms linear infinite;
+        flex-shrink: 0;
+    }
+
+    &:hover:not(:disabled) {
+        background: var(--nks-navy-deep);
+        border-color: var(--nks-navy-deep);
+
+        > i {
+            transform: translateX(2px);
+        }
+    }
+    
+    .nks-auth-loading {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
+.nks-auth-footer {
+    margin-top: 32px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--nks-faint);
+}
+
+.nks-auth-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    font-size: 13px;
+
+    a {
+        color: var(--nks-muted);
+        font-weight: 500;
+        text-decoration: none;
+        transition: color var(--nks-transition);
+
+        &:hover {
+            color: var(--nks-gold-deep);
+            text-decoration: underline;
+        }
+
+        &:disabled,
+        &[disabled] {
+            opacity: 0.6;
+            cursor: not-allowed;
+            text-decoration: none;
+        }
+    }
+}
+
+.nks-auth-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+
+    .nks-auth-submit {
+        flex: 1;
+        min-width: 140px;
+        margin-top: 0;
+    }
+}
+
+.nks-auth-alt-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 46px;
+    padding: 0 18px;
+    background: transparent;
+    color: var(--nks-body);
+    border: 1px solid var(--nks-border);
+    border-radius: var(--nks-radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--nks-transition), color var(--nks-transition), border-color var(--nks-transition);
+
+    &:hover {
+        background: var(--nks-elevated);
+        color: var(--nks-ink);
+        border-color: var(--nks-border-strong);
+    }
 }
