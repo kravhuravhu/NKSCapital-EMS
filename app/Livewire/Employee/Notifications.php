@@ -19,13 +19,15 @@ class Notifications extends Component
 
     public function mount(): void
     {
-        $this->load();
+        // load() fires from wire:init.
     }
 
-    public function load(): void
+    public function load(bool $silent = false): void
     {
-        $this->loading = true;
-        $this->error = null;
+        if (! $silent) {
+            $this->loading = true;
+            $this->error = null;
+        }
 
         $list = Api::get('/notifications/list', ['per_page' => 60]);
 
@@ -46,6 +48,11 @@ class Notifications extends Component
         }
 
         $this->loading = false;
+    }
+
+    public function poll(): void
+    {
+        $this->load(silent: true);
     }
 
     protected function groupByDate(array $items): array

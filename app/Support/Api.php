@@ -65,6 +65,7 @@ class Api
         }
 
         $request->headers->set('X-Requested-With', 'XMLHttpRequest');
+        $request->headers->set('X-Internal-Request', '1');
 
         $response = app()->handle($request);
         $status   = $response->getStatusCode();
@@ -87,6 +88,9 @@ class Api
         $request = Request::create($uri, 'POST', $body);
 
         $request->headers->set('Accept', 'application/json');
+
+        $request->headers->set('X-Requested-With', 'XMLHttpRequest');
+        $request->headers->set('X-Internal-Request', '1');
 
         if ($token = self::token()) {
             $request->headers->set('Authorization', 'Bearer ' . $token);

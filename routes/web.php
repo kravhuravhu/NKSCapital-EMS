@@ -53,12 +53,17 @@ use App\Livewire\Manager\HalfDayNotices;
 use App\Livewire\Admin\LeaveReasons;
 use App\Livewire\Employee\TimesheetHistory;
 use App\Support\RouteRole;
+use App\Http\Middleware\EnsureTwoFactorEnrolled;
 
 Route::get('/', function () {
     return auth()->check()
         ? redirect()->route('portal.dashboard')
         : redirect()->route('login');
 });
+
+Route::get('/auth/qr/{challenge}', function (string $challenge) {
+    return view('auth.qr-approve', ['challenge' => $challenge]);
+})->name('auth.qr.landing');
 
 Route::middleware(['auth'])->get('/dashboard', function () {
     return redirect()->route('portal.dashboard');
@@ -70,7 +75,7 @@ Route::middleware(['auth'])->prefix('portal/documents')->name('portal.documents.
         ->name('stream');
 });
 
-Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->group(function () {
+Route::middleware(['auth', 'api.token', '2fa.enrolled'])->prefix('portal')->name('portal.')->group(function () {
 
     Route::get('/dashboard', function () {
         return redirect()->route(RouteRole::dashboardRouteForUser(auth()->user()));
@@ -97,7 +102,7 @@ Route::middleware(['auth', 'api.token'])->prefix('portal')->name('portal.')->gro
             Route::get('/assets', Assets::class)->name('assets');
             Route::get('/documents', Documents::class)->name('documents');
             Route::get('/profile', Profile::class)->name('profile');
-            Route::get('/security', Security::class)->name('security');
+            Route::get('/security', Security::class)->name('security')->withoutMiddleware(EnsureTwoFactorEnrolled::class);
             Route::get('/notifications', Notifications::class)->name('notifications');
         });
 

@@ -20,10 +20,6 @@
 <body>
     <a href="#main-content" class="sr-only">Skip to main content</a>
 
-    <div id="nks-page-loader" class="nks-page-loader" aria-hidden="true">
-        <div class="nks-page-loader-bar"></div>
-    </div>
-
     <x-nks.shell :title="$title ?? null" :breadcrumb="$breadcrumb ?? null">
         {{ $slot ?? '' }}
         @yield('content')

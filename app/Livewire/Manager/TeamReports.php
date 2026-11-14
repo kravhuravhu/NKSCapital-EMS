@@ -22,7 +22,7 @@ class TeamReports extends Component
         // default to the current calendar month
         $this->from = now()->startOfMonth()->format('Y-m-d');
         $this->to = now()->endOfMonth()->format('Y-m-d');
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void

@@ -29,7 +29,7 @@ class Security extends Component
 
     public function mount(): void
     {
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void

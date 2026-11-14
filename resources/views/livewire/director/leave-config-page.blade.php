@@ -1,17 +1,6 @@
-<div class="page-leave-config">
-    @if ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-leave-config" wire:init="initPage">
+    <x-nks.loading-overlay targets="load,initPage" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     <div class="panel lc-panel">
         <div class="lc-header">
@@ -339,16 +328,23 @@
                         </div>
                     </div>
                 </div>
+                <div class="nks-field" style="margin-top: 16px;">
+                    <label class="nks-label">
+                        Admin password <span class="nks-required">*</span>
+                    </label>
+                    <input type="password"
+                            wire:model="savePassword"
+                            class="nks-input"
+                            autocomplete="current-password"
+                            placeholder="Required to save configuration changes">
+                </div>
                 <footer class="lc-modal-foot">
                     <button type="button" wire:click="closeEdit" class="nks-btn nks-btn--outline">
                         Cancel
                     </button>
-                    <button type="button"
-                            wire:click="save"
-                            wire:loading.attr="disabled"
-                            wire:target="save"
-                            class="nks-btn nks-btn--primary">
-                        <i class="fa-solid fa-check"></i>
+                    <button type="button" wire:click="save" wire:loading.attr="disabled" wire:target="save" class="nks-btn nks-btn--primary">
+                        <i class="fa-solid fa-check" wire:loading.remove wire:target="save"></i>
+                        <span class="nks-btn-spinner" wire:loading wire:target="save"></span>
                         Save Config
                     </button>
                 </footer>

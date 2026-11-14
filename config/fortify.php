@@ -145,8 +145,8 @@ return [
     */
 
     'passkeys' => [
-        'relying_party_id' => parse_url(config('app.url'), PHP_URL_HOST),
-        'allowed_origins' => [config('app.url')],
+        'relying_party_id' => parse_url(config('app.url'), PHP_URL_HOST) ?: 'localhost',
+        'allowed_origins' => array_filter([config('app.url')]),
         'timeout' => 60000,
     ],
 
@@ -162,15 +162,12 @@ return [
     */
 
     'features' => [
-        Features::registration(),
         Features::resetPasswords(),
-        // Features::emailVerification(),
         Features::updateProfileInformation(),
         Features::updatePasswords(),
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,
-            // 'window' => 0,
         ]),
         Features::passkeys([
             'confirmPassword' => true,

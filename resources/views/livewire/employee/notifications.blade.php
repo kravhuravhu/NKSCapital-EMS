@@ -1,20 +1,9 @@
-<div class="page-notifications">
-    @if ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-notifications" wire:init="load" wire:poll.60s="poll">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
-        <x-nks.spinner block label="Loading notifications..." />
+        <div class="panel" style="min-height: 400px;"></div>
     @else
         <div class="nf-layout">
             <div class="nf-feed">
@@ -25,8 +14,10 @@
                             <p>{{ $unreadCount }} unread</p>
                         </div>
                         @if ($unreadCount > 0)
-                            <button type="button" wire:click="markAllRead" class="nks-btn nks-btn--outline nks-btn--sm">
-                                <i class="fa-solid fa-check-double"></i>
+                            <button type="button" wire:click="markAllRead" class="nks-btn nks-btn--outline nks-btn--sm"
+                                    wire:loading.attr="disabled" wire:target="markAllRead">
+                                <i class="fa-solid fa-check-double" wire:loading.remove wire:target="markAllRead"></i>
+                                <span class="nks-btn-spinner" wire:loading wire:target="markAllRead"></span>
                                 Mark all as read
                             </button>
                         @endif

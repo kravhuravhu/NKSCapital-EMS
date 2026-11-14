@@ -1,20 +1,9 @@
-<div class="page-documents">
-    @if ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-documents" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
-        <x-nks.spinner block label="Loading documents..." />
+        <div class="panel" style="min-height: 300px;"></div>
     @else
         <div class="dc-stats">
             <div class="dc-stat">
@@ -108,9 +97,9 @@
                                         </x-nks.badge>
                                     </td>
                                     <td>
-                                        {{ isset($doc['updated_at']) ? \Carbon\Carbon::parse($doc['updated_at'])->format('d M Y') : '—' }}
+                                        {{ isset($doc['updated_at']) ? \Carbon\Carbon::parse($doc['updated_at'])->format('d M Y') : '-' }}
                                     </td>
-                                    <td>{{ $doc['size_human'] ?? '—' }}</td>
+                                    <td>{{ $doc['size_human'] ?? '-' }}</td>
                                     <td>
                                         <a href="{{ $doc['download_url'] ?? '#' }}" class="dc-download" title="Download">
                                             <i class="fa-solid fa-download"></i>

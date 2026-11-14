@@ -1,10 +1,6 @@
-<div class="page-team-reports">
-    @if ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
+<div class="page-team-reports" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     <div class="panel rp-panel">
         <div class="rp-header">

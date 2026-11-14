@@ -24,7 +24,7 @@ class Profile extends Component
 
     public function mount(): void
     {
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
@@ -116,14 +116,26 @@ class Profile extends Component
         $this->load();
     }
 
+    /**
+     * Compact tenure string. Uses absolute diffs so a future hire date does
+     * not produce negative numbers, and short-circuits to "Not started"
+     * when the employee has not begun yet.
+     */
     public function tenure(): string
     {
         if (empty($this->profile['hire_date'])) {
             return '—';
         }
 
-        $years = Carbon::parse($this->profile['hire_date'])->diffInYears(now());
-        $months = Carbon::parse($this->profile['hire_date'])->diffInMonths(now()) % 12;
+        $hire = Carbon::parse($this->profile['hire_date'])->startOfDay();
+
+        if ($hire->isFuture()) {
+            return 'Not started';
+        }
+
+        $years = (int) $hire->diffInYears(now(), true);
+        $totalMonths = (int) $hire->diffInMonths(now(), true);
+        $months = $totalMonths % 12;
 
         return trim("{$years}y {$months}m");
     }

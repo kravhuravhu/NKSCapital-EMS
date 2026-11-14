@@ -1,20 +1,9 @@
-<div class="page-assets">
-    @if ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-assets" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
-        <x-nks.spinner block label="Loading assets..." />
+        <div class="panel" style="min-height: 300px;"></div>
     @else
         <div class="as-stats">
             <div class="as-stat">
@@ -97,15 +86,15 @@
                         <dl class="as-card-meta">
                             <div>
                                 <dt>Asset tag</dt>
-                                <dd>{{ $asset['asset_tag'] ?? '—' }}</dd>
+                                <dd>{{ $asset['asset_tag'] ?? '-' }}</dd>
                             </div>
                             <div>
                                 <dt>Serial</dt>
-                                <dd>{{ $asset['serial_number'] ?? '—' }}</dd>
+                                <dd>{{ $asset['serial_number'] ?? '-' }}</dd>
                             </div>
                             <div>
                                 <dt>Condition</dt>
-                                <dd>{{ ucfirst(str_replace('_', ' ', $asset['condition'] ?? '—')) }}</dd>
+                                <dd>{{ ucfirst(str_replace('_', ' ', $asset['condition'] ?? '-')) }}</dd>
                             </div>
                             <div>
                                 <dt>Expected return</dt>
@@ -118,7 +107,7 @@
                                             </span>
                                         @endif
                                     @else
-                                        —
+                                        -
                                     @endif
                                 </dd>
                             </div>
@@ -195,8 +184,10 @@
                 </div>
                 <footer class="nks-modal-foot">
                     <button type="button" wire:click="closeRepair" class="nks-btn nks-btn--outline">Cancel</button>
-                    <button type="button" wire:click="submitRepair" class="nks-btn nks-btn--primary">
-                        <i class="fa-solid fa-paper-plane"></i>
+                    <button type="button" wire:click="submitRepair" class="nks-btn nks-btn--primary"
+                            wire:loading.attr="disabled" wire:target="submitRepair">
+                        <i class="fa-solid fa-paper-plane" wire:loading.remove wire:target="submitRepair"></i>
+                        <span class="nks-btn-spinner" wire:loading wire:target="submitRepair"></span>
                         Submit
                     </button>
                 </footer>

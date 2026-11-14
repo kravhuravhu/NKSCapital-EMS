@@ -124,25 +124,30 @@ class RoleController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $user->assignRole($request->role);
 
+        if (in_array($request->role, ['employee', 'manager', 'director', 'admin', 'recruiter', 'operational_manager'], true)) {
+            $user->role = $request->role;
+            $user->save();
+        }
+
         return response()->json([
-            'status' => "success",
-            'message' => "Role assigned successfully",
+            'status' => 'success',
+            'message' => 'Role assigned successfully',
             'data' => [
-                'user' => $user->only(['id', 'first_name', 'last_name', 'email']),
+                'user' => $user->only(['id', 'first_name', 'last_name', 'email', 'role']),
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
-            ]
+            ],
         ], 200);
     }
 
     /**
-     * POST /api/v1/admin/roles/remove/{userId}
+     * DELETE /api/v1/admin/roles/remove/{userId}
      */
     public function removeRole(Request $request, $userId)
     {
@@ -156,20 +161,31 @@ class RoleController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $user->removeRole($request->role);
 
+        $remaining = $user->getRoleNames()->toArray();
+
+        if ($user->role === $request->role) {
+            $candidate = in_array('employee', $remaining, true) ? 'employee' : ($remaining[0] ?? 'employee');
+            if (!in_array($candidate, ['employee', 'manager', 'director', 'admin', 'recruiter', 'operational_manager'], true)) {
+                $candidate = 'employee';
+            }
+            $user->role = $candidate;
+            $user->save();
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Role removed successfully',
             'data' => [
-                'user' => $user->only(['id', 'first_name', 'last_name', 'email']),
+                'user' => $user->only(['id', 'first_name', 'last_name', 'email', 'role']),
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
-            ]
+            ],
         ], 200);
     }
 

@@ -132,7 +132,10 @@ class PSTimesheetController extends Controller
             $totalHours += $entry['hours_worked'];
         }
 
-        // Audit log using service
+        $timesheet->total_hours = $totalHours;
+        $timesheet->save();
+
+        // Audit log
         AuditService::log(
             action: 'PS_TIMESHEET_CREATED',
             tableName: 'ps_timesheets',

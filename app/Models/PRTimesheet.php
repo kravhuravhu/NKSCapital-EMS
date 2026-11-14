@@ -14,32 +14,23 @@ class PRTimesheet extends Model
         'user_id',
         'month_year',
         'status',
-        'level1_approver_id',
-        'level2_approver_id',
-        'level1_approved_at',
-        'level2_approved_at',
-        'level1_rejection_reason',
-        'level2_rejection_reason',
-        'total_regular_hours',
-        'total_overtime_hours',
-        'pdf_path',
-        'pdf_hash',
-        'exported_to_payroll',
-        'exported_at',
-        'is_escalated',
-        'escalated_at',
+        'client_manager_id',
+        'client_manager_email',
+        'signed_pdf_path',
+        'signed_pdf_hash',
+        'client_signature_date',
+        'template_generated_at',
+        'client_emailed_at',
+        'notes',
+        'total_hours',
     ];
 
     protected $casts = [
         'month_year' => 'date',
-        'level1_approved_at' => 'datetime',
-        'level2_approved_at' => 'datetime',
-        'exported_at' => 'datetime',
-        'escalated_at' => 'datetime',
-        'exported_to_payroll' => 'boolean',
-        'is_escalated' => 'boolean',
-        'total_regular_hours' => 'decimal:2',
-        'total_overtime_hours' => 'decimal:2',
+        'client_signature_date' => 'datetime',
+        'template_generated_at' => 'datetime',
+        'client_emailed_at' => 'datetime',
+        'total_hours' => 'decimal:2',
     ];
 
     public function user(): BelongsTo
@@ -116,11 +107,21 @@ class PRTimesheet extends Model
 
     public function getTotalHoursAttribute(): float
     {
-        return $this->details()->sum('hours_worked');
+        $column = (float) ($this->attributes['total_hours'] ?? 0);
+
+        if ($column > 0) {
+            return $column;
+        }
+
+        return (float) $this->details()->sum('hours_worked');
     }
 
     public function getOvertimeHoursAttribute(): float
     {
-        return $this->details()->where('is_overtime', true)->sum('hours_worked');
+        if ((float) ($this->total_overtime_hours ?? 0) > 0) {
+            return (float) $this->total_overtime_hours;
+        }
+
+        return (float) $this->details()->where('is_overtime', true)->sum('hours_worked');
     }
 }

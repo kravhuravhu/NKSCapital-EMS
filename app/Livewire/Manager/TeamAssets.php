@@ -26,6 +26,12 @@ class TeamAssets extends Component
     public function mount(): void
     {
         $this->loadDepartments();
+        // load() fires from wire:init.
+    }
+
+    public function initPage(): void
+    {
+        $this->loadDepartments();
         $this->load();
     }
 
@@ -59,6 +65,15 @@ class TeamAssets extends Component
             $params['search'] = $this->search;
         }
 
+        // The API accepts comma-separated statuses. Map each tab to the set
+        // of statuses that belong on it.
+        $params['status'] = match ($this->filter) {
+            'overdue' => 'loaned',
+            'maintenance' => 'maintenance,repair_requested',
+            'my_department' => 'loaned,repair_requested,maintenance,pending_return',
+            default => 'loaned,repair_requested,maintenance,pending_return',
+        };
+
         $response = Api::get('/asset/track', $params);
 
         if (! $response['ok']) {
@@ -67,7 +82,7 @@ class TeamAssets extends Component
             return;
         }
 
-        $rows = $response['data']['loaned_assets'] ?? [];
+        $rows = $response['data']['assets'] ?? $response['data']['loaned_assets'] ?? [];
 
         $myDepartment = auth()->user()->department;
 

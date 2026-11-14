@@ -22,6 +22,11 @@ class RecruitmentService
             $code = $data['requisition_code']
                 ?? $this->generateRequisitionCode($data['department'] ?? 'GEN');
 
+            $status = $data['status'] ?? 'pending_approval';
+            if (!in_array($status, ['draft', 'pending_approval'], true)) {
+                $status = 'pending_approval';
+            }
+
             $requisition = Requisition::create([
                 'requisition_code' => $code,
                 'title' => $data['title'],
@@ -35,7 +40,7 @@ class RecruitmentService
                 'salary_range_max' => $data['salary_range_max'] ?? null,
                 'salary_currency' => $data['salary_currency'] ?? 'ZAR',
                 'reason_for_hire' => $data['reason_for_hire'] ?? null,
-                'status' => 'pending_approval',
+                'status' => $status,
                 'hiring_manager_id' => $data['hiring_manager_id'] ?? $actor->id,
                 'target_start_date' => $data['target_start_date'] ?? null,
                 'created_by' => $actor->id,
@@ -49,17 +54,19 @@ class RecruitmentService
                 logType: 'success'
             );
 
-            // Notify directors for approval
-            $directors = User::where('role', 'director')->where('is_active', true)->get();
-            foreach ($directors as $d) {
-                Notification::create([
-                    'user_id' => $d->id,
-                    'type' => 'REQUISITION_PENDING_APPROVAL',
-                    'title' => 'New Requisition Pending Approval',
-                    'message' => "Requisition {$requisition->requisition_code} ({$requisition->title}) needs your approval.",
-                    'reference_id' => $requisition->id,
-                    'reference_type' => Requisition::class,
-                ]);
+            // Draft requisitions are not sent to directors for approval.
+            if ($status === 'pending_approval') {
+                $directors = User::where('role', 'director')->where('is_active', true)->get();
+                foreach ($directors as $d) {
+                    Notification::create([
+                        'user_id' => $d->id,
+                        'type' => 'REQUISITION_PENDING_APPROVAL',
+                        'title' => 'New Requisition Pending Approval',
+                        'message' => "Requisition {$requisition->requisition_code} ({$requisition->title}) needs your approval.",
+                        'reference_id' => $requisition->id,
+                        'reference_type' => Requisition::class,
+                    ]);
+                }
             }
 
             return $requisition;

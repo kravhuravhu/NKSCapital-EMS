@@ -1,17 +1,6 @@
-<div class="page-pending-l1">
-    @if ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-pending-l1" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
         <x-nks.spinner block label="Loading pending timesheets…" />
@@ -81,7 +70,7 @@
                                                 View
                                             </button>
                                             <button type="button"
-                                                    wire:click="approve({{ $ts['id'] }})"
+                                                    wire:click="openApprove({{ $ts['id'] }})"
                                                     class="nks-btn nks-btn--primary nks-btn--sm">
                                                 <i class="fa-solid fa-check"></i>
                                                 Approve
@@ -212,6 +201,39 @@
                     <button type="button" wire:click="submitReject" class="nks-btn nks-btn--danger">
                         <i class="fa-solid fa-xmark"></i>
                         Confirm Rejection
+                    </button>
+                </footer>
+            </div>
+        </div>
+    @endif
+
+    @if ($showApprove)
+        <div class="l1-modal-backdrop" wire:click.self="closeApprove">
+            <div class="l1-modal">
+                <header class="l1-modal-head">
+                    <h3>Approve Timesheet</h3>
+                    <button type="button" wire:click="closeApprove" class="l1-modal-close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </header>
+                <div class="l1-modal-body">
+                    <div class="nks-field">
+                        <label class="nks-label">Comment to employee (optional)</label>
+                        <textarea wire:model="approveComment"
+                                  class="nks-textarea"
+                                  placeholder="Any note for the employee or L2 reviewer."></textarea>
+                    </div>
+                </div>
+                <footer class="l1-modal-foot">
+                    <button type="button" wire:click="closeApprove" class="nks-btn nks-btn--outline">
+                        Cancel
+                    </button>
+                    <button type="button" wire:click="submitApprove"
+                            wire:loading.attr="disabled" wire:target="submitApprove"
+                            class="nks-btn nks-btn--primary">
+                        <i class="fa-solid fa-check" wire:loading.remove wire:target="submitApprove"></i>
+                        <span class="nks-btn-spinner" wire:loading wire:target="submitApprove"></span>
+                        Confirm Approval
                     </button>
                 </footer>
             </div>

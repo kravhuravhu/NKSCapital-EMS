@@ -1,21 +1,14 @@
-<div class="page-timesheets">
-
-    @if ($error)
-        <div class="ts-flash ts-flash--error">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            <span>{{ $error }}</span>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="ts-flash ts-flash--success">
-            <i class="fa-solid fa-circle-check"></i>
-            <span>{{ $flash }}</span>
-        </div>
-    @endif
+<div class="page-timesheets" wire:init="load">
+    <x-nks.loading-overlay targets="load,updatedMonthYear" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
-        <x-nks.spinner block label="Loading timesheet..." />
+        <div class="panel ts-panel">
+            <div class="nks-card-empty" style="padding: 60px 24px;">
+                <i class="fa-solid fa-circle-notch fa-spin" style="color: var(--nks-gold);"></i>
+                <p>Loading timesheet...</p>
+            </div>
+        </div>
     @else
         <div class="panel ts-panel">
 
@@ -50,7 +43,7 @@
                                     <i class="fa-solid fa-circle" aria-hidden="true"></i>
                                     {{ $group['same_day']
                                         ? $group['start']
-                                        : $group['start'] . ' - ' . $group['end'] }}
+                                        : $group['start'] . ' to ' . $group['end'] }}
                                     &middot; {{ ucfirst($group['type']) }}
                                 </span>
                             @endforeach
@@ -228,13 +221,16 @@
                                 <button type="button" wire:click="createTimesheet"
                                         class="nks-btn nks-btn--primary nks-btn--sm nks-btn--block"
                                         wire:loading.attr="disabled" wire:target="createTimesheet">
-                                    <i class="fa-solid fa-plus"></i>
+                                    <i class="fa-solid fa-plus" wire:loading.remove wire:target="createTimesheet"></i>
+                                    <span class="nks-btn-spinner" wire:loading wire:target="createTimesheet"></span>
                                     Create Timesheet
                                 </button>
                             @else
                                 <button type="button" wire:click="generateTemplate"
-                                        class="nks-btn nks-btn--primary nks-btn--sm">
-                                    <i class="fa-solid fa-file-lines"></i>
+                                        class="nks-btn nks-btn--primary nks-btn--sm"
+                                        wire:loading.attr="disabled" wire:target="generateTemplate">
+                                    <i class="fa-solid fa-file-lines" wire:loading.remove wire:target="generateTemplate"></i>
+                                    <span class="nks-btn-spinner" wire:loading wire:target="generateTemplate"></span>
                                     Generate Template
                                 </button>
 
@@ -247,8 +243,10 @@
                                 <div class="ts-upload-row">
                                     <input type="file" wire:model="signedFile" accept="application/pdf" class="ts-file-input">
                                     <button type="button" wire:click="uploadSigned"
-                                            class="nks-btn nks-btn--outline nks-btn--sm">
-                                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                                            class="nks-btn nks-btn--outline nks-btn--sm"
+                                            wire:loading.attr="disabled" wire:target="uploadSigned">
+                                        <i class="fa-solid fa-cloud-arrow-up" wire:loading.remove wire:target="uploadSigned"></i>
+                                        <span class="nks-btn-spinner" wire:loading wire:target="uploadSigned"></span>
                                         Upload Signed
                                     </button>
                                 </div>
@@ -257,8 +255,10 @@
                                     <input type="email" wire:model="clientEmail" class="ts-cell-input"
                                            placeholder="Client manager email">
                                     <button type="button" wire:click="sendToClient"
-                                            class="nks-btn nks-btn--primary nks-btn--sm">
-                                        <i class="fa-solid fa-paper-plane"></i>
+                                            class="nks-btn nks-btn--primary nks-btn--sm"
+                                            wire:loading.attr="disabled" wire:target="sendToClient">
+                                        <i class="fa-solid fa-paper-plane" wire:loading.remove wire:target="sendToClient"></i>
+                                        <span class="nks-btn-spinner" wire:loading wire:target="sendToClient"></span>
                                         Send
                                     </button>
                                 </div>
@@ -267,14 +267,16 @@
                             <button type="button" wire:click="saveDraft"
                                     class="nks-btn nks-btn--outline nks-btn--sm"
                                     wire:loading.attr="disabled" wire:target="saveDraft">
-                                <i class="fa-solid fa-floppy-disk"></i>
+                                <i class="fa-solid fa-floppy-disk" wire:loading.remove wire:target="saveDraft"></i>
+                                <span class="nks-btn-spinner" wire:loading wire:target="saveDraft"></span>
                                 Save Draft
                             </button>
 
                             <button type="button" wire:click="submitForApproval"
                                     class="nks-btn nks-btn--primary nks-btn--sm nks-btn--block"
                                     wire:loading.attr="disabled" wire:target="submitForApproval">
-                                <i class="fa-solid fa-paper-plane"></i>
+                                <i class="fa-solid fa-paper-plane" wire:loading.remove wire:target="submitForApproval"></i>
+                                <span class="nks-btn-spinner" wire:loading wire:target="submitForApproval"></span>
                                 Submit for Approval
                             </button>
                         @endif
@@ -295,7 +297,7 @@
         </div>
     @endif
 
-    {{-- History --}}
+    {{-- History modal unchanged from previous version --}}
     @if ($showHistory)
         <div class="nks-modal-backdrop" wire:click.self="closeHistory" @keydown.escape.window="$wire.closeHistory()">
             <div class="nks-modal nks-modal--md" role="dialog" aria-modal="true" x-trap>
@@ -323,7 +325,7 @@
                                 @endphp
                                 <div class="ts-history-item {{ $isCurrent ? 'is-current' : '' }}">
                                     <div class="ts-history-body">
-                                        <strong>{{ $monthKey ? \Carbon\Carbon::parse($monthKey)->format('F Y') : '—' }}</strong>
+                                        <strong>{{ $monthKey ? \Carbon\Carbon::parse($monthKey)->format('F Y') : '-' }}</strong>
                                         <span>
                                             {{ self::formatHours($total) }} logged
                                             &middot; {{ ucfirst(str_replace('_', ' ', $row['status'] ?? 'draft')) }}
@@ -350,7 +352,7 @@
         </div>
     @endif
 
-    {{-- Preview --}}
+    {{-- Preview modal unchanged --}}
     @if ($showPreview)
         <div class="nks-modal-backdrop" wire:click.self="closePreview" @keydown.escape.window="$wire.closePreview()">
             <div class="nks-modal nks-modal--lg" role="dialog" aria-modal="true" x-trap>
@@ -393,8 +395,8 @@
                                     <tr>
                                         <td>{{ \Carbon\Carbon::parse($entry['work_date'])->format('d M Y') }}</td>
                                         <td>{{ \Carbon\Carbon::parse($entry['work_date'])->format('D') }}</td>
-                                        <td>{{ $entry['project_name'] ?: '—' }}</td>
-                                        <td>{{ $entry['task_description'] ?: '—' }}</td>
+                                        <td>{{ $entry['project_name'] ?: '-' }}</td>
+                                        <td>{{ $entry['task_description'] ?: '-' }}</td>
                                         <td style="text-align: right;">{{ number_format((float) $entry['hours_worked'], 2) }}</td>
                                         <td style="text-align: right;">{{ number_format((float) $entry['overtime_hours'], 2) }}</td>
                                         <td style="text-align: right;">
@@ -432,7 +434,7 @@
         </div>
     @endif
 
-    {{-- AI Fill --}}
+    {{-- AI Fill modal unchanged except button spinners --}}
     @if ($showAiFill)
         <div class="nks-modal-backdrop" wire:click.self="closeAiFill" @keydown.escape.window="$wire.closeAiFill()">
             <div class="nks-modal nks-modal--lg" role="dialog" aria-modal="true" x-trap>

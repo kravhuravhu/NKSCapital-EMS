@@ -1,26 +1,6 @@
-<div class="page-audit-log">
-    @if ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">
-                <strong style="color: #1F6B45; display: block;">{{ $flash }}</strong>
-                @if ($lastExport)
-                    <a href="{{ $lastExport['download_url'] }}" download class="al-export-link">
-                        <i class="fa-solid fa-download"></i>
-                        Download {{ strtoupper($lastExport['format'] ?? 'CSV') }}
-                        ({{ $lastExport['record_count'] ?? 0 }} records)
-                    </a>
-                @endif
-            </div>
-        </div>
-    @endif
+<div class="page-audit-log" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     <div class="al-stats">
         <div class="al-stat">

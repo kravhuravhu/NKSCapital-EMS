@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use App\Models\LoginOtp;
+use App\Services\QrLoginService;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -24,3 +26,9 @@ Schedule::command('reminders:generate --type=contract')->dailyAt('07:00');
 
 // M13 - Health check (daily)
 Schedule::command('deploy:check')->dailyAt('05:00');
+
+// login OTP cleanup
+Schedule::call(fn () => app(QrLoginService::class)->expireStale())->everyMinute();
+Schedule::call(function () {
+    LoginOtp::where('expires_at', '<', now()->subDay())->delete();
+})->daily();

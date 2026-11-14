@@ -40,7 +40,8 @@ class Timesheet extends Component
     public function mount(): void
     {
         $this->monthYear = $this->monthYear ?: now()->format('Y-m-d');
-        $this->load();
+        // load() fires from wire:init so the overlay can render during
+        // the initial API round-trip. mount() only seeds defaults.
     }
 
     public function load(): void

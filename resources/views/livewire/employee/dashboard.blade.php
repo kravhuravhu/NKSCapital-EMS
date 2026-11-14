@@ -1,4 +1,7 @@
-<div class="nks-dashboard">
+<div class="nks-dashboard" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" />
+
     @if ($loading)
         <div class="nks-kpi-grid">
             @for ($i = 0; $i < 4; $i++)
@@ -8,11 +11,6 @@
                     <div class="nks-skeleton" style="width: 50%; height: 10px;"></div>
                 </div>
             @endfor
-        </div>
-    @elseif ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
         </div>
     @else
         <div class="nks-dashboard-greeting">
@@ -183,10 +181,10 @@
                                                         {{ $entry['table_name'] }}#{{ $entry['record_id'] ?? '0' }}
                                                     </span>
                                                 @else
-                                                    —
+                                                    -
                                                 @endif
                                             </td>
-                                            <td><span class="nks-activity-ip">{{ $entry['ip_address'] ?? '—' }}</span></td>
+                                            <td><span class="nks-activity-ip">{{ $entry['ip_address'] ?? '-' }}</span></td>
                                             <td><span class="nks-activity-time">{{ $time }}</span></td>
                                         </tr>
                                     @endforeach
@@ -285,7 +283,7 @@
                             @foreach (array_slice($upcomingMeetings, 0, 4) as $meeting)
                                 <div class="nks-meeting-item">
                                     <div class="nks-meeting-date">
-                                        <strong>{{ isset($meeting['start_time']) ? \Carbon\Carbon::parse($meeting['start_time'])->format('d') : '—' }}</strong>
+                                        <strong>{{ isset($meeting['start_time']) ? \Carbon\Carbon::parse($meeting['start_time'])->format('d') : '-' }}</strong>
                                         <span>{{ isset($meeting['start_time']) ? \Carbon\Carbon::parse($meeting['start_time'])->format('M') : '' }}</span>
                                     </div>
                                     <div class="nks-meeting-body">
@@ -293,7 +291,7 @@
                                         <span>
                                             {{ isset($meeting['start_time']) ? \Carbon\Carbon::parse($meeting['start_time'])->format('H:i') : '' }}
                                             @if (!empty($meeting['location']))
-                                                · {{ $meeting['location'] }}
+                                                &middot; {{ $meeting['location'] }}
                                             @endif
                                         </span>
                                     </div>

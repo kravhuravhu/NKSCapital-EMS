@@ -11,6 +11,8 @@ use App\Models\TimesheetDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use App\Models\ProjectChangeRequest;
+use App\Models\Notification;
 
 class ProjectController extends Controller
 {
@@ -439,33 +441,251 @@ class ProjectController extends Controller
 
     /**
      * GET /api/v1/project/list/assigned
-     * Get projects assigned to current employee
+     * Returns every active project the user is assigned to, with client,
+     * project manager, team and my engagement. Budget and cost are not
+     * returned here so employees never see them.
      */
     public function listAssignedProjects(Request $request)
     {
         $user = Auth::user();
 
-        $assignments = ProjectAssignment::with(['project.client', 'project.projectManager'])
+        $assignments = ProjectAssignment::with([
+            'project.client:id,company_name,registration_number,vat_number,billing_address,primary_contact_name,primary_contact_email,primary_contact_phone,status,is_active',
+            'project.projectManager:id,first_name,last_name,email,position,department,profile_photo',
+        ])
             ->where('user_id', $user->id)
             ->where('is_active', true)
             ->get();
 
-        // Also include user's primary project
-        $primaryProject = $user->project;
+        $projectIds = $assignments->pluck('project_id')
+            ->merge($user->project_id ? [$user->project_id] : [])
+            ->unique()
+            ->filter()
+            ->values();
+
+        $teammatesByProject = ProjectAssignment::query()
+            ->whereIn('project_id', $projectIds)
+            ->where('is_active', true)
+            ->where('user_id', '!=', $user->id)
+            ->with('user:id,first_name,last_name,position,department,profile_photo,employee_number')
+            ->get()
+            ->groupBy('project_id');
+
+        $primaryProject = $user->project_id
+            ? Project::with([
+                'client',
+                'projectManager:id,first_name,last_name,email,position,department',
+            ])->find($user->project_id)
+            : null;
+
+        $format = function ($project, $assignment = null) use ($teammatesByProject, $primaryProject) {
+            if (!$project) return null;
+
+            $teammates = $teammatesByProject->get($project->id, collect());
+
+            return [
+                'id' => $project->id,
+                'name' => $project->name,
+                'project_code' => $project->project_code,
+                'description' => $project->description,
+                'project_type' => $project->project_type,
+                'status' => $project->status,
+                'start_date' => $project->start_date?->toDateString(),
+                'end_date' => $project->end_date?->toDateString(),
+                'is_primary' => $primaryProject && $primaryProject->id === $project->id,
+                'client' => $project->client ? [
+                    'id' => $project->client->id,
+                    'company_name' => $project->client->company_name,
+                    'registration_number' => $project->client->registration_number,
+                    'primary_contact_name' => $project->client->primary_contact_name,
+                    'primary_contact_email' => $project->client->primary_contact_email,
+                    'primary_contact_phone' => $project->client->primary_contact_phone,
+                    'billing_address' => $project->client->billing_address,
+                ] : null,
+                'project_manager' => $project->projectManager ? [
+                    'id' => $project->projectManager->id,
+                    'name' => $project->projectManager->full_name,
+                    'email' => $project->projectManager->email,
+                    'position' => $project->projectManager->position,
+                    'department' => $project->projectManager->department,
+                ] : null,
+                'my_engagement' => $assignment ? [
+                    'role' => $assignment->role,
+                    'allocation' => (float) $assignment->allocation_percentage,
+                    'assigned_date' => $assignment->assigned_date?->toDateString(),
+                    'end_date' => $assignment->end_date?->toDateString(),
+                ] : null,
+                'team' => [
+                    'count' => $teammates->count() + 1,
+                    'teammates' => $teammates->map(fn ($a) => [
+                        'id' => $a->user?->id,
+                        'name' => $a->user?->full_name,
+                        'position' => $a->user?->position,
+                        'role' => $a->role,
+                    ])->values(),
+                ],
+            ];
+        };
+
+        $formatted = $assignments->map(fn ($a) => $format($a->project, $a))->filter()->values();
+
+        if ($primaryProject && !$formatted->contains('id', $primaryProject->id)) {
+            $formatted->prepend($format($primaryProject));
+        }
 
         return response()->json([
             'status' => 'success',
             'data' => [
-                'primary_project' => $primaryProject,
-                'assigned_projects' => $assignments->map(function($assignment) {
-                    return [
-                        'project' => $assignment->project,
-                        'role' => $assignment->role,
-                        'allocation' => $assignment->allocation_percentage,
-                        'assigned_date' => $assignment->assigned_date,
-                    ];
-                }),
-            ]
+                'primary_project' => $primaryProject ? $format($primaryProject) : null,
+                'assigned_projects' => $formatted,
+            ],
+        ], 200);
+    }
+
+    /**
+     * POST /api/v1/project/request-change
+     */
+    public function requestChange(Request $request)
+    {
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'type' => 'required|in:swap,change,concern,additional,meeting',
+            'current_project_id' => 'nullable|exists:projects,id',
+            'target_project_id' => 'nullable|exists:projects,id',
+            'reason' => 'required|string|min:20|max:2000',
+            'requested_role' => 'nullable|in:team_member,lead,senior,junior',
+            'requested_allocation' => 'nullable|numeric|min:1|max:100',
+            'priority' => 'nullable|in:low,medium,high,urgent',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        if (in_array($request->type, ['swap', 'change', 'concern'], true)) {
+            if (!$request->current_project_id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Select which project this request concerns.',
+                ], 422);
+            }
+
+            $isAssigned = ProjectAssignment::where('user_id', $user->id)
+                ->where('project_id', $request->current_project_id)
+                ->where('is_active', true)
+                ->exists();
+
+            if (!$isAssigned) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'You are not assigned to that project.',
+                ], 403);
+            }
+        }
+
+        if ($request->type === 'swap' && !$request->target_project_id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'A swap request needs a target project.',
+            ], 422);
+        }
+
+        $openExists = ProjectChangeRequest::where('user_id', $user->id)
+            ->where('current_project_id', $request->current_project_id)
+            ->whereIn('status', ['pending', 'acknowledged'])
+            ->exists();
+
+        if ($openExists) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You already have an open request for this project.',
+            ], 422);
+        }
+
+        $row = ProjectChangeRequest::create([
+            'user_id' => $user->id,
+            'current_project_id' => $request->current_project_id,
+            'target_project_id' => $request->target_project_id,
+            'type' => $request->type,
+            'reason' => $request->reason,
+            'requested_role' => $request->requested_role,
+            'requested_allocation' => $request->requested_allocation,
+            'priority' => $request->priority ?? 'medium',
+            'status' => 'pending',
+        ]);
+
+        AuditService::log(
+            action: 'PROJECT_CHANGE_REQUESTED',
+            tableName: 'project_change_requests',
+            recordId: $row->id,
+            newValues: [
+                'type' => $row->type,
+                'current_project_id' => $row->current_project_id,
+                'target_project_id' => $row->target_project_id,
+                'priority' => $row->priority,
+            ],
+            logType: 'success'
+        );
+
+        $project = $row->current_project_id ? Project::find($row->current_project_id) : null;
+        $recipients = collect();
+
+        if ($project?->project_manager_id) {
+            $recipients->push($project->project_manager_id);
+        } else {
+            $recipients = $recipients->merge(
+                User::whereIn('role', ['director', 'operational_manager', 'admin'])
+                    ->where('is_active', true)
+                    ->pluck('id')
+            );
+        }
+
+        foreach ($recipients->unique() as $recipientId) {
+            Notification::create([
+                'user_id' => $recipientId,
+                'type' => 'PROJECT_CHANGE_REQUESTED',
+                'title' => 'Project ' . ucfirst($row->type) . ' Request',
+                'message' => "{$user->full_name} submitted a {$row->type} request for " . ($project?->name ?? 'a project') . '.',
+                'reference_id' => $row->id,
+                'reference_type' => ProjectChangeRequest::class,
+                'category' => 'project',
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Request submitted. Your project manager has been notified.',
+            'data' => $row->load(['currentProject:id,name,project_code', 'targetProject:id,name,project_code']),
+        ], 201);
+    }
+
+    /**
+     * GET /api/v1/project/requests
+     */
+    public function listRequests(Request $request)
+    {
+        $user = Auth::user();
+
+        $query = ProjectChangeRequest::with([
+            'currentProject:id,name,project_code',
+            'targetProject:id,name,project_code',
+            'reviewer:id,first_name,last_name',
+        ])->where('user_id', $user->id);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $items = $query->orderByDesc('created_at')->limit(50)->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $items,
         ], 200);
     }
 

@@ -27,7 +27,7 @@ class Assets extends Component
 
     public function mount(): void
     {
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
@@ -35,7 +35,7 @@ class Assets extends Component
         $this->loading = true;
         $this->error = null;
 
-        $response = Api::get('/asset/track');
+        $response = Api::get('/asset/track', ['status' => 'all']);
 
         if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Unable to load assets.';
@@ -135,10 +135,16 @@ class Assets extends Component
     public function getFilteredAssetsProperty(): array
     {
         if ($this->tab === 'current') {
-            return array_values(array_filter($this->assets, fn ($a) => ($a['status'] ?? '') === 'loaned'));
+            return array_values(array_filter(
+                $this->assets,
+                fn ($a) => ($a['status'] ?? '') === 'loaned'
+            ));
         }
 
-        return array_values(array_filter($this->assets, fn ($a) => ($a['status'] ?? '') !== 'loaned'));
+        return array_values(array_filter(
+            $this->assets,
+            fn ($a) => ($a['status'] ?? '') !== 'loaned'
+        ));
     }
 
     public function getSummaryProperty(): array

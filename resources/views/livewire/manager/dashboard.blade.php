@@ -1,4 +1,7 @@
-<div class="nks-dashboard">
+<div class="nks-dashboard" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
+
     @if ($loading)
         <div class="nks-kpi-grid">
             @for ($i = 0; $i < 4; $i++)
@@ -8,11 +11,6 @@
                     <div class="nks-skeleton" style="width: 50%; height: 10px;"></div>
                 </div>
             @endfor
-        </div>
-    @elseif ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
         </div>
     @else
         <div class="nks-dashboard-greeting">
@@ -327,6 +325,36 @@
                                         <span>until {{ \Carbon\Carbon::parse($row['end_date'])->format('d M Y') }}</span>
                                     </div>
                                     <x-nks.badge tone="gold">{{ ucfirst($row['delegation_type']) }}</x-nks.badge>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if (count($receivedDelegations) > 0)
+                    <div class="nks-card">
+                        <div class="nks-card-head">
+                            <h3>Delegations received</h3>
+                        </div>
+                        <div class="nks-list">
+                            @foreach ($receivedDelegations as $row)
+                                <div class="nks-list-item">
+                                    <span class="nks-list-avatar nks-list-avatar--muted">
+                                        <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+                                    </span>
+                                    <div class="nks-list-body">
+                                        <strong>
+                                            {{ $row['original_approver']['first_name'] ?? '' }}
+                                            {{ $row['original_approver']['last_name'] ?? '' }}
+                                        </strong>
+                                        <span>
+                                            {{ ucfirst($row['delegation_type'] ?? 'both') }}
+                                            &middot; until {{ \Carbon\Carbon::parse($row['end_date'])->format('d M Y') }}
+                                        </span>
+                                    </div>
+                                    <x-nks.badge tone="gold">
+                                        {{ ucfirst($row['delegation_type'] ?? 'both') }}
+                                    </x-nks.badge>
                                 </div>
                             @endforeach
                         </div>

@@ -1,17 +1,6 @@
-<div class="page-pending-leave">
-    @if ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-pending-leave" wire:init="initPage">
+    <x-nks.loading-overlay targets="initPage" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)
         <x-nks.spinner block label="Loading pending leave requests…" />
@@ -248,6 +237,39 @@
                     <button type="button" wire:click="submitReject" class="nks-btn nks-btn--danger">
                         <i class="fa-solid fa-xmark"></i>
                         Confirm Rejection
+                    </button>
+                </footer>
+            </div>
+        </div>
+    @endif
+
+    @if ($showApprove)
+        <div class="pl-modal-backdrop" wire:click.self="closeApprove">
+            <div class="pl-modal">
+                <header class="pl-modal-head">
+                    <h3>Approve Leave Request</h3>
+                    <button type="button" wire:click="closeApprove" class="pl-modal-close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </header>
+                <div class="pl-modal-body">
+                    <div class="nks-field">
+                        <label class="nks-label">Comment (optional)</label>
+                        <textarea wire:model="approveComment"
+                                  class="nks-textarea"
+                                  placeholder="Any note for the employee."></textarea>
+                    </div>
+                </div>
+                <footer class="pl-modal-foot">
+                    <button type="button" wire:click="closeApprove" class="nks-btn nks-btn--outline">
+                        Cancel
+                    </button>
+                    <button type="button" wire:click="submitApprove"
+                            wire:loading.attr="disabled" wire:target="submitApprove"
+                            class="nks-btn nks-btn--primary">
+                        <i class="fa-solid fa-check" wire:loading.remove wire:target="submitApprove"></i>
+                        <span class="nks-btn-spinner" wire:loading wire:target="submitApprove"></span>
+                        Confirm Approval
                     </button>
                 </footer>
             </div>

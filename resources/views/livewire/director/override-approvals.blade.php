@@ -1,4 +1,4 @@
-<div class="page-override-approvals">
+<div class="page-override-approvals" wire:init="load">
     @if (!$twoFactorEnabled)
         <div class="nks-notice" style="background: var(--nks-gold-tint); color: #7A6023; margin-bottom: 14px;">
             <i class="fa-solid fa-shield-halved" style="color: #7A6023;"></i>
@@ -9,27 +9,8 @@
         </div>
     @endif
 
-    @if ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">
-                <strong style="color: #1F6B45; display: block;">{{ $flash }}</strong>
-                @if ($pdfUrl)
-                    <a href="{{ $pdfUrl }}" target="_blank" rel="noopener" class="ov-pdf-link">
-                        <i class="fa-solid fa-file-pdf"></i>
-                        Download generated PDF
-                    </a>
-                @endif
-            </div>
-        </div>
-    @endif
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     <div class="panel ov-panel">
         <div class="ov-header">

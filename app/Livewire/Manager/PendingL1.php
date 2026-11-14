@@ -20,9 +20,13 @@ class PendingL1 extends Component
     public ?int $rejectId = null;
     public string $rejectReason = '';
 
+    public bool $showApprove = false;
+    public ?int $approveId = null;
+    public string $approveComment = '';
+
     public function mount(): void
     {
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
@@ -65,22 +69,38 @@ class PendingL1 extends Component
         $this->viewData = null;
     }
 
-    public function approve(int $id): void
+    public function openApprove(int $id): void
+    {
+        $this->approveId = $id;
+        $this->approveComment = '';
+        $this->error = null;
+        $this->showApprove = true;
+    }
+
+    public function closeApprove(): void
+    {
+        $this->showApprove = false;
+        $this->approveId = null;
+        $this->approveComment = '';
+    }
+
+    public function submitApprove(): void
     {
         $this->error = null;
         $this->flash = null;
 
-        // L1 approval — forwards the timesheet to the director
         $response = Api::post('/timesheet/pr/approve/l1', [
-            'timesheet_id' => $id,
+            'timesheet_id' => $this->approveId,
+            'comment' => $this->approveComment ?: null,
         ]);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Failed to approve timesheet.';
             return;
         }
 
         $this->flash = 'Timesheet approved and forwarded to L2.';
+        $this->closeApprove();
         $this->closeView();
         $this->load();
     }

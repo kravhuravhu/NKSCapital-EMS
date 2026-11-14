@@ -10,6 +10,7 @@ use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class LeaveConfigController extends Controller
 {
@@ -47,6 +48,9 @@ class LeaveConfigController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            'password' => 'required|string',
+            'configs' => 'required|array',
+            'configs.*.leave_type' => 'required|in:annual,sick,family,unpaid,study,maternity,paternity',
             'configs' => 'required|array',
             'configs.*.leave_type' => 'required|in:annual,sick,family,unpaid,study,maternity,paternity',
             'configs.*.default_entitlement' => 'nullable|numeric|min:0',
@@ -78,7 +82,17 @@ class LeaveConfigController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        if (!Hash::check($request->password, $user->password)) {
+            AuditService::logWarning('LEAVE_CONFIG_PASSWORD_FAILED', 'leave_configs', 0, [
+                'actor_id' => $user->id,
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Password is incorrect',
             ], 422);
         }
 

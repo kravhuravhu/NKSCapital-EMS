@@ -888,13 +888,25 @@ class User extends Authenticatable
 
     /**
      * Get months of service from hire date.
+     * Returns 0.0 for missing or future hire dates so callers never have to
+     * deal with negative tenure. The diff is absolute so Carbon 2 and 3
+     * behave the same way.
      */
     public function getMonthsOfService(): float
     {
         if (!$this->hire_date) {
             return 0.0;
         }
-        return round($this->hire_date->diffInDays(now()) / 30.4375, 2);
+
+        $hire = $this->hire_date->copy()->startOfDay();
+
+        if ($hire->isFuture()) {
+            return 0.0;
+        }
+
+        $days = (int) $hire->diffInDays(now()->startOfDay(), true);
+
+        return round($days / 30.4375, 2);
     }
 
     /**

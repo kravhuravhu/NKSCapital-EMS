@@ -36,13 +36,14 @@ html.dark .nks-spinner--overlay {
 }
 
 .nks-btn .nks-btn-spinner {
-    display: none;
+    display: inline-block;
     width: 14px;
     height: 14px;
     border: 2px solid currentColor;
     border-top-color: transparent;
     border-radius: 50%;
     animation: nks-spin 700ms linear infinite;
+    flex-shrink: 0;
 }
 
 .nks-btn.is-loading .nks-btn-spinner { display: inline-block; }

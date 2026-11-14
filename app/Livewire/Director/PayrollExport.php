@@ -20,12 +20,14 @@ class PayrollExport extends Component
     public ?array $lastDownload = null;
     public ?array $syncResult = null;
 
+    public string $syncPassword = '';
+
     public bool $showSync = false;
 
     public function mount(): void
     {
         $this->month = now()->format('Y-m');
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
@@ -102,6 +104,7 @@ class PayrollExport extends Component
             return;
         }
 
+        $this->syncPassword = '';
         $this->showSync = true;
     }
 
@@ -116,25 +119,27 @@ class PayrollExport extends Component
         $this->flash = null;
         $this->syncResult = null;
 
-        // payroll export is a GET endpoint per IntegrationController::payrollExport
-        $response = Api::get('/integrations/payroll/export', [
+        if (empty($this->syncPassword)) {
+            $this->error = 'Enter your password to confirm the sync.';
+            return;
+        }
+
+        $response = Api::post('/integrations/payroll/export', [
             'month_year' => $this->month . '-01',
+            'password' => $this->syncPassword,
         ]);
 
         if (!$response['ok']) {
             $errs = $response['errors'] ?? [];
             $first = collect($errs)->flatten()->first();
             $this->error = $first ?: ($response['message'] ?? 'Failed to sync payroll.');
-            $this->closeSync();
             return;
         }
 
         $this->syncResult = $response['data'] ?? null;
         $this->flash = 'Payroll synced. Timesheets have been marked as exported.';
-
+        $this->syncPassword = '';
         $this->closeSync();
-
-        // reload — the preview should now be empty because timesheets are marked exported
         $this->load();
     }
 
