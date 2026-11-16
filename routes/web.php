@@ -56,6 +56,7 @@ use App\Support\RouteRole;
 use App\Http\Middleware\EnsureTwoFactorEnrolled;
 use App\Http\Controllers\API\ImpersonationController;
 use App\Livewire\Admin\SupportConsole;
+use App\Livewire\Admin\ImportEmployees;
 
 Route::get('/', function () {
     return auth()->check()
@@ -82,6 +83,8 @@ Route::middleware(['auth', 'api.token', '2fa.enrolled'])->prefix('portal')->name
     Route::get('/dashboard', function () {
         return redirect()->route(RouteRole::dashboardRouteForUser(auth()->user()));
     })->name('dashboard');
+
+    Route::get('/security', Security::class)->name('security');
 
     Route::get('/smoke-test', SmokeTest::class)->name('smoke-test');
 
@@ -151,6 +154,7 @@ Route::middleware(['auth', 'api.token', '2fa.enrolled'])->prefix('portal')->name
             Route::get('/queue-monitor', QueueMonitor::class)->name('queue-monitor');
             Route::get('/backup-restore', BackupRestore::class)->name('backup-restore');
             Route::get('/support-console', SupportConsole::class)->name('support-console');
+            Route::get('/import-employees', ImportEmployees::class)->name('import-employees');
         });
 
     // recruiter

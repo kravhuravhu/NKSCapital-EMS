@@ -70,11 +70,6 @@
                     <i class="fa-solid fa-filter"></i>
                     Apply
                 </button>
-                <button type="button" wire:click="openOnboarding({{ $emp['id'] }})"
-                        class="em-more-item">
-                    <i class="fa-solid fa-list-check"></i>
-                    Onboarding
-                </button>
             </div>
         </div>
 
@@ -153,11 +148,18 @@
                                                 <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
                                             </button>
                                             <div class="em-more-menu">
+                                                <button type="button" wire:click="openOnboarding({{ $emp['id'] }})"
+                                                        class="em-more-item">
+                                                    <i class="fa-solid fa-list-check"></i>
+                                                    Onboarding
+                                                </button>
+
                                                 <button type="button" wire:click="openResetPassword({{ $emp['id'] }})"
                                                         class="em-more-item">
                                                     <i class="fa-solid fa-key"></i>
                                                     Reset Password
                                                 </button>
+
                                                 @if (!empty($emp['is_active']))
                                                     <button type="button" wire:click="openDeactivate({{ $emp['id'] }})"
                                                             class="em-more-item em-more-item--danger">

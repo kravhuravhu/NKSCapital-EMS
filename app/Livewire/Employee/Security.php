@@ -27,6 +27,8 @@ class Security extends Component
     public bool $enabling2fa = false;
     public bool $verifying2fa = false;
 
+    public int $passkeyCount = 0;
+
     public function mount(): void
     {
         // load() fires from wire:init.
@@ -51,6 +53,10 @@ class Security extends Component
         if ($activity['ok']) {
             $this->activity = $activity['data']['activity'] ?? [];
         }
+
+        $this->passkeyCount = method_exists(auth()->user(), 'passkeys')
+            ? auth()->user()->passkeys()->count()
+            : 0;
 
         $this->loading = false;
     }

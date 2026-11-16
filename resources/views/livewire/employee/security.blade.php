@@ -40,6 +40,26 @@
                     </div>
 
                     <div class="sc-row">
+                        <div class="sc-row-icon"><i class="fa-solid fa-fingerprint"></i></div>
+                        <div class="sc-row-body">
+                            <strong>
+                                Passkeys
+                                @if ($passkeyCount > 0)
+                                    <x-nks.badge tone="success">{{ $passkeyCount }} enrolled</x-nks.badge>
+                                @else
+                                    <x-nks.badge tone="muted">Not enrolled</x-nks.badge>
+                                @endif
+                            </strong>
+                            <span>Sign in with your phone's biometrics instead of a code.</span>
+                        </div>
+                        @if (Route::has('passkeys.index'))
+                            <a href="{{ route('passkeys.index') }}" class="nks-btn nks-btn--outline nks-btn--sm">
+                                Manage
+                            </a>
+                        @endif
+                    </div>
+
+                    <div class="sc-row">
                         <div class="sc-row-icon"><i class="fa-solid fa-desktop"></i></div>
                         <div class="sc-row-body">
                             <strong>Active sessions</strong>

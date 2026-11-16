@@ -46,8 +46,12 @@ class EnsureTwoFactorEnrolled
             return $next($request);
         }
 
+        if ($request->routeIs('portal.security') || $request->routeIs('portal.employee.security')) {
+            return $next($request);
+        }
+
         return redirect()
-            ->route('portal.employee.security')
+            ->route('portal.security')
             ->with('error', 'You must enable a second factor (authenticator app or passkey) before continuing.');
     }
 }
