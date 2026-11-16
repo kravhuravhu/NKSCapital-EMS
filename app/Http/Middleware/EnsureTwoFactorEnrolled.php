@@ -17,6 +17,12 @@ class EnsureTwoFactorEnrolled
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Impersonation is an admin-controlled action that already passed 2FA
+        // on the admin side. Do not gate the target user's pages on enrollment.
+        if (session()->has('impersonated_by_user_id')) {
+            return $next($request);
+        }
+
         $user = Auth::user();
 
         if (!$user) {

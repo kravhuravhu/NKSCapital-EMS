@@ -1,19 +1,16 @@
-<div class="page-dashboard">
+<div class="page-dashboard" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" />
 
     @if ($loading)
-        <x-nks.spinner block label="Loading admin dashboard…" />
-    @elseif ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
+        <div class="panel" style="min-height: 400px;"></div>
     @else
         <div class="dash-stats">
             <div class="dash-stat">
                 <div class="dash-stat-head"><i class="fa-solid fa-users-cog"></i><span>Total Users</span></div>
                 <div class="dash-stat-value">{{ $data['users']['total'] ?? 0 }}</div>
                 <div class="dash-stat-note">
-                    Active: {{ $data['users']['active'] ?? 0 }} · Inactive: {{ $data['users']['inactive'] ?? 0 }}
+                    Active: {{ $data['users']['active'] ?? 0 }} &middot; Inactive: {{ $data['users']['inactive'] ?? 0 }}
                 </div>
             </div>
             <div class="dash-stat">
@@ -44,7 +41,7 @@
                             <i class="fa-solid fa-user"></i>
                             <div class="dash-activity-text">
                                 {{ $user['first_name'] ?? '' }} {{ $user['last_name'] ?? '' }}
-                                — {{ ucfirst($user['role'] ?? '') }}
+                                &middot; {{ ucfirst($user['role'] ?? '') }}
                             </div>
                             <div class="dash-activity-time">
                                 {{ isset($user['created_at']) ? \Carbon\Carbon::parse($user['created_at'])->diffForHumans() : '' }}
@@ -54,6 +51,31 @@
                         <div class="dash-activity-item">
                             <i class="fa-solid fa-circle-info"></i>
                             <div class="dash-activity-text">No recent users</div>
+                        </div>
+                    @endforelse
+                </div>
+
+                <div class="panel">
+                    <h2>Recent Activity</h2>
+                    @forelse ($recentActivity as $entry)
+                        @php
+                            $actor = $entry['user'] ?? [];
+                            $actorName = trim(($actor['first_name'] ?? '') . ' ' . ($actor['last_name'] ?? ''));
+                        @endphp
+                        <div class="dash-activity-item">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <div class="dash-activity-text">
+                                <strong>{{ $actorName ?: 'System' }}</strong>
+                                &middot; {{ $entry['action'] ?? '' }}
+                            </div>
+                            <div class="dash-activity-time">
+                                {{ isset($entry['timestamp']) ? \Carbon\Carbon::parse($entry['timestamp'])->diffForHumans() : '' }}
+                            </div>
+                        </div>
+                    @empty
+                        <div class="dash-activity-item">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <div class="dash-activity-text">No recent activity</div>
                         </div>
                     @endforelse
                 </div>
@@ -75,7 +97,7 @@
                         <div class="dash-progress-metric">
                             <div class="metric-label">Last Audit</div>
                             <div class="metric-value" style="font-size: 11px;">
-                                {{ $sys['last_audit'] ?? '—' }}
+                                {{ $sys['last_audit'] ?? '-' }}
                             </div>
                         </div>
                     </div>

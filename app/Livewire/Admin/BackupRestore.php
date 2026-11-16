@@ -31,7 +31,7 @@ class BackupRestore extends Component
     public function mount(): void
     {
         $this->isSuperAdmin = auth()->user()->role === 'super_admin';
-        $this->load();
+         // load() fires from wire:init.
     }
 
     public function load(): void

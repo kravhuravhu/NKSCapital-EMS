@@ -41,7 +41,7 @@ class ClientTemplates extends Component
     {
         $this->resetUploadForm();
         $this->loadClients();
-        $this->load();
+         // load() fires from wire:init.
     }
 
     public function loadClients(): void

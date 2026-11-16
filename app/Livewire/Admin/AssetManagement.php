@@ -63,7 +63,7 @@ class AssetManagement extends Component
         $this->resetRegisterForm();
         $this->loadStats();
         $this->loadEmployees();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     protected function loadStats(): void

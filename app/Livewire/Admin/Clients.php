@@ -50,7 +50,7 @@ class Clients extends Component
     public function mount(): void
     {
         $this->resetCreateForm();
-        $this->load();
+         // load() fires from wire:init.
     }
 
     public function load(): void

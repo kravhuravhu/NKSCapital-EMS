@@ -54,6 +54,8 @@ use App\Livewire\Admin\LeaveReasons;
 use App\Livewire\Employee\TimesheetHistory;
 use App\Support\RouteRole;
 use App\Http\Middleware\EnsureTwoFactorEnrolled;
+use App\Http\Controllers\API\ImpersonationController;
+use App\Livewire\Admin\SupportConsole;
 
 Route::get('/', function () {
     return auth()->check()
@@ -148,6 +150,7 @@ Route::middleware(['auth', 'api.token', '2fa.enrolled'])->prefix('portal')->name
             Route::get('/system-config', SystemConfig::class)->name('system-config');
             Route::get('/queue-monitor', QueueMonitor::class)->name('queue-monitor');
             Route::get('/backup-restore', BackupRestore::class)->name('backup-restore');
+            Route::get('/support-console', SupportConsole::class)->name('support-console');
         });
 
     // recruiter
@@ -162,4 +165,6 @@ Route::middleware(['auth', 'api.token', '2fa.enrolled'])->prefix('portal')->name
             Route::get('/convert', ConvertToEmployee::class)->name('convert');
             Route::get('/reports', Reports::class)->name('reports');
         });
+
+    Route::post('/impersonation/stop', [ImpersonationController::class, 'stop'])->name('impersonation.stop');
 });

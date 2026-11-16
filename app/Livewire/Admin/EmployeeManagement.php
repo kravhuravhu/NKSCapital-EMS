@@ -73,7 +73,7 @@ class EmployeeManagement extends Component
     {
         $this->resetCreateForm();
         $this->loadReferenceData();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function loadReferenceData(): void
