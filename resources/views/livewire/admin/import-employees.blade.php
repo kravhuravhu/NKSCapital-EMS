@@ -86,7 +86,7 @@
 
         @if ($imported)
             <div style="margin-top: 16px;">
-                <button type="button" wire:click="reset" class="nks-btn nks-btn--outline">
+                <button type="button" wire:click="resetImport" class="nks-btn nks-btn--outline">
                     <i class="fa-solid fa-rotate-left"></i>
                     Import another file
                 </button>

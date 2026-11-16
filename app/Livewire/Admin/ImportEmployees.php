@@ -30,14 +30,16 @@ class ImportEmployees extends Component
 
     public function mount(): void
     {
-        // nothing to preload
+        // Nothing to preload.
     }
 
     public function downloadTemplate()
     {
         return response()->streamDownload(function () {
             echo EmployeeCsvImportService::templateCsv();
-        }, 'employee-import-template.csv', ['Content-Type' => 'text/csv']);
+        }, 'employee-import-template.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function previewImport(): void
@@ -52,12 +54,18 @@ class ImportEmployees extends Component
 
         $this->loading = true;
 
-        $response = Api::upload('/admin/employee-import/preview', [], ['file' => $this->csvFile]);
+        $response = Api::upload(
+            '/admin/employee-import/preview',
+            [],
+            ['file' => $this->csvFile]
+        );
 
         if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
+
             $this->error = collect($errs)->flatten()->first()
                 ?: ($response['message'] ?? 'Preview failed.');
+
             $this->loading = false;
             return;
         }
@@ -65,8 +73,17 @@ class ImportEmployees extends Component
         $rows = $response['data']['rows'] ?? [];
 
         $this->preview = $rows;
-        $this->previewCreated = count(array_filter($rows, fn ($r) => ($r['status'] ?? '') === 'ready'));
-        $this->previewSkipped = count(array_filter($rows, fn ($r) => ($r['status'] ?? '') === 'error'));
+
+        $this->previewCreated = count(array_filter(
+            $rows,
+            fn ($r) => ($r['status'] ?? '') === 'ready'
+        ));
+
+        $this->previewSkipped = count(array_filter(
+            $rows,
+            fn ($r) => ($r['status'] ?? '') === 'error'
+        ));
+
         $this->hasPreviewed = true;
         $this->loading = false;
     }
@@ -108,42 +125,63 @@ class ImportEmployees extends Component
 
         $this->loading = true;
 
-        $response = Api::upload('/admin/employee-import/import', [
-            'password' => $this->confirmPassword,
-        ], ['file' => $this->csvFile]);
+        $response = Api::upload(
+            '/admin/employee-import/import',
+            ['password' => $this->confirmPassword],
+            ['file' => $this->csvFile]
+        );
 
         if (! $response['ok']) {
             $errs = $response['errors'] ?? [];
+
             $this->error = collect($errs)->flatten()->first()
                 ?: ($response['message'] ?? 'Import failed.');
+
             $this->loading = false;
             return;
         }
 
         $this->importResult = $response['data']['rows'] ?? [];
-        $this->flash = ($response['data']['created'] ?? 0) . ' employees created, '
-            . ($response['data']['skipped'] ?? 0) . ' skipped.';
+
+        $this->flash = ($response['data']['created'] ?? 0)
+            . ' employees created, '
+            . ($response['data']['skipped'] ?? 0)
+            . ' skipped.';
+
         $this->imported = true;
+
         $this->closeConfirm();
         $this->loading = false;
     }
 
-    public function reset(): void
+    /**
+     * Reset the employee CSV import form.
+     */
+    public function resetImport(): void
     {
         $this->csvFile = null;
         $this->preview = [];
         $this->previewCreated = 0;
         $this->previewSkipped = 0;
         $this->hasPreviewed = false;
+
         $this->imported = false;
         $this->importResult = [];
+
         $this->flash = null;
         $this->error = null;
+
+        $this->confirmPassword = '';
+        $this->showConfirm = false;
+        $this->loading = false;
     }
 
     public function render()
     {
         return view('livewire.admin.import-employees')
-            ->layout('layouts.portal', ['title' => 'Import Employees', 'breadcrumb' => 'Import Employees']);
+            ->layout('layouts.portal', [
+                'title' => 'Import Employees',
+                'breadcrumb' => 'Import Employees',
+            ]);
     }
 }
