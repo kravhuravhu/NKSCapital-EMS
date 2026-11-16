@@ -2,9 +2,11 @@
 
 @php $user = auth()->user(); @endphp
 
-<div class="nks-app"
+<div class="nks-app {{ session()->has('impersonated_by_user_id') ? 'is-impersonating' : '' }}"
      x-data="nksShell()"
      x-init="init()">
+
+    @include('components.nks.impersonation-banner')
 
     <x-nks.sidebar :user="$user" />
 

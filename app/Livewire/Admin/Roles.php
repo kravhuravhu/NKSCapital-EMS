@@ -30,10 +30,12 @@ class Roles extends Component
     public array $permSelected = [];
     public string $permSearch = '';
 
+    public string $deletePassword = '';
+
     public function mount(): void
     {
         $this->resetCreateForm();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
@@ -175,15 +177,29 @@ class Roles extends Component
         $this->error = null;
         if (!$this->deleteId) return;
 
+        if (empty($this->deletePassword)) {
+            $this->error = 'Enter your admin password to confirm.';
+            return;
+        }
+
+        if (! Auth::validate([
+            'email' => auth()->user()->email,
+            'password' => $this->deletePassword,
+        ])) {
+            $this->error = 'Password is incorrect.';
+            return;
+        }
+
         $response = Api::delete('/admin/roles/delete/' . $this->deleteId);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Failed to delete role.';
             $this->closeDelete();
             return;
         }
 
         $this->flash = 'Role deleted.';
+        $this->deletePassword = '';
         $this->closeDelete();
         $this->load();
     }

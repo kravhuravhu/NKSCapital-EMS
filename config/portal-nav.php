@@ -295,6 +295,12 @@ return [
                     'roles' => ['admin', 'super_admin'],
                 ],
                 [
+                    'label' => 'Support Console',
+                    'route' => 'portal.admin.support-console',
+                    'icon' => 'fa-solid fa-life-ring',
+                    'roles' => ['admin', 'super_admin'],
+                ],
+                [
                     'label' => 'Queue Monitor',
                     'route' => 'portal.admin.queue-monitor',
                     'icon' => 'fa-solid fa-list-check',

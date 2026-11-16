@@ -36,6 +36,7 @@ use App\Http\Controllers\API\AIController;
 use App\Http\Controllers\API\SearchController;
 use App\Http\Controllers\API\HalfDayController;
 use App\Http\Controllers\API\LeaveReasonsController;
+use App\Http\Controllers\API\SupportController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -529,6 +530,16 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     });
 
     Route::get('search', [SearchController::class, 'search']);
+
+    Route::prefix('admin/support')->middleware(['role:admin,super_admin'])->group(function () {
+        Route::post('search', [SupportController::class, 'search']);
+        Route::get('users/{id}', [SupportController::class, 'userDetail'])->whereNumber('id');
+        Route::post('users/{id}/force-logout', [SupportController::class, 'forceLogout'])->whereNumber('id');
+        Route::post('users/{id}/reset-2fa', [SupportController::class, 'reset2fa'])->whereNumber('id');
+        Route::post('users/{id}/employee-number', [SupportController::class, 'updateEmployeeNumber'])->whereNumber('id');
+        Route::post('users/{id}/relink', [SupportController::class, 'relink'])->whereNumber('id');
+        Route::post('users/{id}/impersonate', [SupportController::class, 'impersonate'])->whereNumber('id');
+    });
 
     // Role management - Admin only
     Route::prefix('admin/roles')

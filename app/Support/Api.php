@@ -64,6 +64,10 @@ class Api
             $request->headers->set('Authorization', 'Bearer ' . $token);
         }
 
+        if ($impersonatedBy = Session::get('impersonated_by_user_id')) {
+            $request->headers->set('X-Impersonated-By', (string) $impersonatedBy);
+        }
+
         $request->headers->set('X-Requested-With', 'XMLHttpRequest');
         $request->headers->set('X-Internal-Request', '1');
 
@@ -94,6 +98,10 @@ class Api
 
         if ($token = self::token()) {
             $request->headers->set('Authorization', 'Bearer ' . $token);
+        }
+
+        if ($impersonatedBy = Session::get('impersonated_by_user_id')) {
+            $request->headers->set('X-Impersonated-By', (string) $impersonatedBy);
         }
 
         $request->files->replace($files);

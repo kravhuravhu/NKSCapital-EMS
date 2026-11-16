@@ -35,6 +35,7 @@ class AuditLog extends Model
         'severity',
         'environment',
         'session_id',
+        'impersonated_by_user_id',
     ];
 
     protected $casts = [
@@ -47,6 +48,7 @@ class AuditLog extends Model
         'response_size' => 'integer',
         'memory_peak_kb' => 'integer',
         'is_slow' => 'boolean',
+        'impersonated_by_user_id' => 'integer',
     ];
 
     /**

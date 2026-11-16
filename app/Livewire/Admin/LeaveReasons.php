@@ -24,7 +24,7 @@ class LeaveReasons extends Component
     public function mount(): void
     {
         $this->resetForm();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void

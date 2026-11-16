@@ -34,7 +34,8 @@ class AuditService
         ?int $memoryPeakKb = null,
         bool $isSlow = false,
         ?string $severity = null,
-        ?string $sessionId = null
+        ?string $sessionId = null,
+        ?int $impersonatedByUserId = null
     ): AuditLog {
         return DB::transaction(function () use (
             $action, $tableName, $recordId, $oldValues, $newValues, $userId,
@@ -61,6 +62,8 @@ class AuditService
             $timestamp = now();
             $severity = $severity ?? self::severityFromLogType($logType);
             $environment = app()->environment();
+
+            $impersonatedByUserId = $impersonatedByUserId ?? self::resolveImpersonatedBy();
 
             $payload = self::buildPayload([
                 'previous_hash' => $previousHash,
@@ -109,6 +112,7 @@ class AuditService
                 'session_id' => $sessionId,
                 'error_message' => $errorMessage,
                 'error_trace' => $errorTrace,
+                'impersonated_by_user_id' => $impersonatedByUserId,
             ]);
         });
     }
@@ -243,5 +247,21 @@ class AuditService
             'success' => 'success',
             default => 'info',
         };
+    }
+
+    /**
+     * When the request carries X-Impersonated-By (set by Api::dispatch from
+     * session during an admin impersonation session), tag the entry so it is
+     * obvious the action was performed on behalf of, not by, the target user.
+     */
+    protected static function resolveImpersonatedBy(): ?int
+    {
+        if (app()->runningInConsole()) {
+            return null;
+        }
+
+        $header = request()->header('X-Impersonated-By');
+
+        return $header !== null && $header !== '' ? (int) $header : null;
     }
 }

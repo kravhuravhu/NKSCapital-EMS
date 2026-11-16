@@ -37,10 +37,12 @@ class EmployeeTypes extends Component
     public ?int $deleteId = null;
     public string $deleteName = '';
 
+    public string $deletePassword = '';
+
     public function mount(): void
     {
         $this->resetCreateForm();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
@@ -198,15 +200,29 @@ class EmployeeTypes extends Component
         $this->error = null;
         if (!$this->deleteId) return;
 
+        if (empty($this->deletePassword)) {
+            $this->error = 'Enter your admin password to confirm.';
+            return;
+        }
+
+        if (! Auth::validate([
+            'email' => auth()->user()->email,
+            'password' => $this->deletePassword,
+        ])) {
+            $this->error = 'Password is incorrect.';
+            return;
+        }
+
         $response = Api::delete('/admin/employee-type/delete/' . $this->deleteId);
 
-        if (!$response['ok']) {
+        if (! $response['ok']) {
             $this->error = $response['message'] ?? 'Failed to delete employee type.';
             $this->closeDelete();
             return;
         }
 
         $this->flash = 'Employee type deleted.';
+        $this->deletePassword = '';
         $this->closeDelete();
         $this->load();
     }

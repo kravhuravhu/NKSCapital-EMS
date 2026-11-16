@@ -68,7 +68,7 @@ class Projects extends Component
     {
         $this->resetCreateForm();
         $this->loadReferenceData();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     protected function loadReferenceData(): void

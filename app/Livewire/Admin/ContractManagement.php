@@ -59,7 +59,7 @@ class ContractManagement extends Component
     {
         $this->resetUploadForm();
         $this->loadEmployees();
-        $this->load();
+         // load() fires from wire:init.
     }
 
     protected function loadEmployees(): void
