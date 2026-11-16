@@ -54,8 +54,12 @@ class Offers extends Component
     public function mount(): void
     {
         $this->resetGenerateForm();
+    }
+
+    public function initPage(): void
+    {
         $this->loadReferenceData();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     protected function loadReferenceData(): void

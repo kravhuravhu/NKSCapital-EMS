@@ -37,6 +37,7 @@ use App\Http\Controllers\API\SearchController;
 use App\Http\Controllers\API\HalfDayController;
 use App\Http\Controllers\API\LeaveReasonsController;
 use App\Http\Controllers\API\SupportController;
+use App\Http\Controllers\API\OnboardingController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -539,6 +540,12 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('users/{id}/employee-number', [SupportController::class, 'updateEmployeeNumber'])->whereNumber('id');
         Route::post('users/{id}/relink', [SupportController::class, 'relink'])->whereNumber('id');
         Route::post('users/{id}/impersonate', [SupportController::class, 'impersonate'])->whereNumber('id');
+        Route::post('users/{id}/assign-company-email', [SupportController::class, 'assignCompanyEmail'])->whereNumber('id');
+    });
+
+    Route::prefix('employee/{userId}/onboarding')->whereNumber('userId')->group(function () {
+        Route::get('/', [OnboardingController::class, 'show']);
+        Route::put('/', [OnboardingController::class, 'update']);
     });
 
     // Role management - Admin only

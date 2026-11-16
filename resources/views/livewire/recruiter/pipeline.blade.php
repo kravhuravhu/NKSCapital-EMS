@@ -1,17 +1,6 @@
-<div class="page-pipeline">
-    @if ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-pipeline" wire:init="initPage">
+    <x-nks.loading-overlay targets="initPage" />
+    <x-nks.notice-stack :error="$error" />
 
     @if ($loading)
         <x-nks.spinner block label="Loading pipeline..." />
@@ -107,11 +96,9 @@
                         $count = count($rows);
                     @endphp
                     <div class="pl-column"
-                         x-data="{ dragover: false }"
-                         @dragover.prevent="dragover = true"
-                         @dragleave="dragover = false"
-                         @drop.prevent="dragover = false; const id = $event.dataTransfer.getData('text/plain'); if (id) { $wire.moveCard(id, '{{ $stage }}'); }"
-                         :class="dragover ? 'is-dragover' : ''">
+                         @dragover.prevent="$el.classList.add('is-dragover')"
+                         @dragleave="if (! $el.contains($event.relatedTarget)) $el.classList.remove('is-dragover')"
+                         @drop.prevent=" $el.classList.remove('is-dragover'); const id = $event.dataTransfer.getData('text/plain'); if (id) { $wire.moveCard(id, '{{ $stage }}'); }">
                         <div class="pl-column-head pl-column-head--{{ self::stageTone($stage) }}">
                             <div class="pl-column-title">{{ $stageLabels[$stage] }}</div>
                             <span class="pl-column-count">{{ $count }}</span>
@@ -131,7 +118,8 @@
                                     <div class="pl-card"
                                          wire:key="pl-card-{{ $c['id'] }}"
                                          draggable="{{ $canMove ? 'true' : 'false' }}"
-                                         @dragstart="$event.dataTransfer.setData('text/plain', '{{ $c['id'] }}'); $event.dataTransfer.effectAllowed = 'move';"
+                                         @dragstart="$event.dataTransfer.setData('text/plain', '{{ $c['id'] }}'); $event.dataTransfer.effectAllowed = 'move'; $el.classList.add('is-dragging');"
+                                         @dragend="$el.classList.remove('is-dragging');"
                                          @click="$wire.openView({{ $c['id'] }})">
                                         <div class="pl-card-head">
                                             <div class="pl-card-name">

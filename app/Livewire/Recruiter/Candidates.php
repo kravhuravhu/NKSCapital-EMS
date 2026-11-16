@@ -53,8 +53,12 @@ class Candidates extends Component
     public function mount(): void
     {
         $this->resetCreateForm();
+    }
+
+    public function initPage(): void
+    {
         $this->loadRequisitions();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     protected function loadRequisitions(): void

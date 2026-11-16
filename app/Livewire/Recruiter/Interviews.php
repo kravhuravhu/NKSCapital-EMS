@@ -54,8 +54,13 @@ class Interviews extends Component
     {
         $this->calendarMonth = now()->format('Y-m');
         $this->resetScheduleForm();
-        $this->loadReferenceData();
         $this->loadList();
+    }
+
+    public function initPage(): void
+    {
+        $this->loadReferenceData();
+        // load() fires from wire:init.
     }
 
     protected function loadReferenceData(): void

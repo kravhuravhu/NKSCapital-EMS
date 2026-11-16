@@ -56,6 +56,12 @@
                     @else
                         <x-nks.badge tone="muted">No 2FA</x-nks.badge>
                     @endif
+                    @if (! empty($selectedUser['pending_company_email']))
+                        <x-nks.badge tone="gold">Awaiting company email</x-nks.badge>
+                    @endif
+                    @if (! empty($selectedUser['company_email']))
+                        <x-nks.badge tone="blue">{{ $selectedUser['company_email'] }}</x-nks.badge>
+                    @endif
                 </div>
             </div>
 
@@ -79,6 +85,10 @@
                 <button type="button" wire:click="openRelink" class="nks-btn nks-btn--outline nks-btn--sm">
                     <i class="fa-solid fa-link"></i>
                     Re-link
+                </button>
+                <button type="button" wire:click="openCompanyEmail" class="nks-btn nks-btn--outline nks-btn--sm">
+                    <i class="fa-solid fa-at"></i>
+                    {{ ! empty($selectedUser['pending_company_email']) ? 'Assign company email' : 'Edit company email' }}
                 </button>
             </div>
 
@@ -359,6 +369,44 @@
                             class="nks-btn nks-btn--primary">
                         <i class="fa-solid fa-check" wire:loading.remove wire:target="confirmRelink"></i>
                         <span class="nks-btn-spinner" wire:loading wire:target="confirmRelink"></span>
+                        Save
+                    </button>
+                </footer>
+            </div>
+        </div>
+    @endif
+
+    @if ($showCompanyEmail)
+        <div class="nks-modal-backdrop">
+            <div class="nks-modal">
+                <header class="nks-modal-head">
+                    <h3>Assign company email</h3>
+                    <button type="button" wire:click="closeCompanyEmail" class="nks-modal-close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </header>
+                <div class="nks-modal-body">
+                    <div class="nks-field">
+                        <label class="nks-label">Company email address <span class="nks-required">*</span></label>
+                        <input type="email" wire:model="companyEmailInput" class="nks-input"
+                               placeholder="firstname.lastname@nkscapital.co.za">
+                    </div>
+                    <label class="nks-checkbox">
+                        <input type="checkbox" wire:model="updateLoginEmail">
+                        <span>Also make this the login email and send fresh credentials</span>
+                    </label>
+                    <div class="nks-field">
+                        <label class="nks-label">Your admin password <span class="nks-required">*</span></label>
+                        <input type="password" wire:model="companyEmailPassword" class="nks-input" autocomplete="current-password">
+                    </div>
+                </div>
+                <footer class="nks-modal-foot">
+                    <button type="button" wire:click="closeCompanyEmail" class="nks-btn nks-btn--outline">Cancel</button>
+                    <button type="button" wire:click="confirmCompanyEmail"
+                            wire:loading.attr="disabled" wire:target="confirmCompanyEmail"
+                            class="nks-btn nks-btn--primary">
+                        <i class="fa-solid fa-check" wire:loading.remove wire:target="confirmCompanyEmail"></i>
+                        <span class="nks-btn-spinner" wire:loading wire:target="confirmCompanyEmail"></span>
                         Save
                     </button>
                 </footer>

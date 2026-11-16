@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Support\RoleCheck;
 
 class RecruitmentController extends Controller
 {
@@ -650,14 +651,17 @@ class RecruitmentController extends Controller
     protected function requireRole(array $roles): User
     {
         $user = Auth::user();
-        if (!in_array($user->role, $roles)) {
+
+        if (!RoleCheck::has($user, $roles)) {
             AuditService::logWarning('RECRUITMENT_ACCESS_DENIED', 'recruitment', 0, [
                 'actor_id' => $user->id,
                 'required' => $roles,
                 'actual' => $user->role,
+                'path' => request()->path(),
             ]);
             abort(response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403));
         }
+
         return $user;
     }
 }

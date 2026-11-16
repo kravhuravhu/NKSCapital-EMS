@@ -17,6 +17,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\AuditService;
 use App\Services\EmployeeNumberService;
 use App\Models\LeaveConfig;
+use App\Services\OnboardingService;
+use Illuminate\Support\Facades\Mail;
 
 class OfferService
 {
@@ -269,7 +271,7 @@ class OfferService
                 . config('app.name');
 
             try {
-                \Illuminate\Support\Facades\Mail::raw($body, function ($mail) use ($email, $subject, $offer) {
+                Mail::raw($body, function ($mail) use ($email, $subject, $offer) {
                     $mail->to($email)
                         ->subject($subject)
                         ->attach(
@@ -326,7 +328,6 @@ class OfferService
 
             $requisition = $candidate->requisition;
 
-            // Determine employee_type & service_type
             $employeeType = $data['employee_type']
                 ?? $requisition->employee_type_target
                 ?? 'pr';
@@ -340,9 +341,9 @@ class OfferService
             // Generate a temporary password
             $tempPassword = Str::random(12);
 
-            // pull default entitlements so new employees are immediately usable
+            // pull default leave entitlements from config
             $annualConfig = LeaveConfig::where('leave_type', 'annual')->first();
-            $sickConfig   = LeaveConfig::where('leave_type', 'sick')->first();
+            $sickConfig = LeaveConfig::where('leave_type', 'sick')->first();
             $familyConfig = LeaveConfig::where('leave_type', 'family')->first();
 
             $employee = User::create([
@@ -362,15 +363,31 @@ class OfferService
                 'project_id' => $data['project_id'] ?? null,
                 'hire_date' => $offer->start_date?->toDateString() ?? now()->toDateString(),
                 'is_active' => true,
+                'pending_company_email' => true,
                 'leave_balance_annual' => (float) ($annualConfig?->default_entitlement ?? 0),
-                'leave_balance_sick'   => (float) ($sickConfig?->default_entitlement ?? 0),
+                'leave_balance_sick' => (float) ($sickConfig?->default_entitlement ?? 0),
                 'leave_balance_family' => (float) ($familyConfig?->default_entitlement ?? 0),
             ]);
 
-            // Assign Spatie role
             $employee->assignRole($data['role'] ?? 'employee');
 
-            // link candidate → employee and close the funnel
+            // Draft employment contract pending signature
+            Contract::create([
+                'user_id' => $employee->id,
+                'version' => 1,
+                'file_path' => '',
+                'effective_date' => $offer->start_date?->toDateString() ?? now()->toDateString(),
+                'expiry_date' => null,
+                'salary_annual' => $offer->salary_offered,
+                'notice_period_days' => $offer->notice_period_days ?? 30,
+                'position' => $offer->position ?? $requisition->title,
+                'contract_type' => $this->mapOfferContractType($offer->contract_type),
+                'status' => 'pending_signature',
+                'uploaded_by' => $actor->id,
+            ]);
+
+            app(OnboardingService::class)->seed($employee);
+
             $candidate->hired_employee_id = $employee->id;
             $candidate->converted_from_offer_id = $offer->id;
             $candidate->conversion_notes = $data['notes'] ?? null;
@@ -387,24 +404,20 @@ class OfferService
                     'offer_id' => $offer->id,
                     'employee_number' => $employeeNumber,
                     'employee_type' => $employeeType,
-                    'service_type' => $serviceType,
-                    'department' => $employee->department,
-                    'position' => $employee->position,
+                    'pending_company_email' => true,
                 ],
                 logType: 'success'
             );
 
-            // welcome notification for the new employee
             Notification::create([
                 'user_id' => $employee->id,
                 'type' => 'WELCOME_EMPLOYEE',
                 'title' => 'Welcome to ' . config('app.name'),
-                'message' => "Welcome aboard! Your employee number is {$employeeNumber}. Check your email for login credentials.",
+                'message' => "Welcome aboard! Your employee number is {$employeeNumber}. IT will contact you with your company email.",
                 'reference_id' => $employee->id,
                 'reference_type' => User::class,
             ]);
 
-            // manager notification
             if ($employee->manager_id) {
                 Notification::create([
                     'user_id' => $employee->manager_id,
@@ -416,21 +429,21 @@ class OfferService
                 ]);
             }
 
-            // welcome email with credentials — previously the notification promised
-            // this but no email was actually being sent
+            // Welcome email to personal address. Login credentials are NOT sent.
+            // An administrator will provision a company email separately and the
+            // credentials will be delivered at that time through the support console.
             try {
-                \Illuminate\Support\Facades\Mail::raw(
+                Mail::raw(
                     "Dear {$employee->first_name},\n\n"
                     . "Welcome to " . config('app.name') . "!\n\n"
-                    . "Your employee number is: {$employeeNumber}\n"
-                    . "Your login email: {$employee->email}\n"
-                    . "Your temporary password: {$tempPassword}\n\n"
-                    . "Please log in at " . url('/login') . " and change your password on first sign-in.\n\n"
+                    . "Your employee number is: {$employeeNumber}\n\n"
+                    . "Your account is being prepared. Our IT team will contact you shortly with your company email address and login credentials.\n\n"
+                    . "If you have questions in the meantime, reply to this email and your onboarding manager will assist.\n\n"
                     . "Kind regards,\n"
                     . config('app.name'),
                     function ($mail) use ($employee) {
                         $mail->to($employee->email)
-                            ->subject('Welcome to ' . config('app.name') . ' — Your Login Details');
+                            ->subject('Welcome to ' . config('app.name'));
                     }
                 );
 
@@ -438,11 +451,10 @@ class OfferService
                     action: 'WELCOME_EMAIL_SENT',
                     tableName: 'users',
                     recordId: $employee->id,
-                    newValues: ['email' => $employee->email],
+                    newValues: ['email' => $employee->email, 'contains_credentials' => false],
                     logType: 'success'
                 );
             } catch (\Throwable $e) {
-                // do not fail the whole conversion if mail bounces — admin can still copy the password from the UI
                 AuditService::log(
                     action: 'WELCOME_EMAIL_FAILED',
                     tableName: 'users',
@@ -458,6 +470,17 @@ class OfferService
                 'temporary_password' => $tempPassword,
             ];
         });
+    }
+
+    protected function mapOfferContractType(?string $type): string
+    {
+        return match ($type) {
+            'permanent' => 'permanent',
+            'fixed_term', 'contract' => 'fixed_term',
+            'consulting' => 'consulting',
+            'internship' => 'internship',
+            default => 'permanent',
+        };
     }
 
     /**
@@ -535,16 +558,5 @@ class OfferService
             'contract' => 'contractor',
             default => 'permanent',
         };
-    }
-
-    protected function generateEmployeeNumber(): string
-    {
-        $prefix = 'EMP' . date('Y');
-        $last = User::where('employee_number', 'like', $prefix . '%')
-            ->orderBy('id', 'desc')
-            ->value('employee_number');
-
-        $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
-        return $prefix . str_pad($seq, 4, '0', STR_PAD_LEFT);
     }
 }

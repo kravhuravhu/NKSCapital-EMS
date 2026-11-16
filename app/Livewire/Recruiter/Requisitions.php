@@ -57,9 +57,13 @@ class Requisitions extends Component
 
     public function mount(): void
     {
-        $this->resetCreateForm();
+        $this->resetCreateForm();  
+    }
+
+    public function initPage(): void
+    {
         $this->loadReferenceData();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     protected function loadReferenceData(): void

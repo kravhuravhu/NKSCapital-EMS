@@ -26,7 +26,7 @@ class Reports extends Component
     {
         $this->from = now()->subDays(90)->format('Y-m-d');
         $this->to = now()->format('Y-m-d');
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
