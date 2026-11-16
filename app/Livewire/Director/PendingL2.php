@@ -33,7 +33,7 @@ class PendingL2 extends Component
         if (! in_array(auth()->user()->role, ['director', 'operational_manager', 'admin', 'super_admin'], true)) {
             abort(403, 'Operational Manager or Director role required.');
         }
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void

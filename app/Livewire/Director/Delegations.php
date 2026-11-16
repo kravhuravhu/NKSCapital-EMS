@@ -37,7 +37,7 @@ class Delegations extends Component
     {
         $this->resetCreateForm();
         $this->loadStats();
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function resetCreateForm(): void

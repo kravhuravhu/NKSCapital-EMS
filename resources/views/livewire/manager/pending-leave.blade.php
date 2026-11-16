@@ -1,5 +1,5 @@
 <div class="page-pending-leave" wire:init="initPage">
-    <x-nks.loading-overlay targets="initPage" />
+    <x-nks.loading-overlay :loading="$loading" targets="initPage" />
     <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)

@@ -25,8 +25,7 @@ class TeamAssets extends Component
 
     public function mount(): void
     {
-        $this->loadDepartments();
-        // load() fires from wire:init.
+        // initPage() fires from wire:init.
     }
 
     public function initPage(): void

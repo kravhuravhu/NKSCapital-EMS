@@ -1,5 +1,5 @@
 <div class="page-team-reports" wire:init="load">
-    <x-nks.loading-overlay targets="load" />
+    <x-nks.loading-overlay :loading="$loading" targets="load" />
     <x-nks.notice-stack :error="$error" :success="$flash" />
 
     <div class="panel rp-panel">
