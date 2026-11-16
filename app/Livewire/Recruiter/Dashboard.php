@@ -12,25 +12,33 @@ class Dashboard extends Component
 
     public array $data = [];
 
+    public array $recentActivity = [];
+
     public function mount(): void
     {
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
     {
         $this->loading = true;
-        $this->error   = null;
+        $this->error = null;
 
         $dashboard = Api::get('/dashboard/recruiter');
 
         if (!$dashboard['ok']) {
-            $this->error   = $dashboard['message'] ?? 'Unable to load dashboard.';
+            $this->error = $dashboard['message'] ?? 'Unable to load dashboard.';
             $this->loading = false;
             return;
         }
 
         $this->data = $dashboard['data']['widgets'] ?? [];
+
+        $activity = Api::get('/dashboard/recent-activity', ['limit' => 8]);
+        if ($activity['ok']) {
+            $this->recentActivity = $activity['data']['activity'] ?? [];
+        }
+
         $this->loading = false;
     }
 

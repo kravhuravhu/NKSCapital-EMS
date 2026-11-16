@@ -1,18 +1,7 @@
-<div class="page-offers">
-    @if ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
-
+<div class="page-offers" wire:init="initPage">
+    <x-nks.loading-overlay targets="initPage" />
+    <x-nks.notice-stack :error="$error" />
+    
     <div class="pl-page-stats">
         <div class="pl-page-stat">
             <div class="pl-page-stat-icon"><i class="fa-solid fa-file-signature" aria-hidden="true"></i></div>

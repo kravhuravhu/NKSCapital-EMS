@@ -29,7 +29,6 @@ class ConvertToEmployee extends Component
     public function mount(): void
     {
         $this->offerId = (int) request()->query('offer_id', 0);
-        $this->loadReferenceData();
         $this->loadAcceptedOffers();
 
         if ($this->offerId) {
@@ -37,6 +36,12 @@ class ConvertToEmployee extends Component
         }
 
         $this->loading = false;
+    }
+
+    public function initPage(): void
+    {
+        $this->loadReferenceData();
+        // load() fires from wire:init.
     }
 
     protected function loadReferenceData(): void

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Support\RoleCheck;
 
 class OfferController extends Controller
 {
@@ -511,14 +512,17 @@ class OfferController extends Controller
     protected function requireRole(array $roles): User
     {
         $user = Auth::user();
-        if (!in_array($user->role, $roles)) {
+
+        if (!RoleCheck::has($user, $roles)) {
             AuditService::logWarning('OFFER_ACCESS_DENIED', 'offers', 0, [
                 'actor_id' => $user->id,
                 'required' => $roles,
                 'actual' => $user->role,
+                'path' => request()->path(),
             ]);
             abort(response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403));
         }
+
         return $user;
     }
 }

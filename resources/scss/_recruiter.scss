@@ -2372,3 +2372,19 @@
     margin-top: 2px;
     line-height: 1.15;
 }
+
+.page-pipeline {
+    .pl-card.is-dragging {
+        opacity: 0.4;
+        cursor: grabbing;
+    }
+
+    .pl-card[draggable="true"] {
+        cursor: grab;
+    }
+
+    .pl-column.is-dragover {
+        border-color: var(--nks-gold);
+        background: var(--nks-gold-tint);
+    }
+}

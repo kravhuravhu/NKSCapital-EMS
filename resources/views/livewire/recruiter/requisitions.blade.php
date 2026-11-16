@@ -1,17 +1,6 @@
-<div class="page-requisitions">
-    @if ($error)
-        <div class="nks-notice" style="background: rgba(194, 91, 91, 0.1); color: var(--nks-danger);">
-            <i class="fa-solid fa-circle-exclamation" style="color: var(--nks-danger);"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
-    @endif
-
-    @if ($flash)
-        <div class="nks-notice" style="background: var(--nks-mint); color: #1F6B45;">
-            <i class="fa-solid fa-circle-check" style="color: #1F6B45;"></i>
-            <div class="nks-notice-body">{{ $flash }}</div>
-        </div>
-    @endif
+<div class="page-requisitions" wire:init="initPage">
+    <x-nks.loading-overlay targets="initPage" />
+    <x-nks.notice-stack :error="$error" />
 
     @if ($loading)
         <x-nks.spinner block label="Loading requisitions..." />

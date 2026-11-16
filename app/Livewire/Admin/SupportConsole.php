@@ -43,6 +43,11 @@ class SupportConsole extends Component
     public array $relinkForm = [];
     public string $relinkPassword = '';
 
+    public bool $showCompanyEmail = false;
+    public string $companyEmailInput = '';
+    public bool $updateLoginEmail = false;
+    public string $companyEmailPassword = '';
+
     public function mount(): void
     {
         // load() fires from wire:init.
@@ -387,5 +392,57 @@ class SupportConsole extends Component
     {
         return view('livewire.admin.support-console')
             ->layout('layouts.portal', ['title' => 'Support Console', 'breadcrumb' => 'Support Console']);
+    }
+
+    public function openCompanyEmail(): void
+    {
+        $this->showCompanyEmail = true;
+        $this->companyEmailInput = $this->selectedUser['company_email'] ?? '';
+        $this->updateLoginEmail = (bool) ($this->selectedUser['pending_company_email'] ?? false);
+        $this->companyEmailPassword = '';
+        $this->error = null;
+    }
+
+    public function closeCompanyEmail(): void
+    {
+        $this->showCompanyEmail = false;
+        $this->companyEmailInput = '';
+        $this->updateLoginEmail = false;
+        $this->companyEmailPassword = '';
+    }
+
+    public function confirmCompanyEmail(): void
+    {
+        $this->error = null;
+
+        if (empty($this->companyEmailPassword)) {
+            $this->error = 'Enter your admin password.';
+            return;
+        }
+
+        if (empty($this->companyEmailInput)) {
+            $this->error = 'Enter the company email.';
+            return;
+        }
+
+        $response = Api::post('/admin/support/users/' . $this->selectedUser['id'] . '/assign-company-email', [
+            'password' => $this->companyEmailPassword,
+            'company_email' => $this->companyEmailInput,
+            'update_login_email' => $this->updateLoginEmail ? 1 : 0,
+        ]);
+
+        if (! $response['ok']) {
+            $errs = $response['errors'] ?? [];
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed.');
+            return;
+        }
+
+        $this->flash = $response['data']['temporary_password']
+            ? 'Company email assigned. New temporary password: ' . $response['data']['temporary_password']
+            : 'Company email assigned.';
+
+        $this->closeCompanyEmail();
+        $this->selectUser($this->selectedUser['id']);
     }
 }

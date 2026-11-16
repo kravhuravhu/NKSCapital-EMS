@@ -1,12 +1,9 @@
-<div class="page-dashboard">
+<div class="page-dashboard" wire:init="load">
+    <x-nks.loading-overlay targets="load" />
+    <x-nks.notice-stack :error="$error" />
 
     @if ($loading)
-        <x-nks.spinner block label="Loading recruiter dashboard…" />
-    @elseif ($error)
-        <div class="nks-notice" style="background: #F5B5B5; color: #8A2A2A;">
-            <i class="fa-solid fa-circle-exclamation" style="color: #8A2A2A;"></i>
-            <div class="nks-notice-body">{{ $error }}</div>
-        </div>
+        <div class="panel" style="min-height: 400px;"></div>
     @else
         <div class="dash-stats">
             <div class="dash-stat">
@@ -65,13 +62,38 @@
                 </div>
 
                 <div class="panel">
+                    <h2>Recent Activity</h2>
+                    @forelse ($recentActivity as $entry)
+                        @php
+                            $actor = $entry['user'] ?? [];
+                            $actorName = trim(($actor['first_name'] ?? '') . ' ' . ($actor['last_name'] ?? ''));
+                        @endphp
+                        <div class="dash-activity-item">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <div class="dash-activity-text">
+                                <strong>{{ $actorName ?: 'System' }}</strong>
+                                &middot; {{ $entry['action'] ?? '' }}
+                            </div>
+                            <div class="dash-activity-time">
+                                {{ isset($entry['timestamp']) ? \Carbon\Carbon::parse($entry['timestamp'])->diffForHumans() : '' }}
+                            </div>
+                        </div>
+                    @empty
+                        <div class="dash-activity-item">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <div class="dash-activity-text">No recent activity</div>
+                        </div>
+                    @endforelse
+                </div>
+
+                <div class="panel">
                     <h2>Recent Candidates</h2>
                     @forelse (($data['recent_candidates'] ?? []) as $candidate)
                         <div class="dash-activity-item">
                             <i class="fa-solid fa-user"></i>
                             <div class="dash-activity-text">
                                 {{ $candidate['first_name'] ?? '' }} {{ $candidate['last_name'] ?? '' }}
-                                — {{ ucfirst($candidate['current_stage'] ?? '') }}
+                                &middot; {{ ucfirst($candidate['current_stage'] ?? '') }}
                             </div>
                             <div class="dash-activity-time">
                                 {{ isset($candidate['applied_date']) ? \Carbon\Carbon::parse($candidate['applied_date'])->diffForHumans() : '' }}

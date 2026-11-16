@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use App\Services\OnboardingService;
+use Illuminate\Support\Facades\Mail;
 
 class SupportController extends Controller
 {
@@ -83,6 +85,8 @@ class SupportController extends Controller
                     'first_name' => $user->first_name,
                     'last_name' => $user->last_name,
                     'email' => $user->email,
+                    'company_email' => $user->company_email,
+                    'pending_company_email' => (bool) $user->pending_company_email,
                     'role' => $user->role,
                     'department' => $user->department,
                     'position' => $user->position,
@@ -95,6 +99,7 @@ class SupportController extends Controller
                     'client_name' => $user->client?->company_name,
                     'project_id' => $user->project_id,
                     'project_name' => $user->project?->name,
+                    'onboarding_progress' => app(OnboardingService::class)->progress($user),
                 ],
                 'sessions' => $sessions,
                 'audit_slice' => $auditSlice,
@@ -288,5 +293,89 @@ class SupportController extends Controller
             ]);
             abort(response()->json(['status' => 'error', 'message' => 'Password is incorrect'], 422));
         }
+    }
+
+    public function assignCompanyEmail(Request $request, $id)
+    {
+        $actor = $this->requireAdmin();
+        $this->checkPassword($request, $actor);
+
+        $validator = Validator::make($request->all(), [
+            'company_email' => 'required|email|max:255|unique:users,email,' . $id,
+            'update_login_email' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+        }
+
+        $user = User::findOrFail($id);
+        $old = [
+            'company_email' => $user->company_email,
+            'email' => $user->email,
+            'pending_company_email' => (bool) $user->pending_company_email,
+        ];
+
+        $user->company_email = $request->company_email;
+        $user->pending_company_email = false;
+
+        if ($request->boolean('update_login_email')) {
+            $user->email = $request->company_email;
+        }
+
+        $newTempPassword = null;
+        if ($request->boolean('update_login_email')) {
+            $newTempPassword = \Illuminate\Support\Str::random(12);
+            $user->password = Hash::make($newTempPassword);
+        }
+
+        $user->save();
+
+        AuditService::log(
+            action: 'SUPPORT_COMPANY_EMAIL_ASSIGNED',
+            tableName: 'users',
+            recordId: $user->id,
+            oldValues: $old,
+            newValues: [
+                'company_email' => $user->company_email,
+                'login_email_updated' => $request->boolean('update_login_email'),
+                'actor_id' => $actor->id,
+            ],
+            logType: 'warning',
+            severity: 'warning'
+        );
+
+        if ($newTempPassword) {
+            try {
+                Mail::raw(
+                    "Welcome to " . config('app.name') . "!\n\n"
+                    . "Your company email is: {$user->email}\n"
+                    . "Your login password: {$newTempPassword}\n\n"
+                    . "Please sign in at " . url('/login') . " and change your password on first login.\n",
+                    function ($mail) use ($user) {
+                        $mail->to($user->email)->subject('Your NKS Capital credentials');
+                    }
+                );
+            } catch (\Throwable $e) {
+                AuditService::log(
+                    action: 'CREDENTIALS_EMAIL_FAILED',
+                    tableName: 'users',
+                    recordId: $user->id,
+                    newValues: ['email' => $user->email, 'error' => $e->getMessage()],
+                    logType: 'error',
+                    severity: 'error'
+                );
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Company email assigned',
+            'data' => [
+                'company_email' => $user->company_email,
+                'login_email' => $user->email,
+                'temporary_password' => $newTempPassword,
+            ],
+        ], 200);
     }
 }
