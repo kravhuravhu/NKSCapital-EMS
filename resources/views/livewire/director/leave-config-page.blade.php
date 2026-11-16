@@ -1,5 +1,5 @@
 <div class="page-leave-config" wire:init="initPage">
-    <x-nks.loading-overlay targets="load,initPage" />
+    <x-nks.loading-overlay :loading="$loading" targets="load,initPage" />
     <x-nks.notice-stack :error="$error" :success="$flash" />
 
     <div class="panel lc-panel">

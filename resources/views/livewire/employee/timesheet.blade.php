@@ -1,5 +1,5 @@
 <div class="page-timesheets" wire:init="load">
-    <x-nks.loading-overlay targets="load,updatedMonthYear" />
+    <x-nks.loading-overlay :loading="$loading" targets="load,updatedMonthYear" />
     <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($loading)

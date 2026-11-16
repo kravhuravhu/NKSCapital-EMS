@@ -1,12 +1,16 @@
 .nks-loading-overlay {
+    display: none;
     position: fixed;
     inset: 0;
     z-index: 300;
     background: rgba(255, 255, 255, 0.4);
     backdrop-filter: blur(4px);
-    display: flex;
     align-items: center;
     justify-content: center;
+
+    &.is-active {
+        display: flex;
+    }
 
     html.dark & {
         background: rgba(11, 18, 32, 0.5);

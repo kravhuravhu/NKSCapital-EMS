@@ -1,5 +1,5 @@
 <div class="page-payroll-export" wire:init="load">
-    <x-nks.loading-overlay targets="load,initPage" />
+    <x-nks.loading-overlay :loading="$loading" targets="load,initPage" />
     <x-nks.notice-stack :error="$error" :success="$flash" />
 
     @if ($lastDownload)

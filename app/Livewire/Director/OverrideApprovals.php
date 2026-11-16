@@ -33,7 +33,7 @@ class OverrideApprovals extends Component
     public function mount(): void
     {
         $this->month = now()->format('Y-m');
-        $this->load();
+        // load() fires from wire:init.
     }
 
     public function load(): void
