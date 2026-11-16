@@ -27,6 +27,10 @@ Schedule::command('reminders:generate --type=contract')->dailyAt('07:00');
 // M13 - Health check (daily)
 Schedule::command('deploy:check')->dailyAt('05:00');
 
+Schedule::command('launch:check')->dailyAt('04:00');
+
+Schedule::command('smoke:roles')->everySixHours();
+
 // login OTP cleanup
 Schedule::call(fn () => app(QrLoginService::class)->expireStale())->everyMinute();
 Schedule::call(function () {

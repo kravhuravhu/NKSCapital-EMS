@@ -38,6 +38,7 @@ use App\Http\Controllers\API\HalfDayController;
 use App\Http\Controllers\API\LeaveReasonsController;
 use App\Http\Controllers\API\SupportController;
 use App\Http\Controllers\API\OnboardingController;
+use App\Http\Controllers\API\EmployeeImportController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -546,6 +547,12 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::prefix('employee/{userId}/onboarding')->whereNumber('userId')->group(function () {
         Route::get('/', [OnboardingController::class, 'show']);
         Route::put('/', [OnboardingController::class, 'update']);
+    });
+
+    Route::prefix('admin/employee-import')->middleware(['role:admin,super_admin'])->group(function () {
+        Route::get('template', [EmployeeImportController::class, 'template']);
+        Route::post('preview', [EmployeeImportController::class, 'preview']);
+        Route::post('import', [EmployeeImportController::class, 'import']);
     });
 
     // Role management - Admin only

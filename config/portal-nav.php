@@ -307,6 +307,12 @@ return [
                     'roles' => ['admin', 'super_admin'],
                 ],
                 [
+                    'label' => 'Import Employees',
+                    'route' => 'portal.admin.import-employees',
+                    'icon' => 'fa-solid fa-file-csv',
+                    'roles' => ['admin', 'super_admin'],
+                ],
+                [
                     'label' => 'Backup and Restore',
                     'route' => 'portal.admin.backup-restore',
                     'icon' => 'fa-solid fa-database',
