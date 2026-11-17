@@ -56,7 +56,7 @@ class Pipeline extends Component
 
     public function initPage(): void
     {
-        $this->loadReferenceData();
+        $this->loadRequisitions();
         // load() fires from wire:init.
     }
 
