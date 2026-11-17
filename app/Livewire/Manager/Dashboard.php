@@ -11,6 +11,7 @@ class Dashboard extends Component
 {
     public bool $loading = true;
     public ?string $error = null;
+    public ?string $flash = null;
 
     public array $widgets = [];
     public array $counts = [];
@@ -44,6 +45,7 @@ class Dashboard extends Component
     {
         $this->loading = true;
         $this->error = null;
+        $this->flash = null;
 
         $dashboard = Api::get('/dashboard/manager');
 
