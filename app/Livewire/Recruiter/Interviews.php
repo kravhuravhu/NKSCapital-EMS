@@ -5,6 +5,7 @@ namespace App\Livewire\Recruiter;
 use App\Support\Api;
 use Carbon\Carbon;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class Interviews extends Component
 {

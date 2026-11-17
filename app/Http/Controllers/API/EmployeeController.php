@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use App\Services\AuditService;
 use App\Services\EmployeeNumberService;
+use App\Support\RoleCheck;
 
 class EmployeeController extends Controller
 {
@@ -417,7 +418,7 @@ class EmployeeController extends Controller
         $user = User::findOrFail($id);
 
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to deactivate employees'
@@ -639,7 +640,7 @@ class EmployeeController extends Controller
         }
 
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'director', 'manager'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'director', 'manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to assign clients'
@@ -684,7 +685,7 @@ class EmployeeController extends Controller
         }
 
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'director', 'manager'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'director', 'manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to assign projects'
@@ -729,7 +730,7 @@ class EmployeeController extends Controller
         }
 
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to assign roles'

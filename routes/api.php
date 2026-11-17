@@ -82,6 +82,9 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
             Route::post('2fa/verify', [AuthController::class, 'verify2FA']);
             Route::post('2fa/disable', [AuthController::class, 'disable2FA']);
         });
+
+        Route::middleware('throttle:api-qr')->post('qr/anonymous', [AuthController::class, 'qrAnonymous']);
+        Route::middleware('throttle:api-qr')->post('qr/cancel/{challenge}', [AuthController::class, 'qrCancel']);
     });
 
     // ========================================

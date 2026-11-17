@@ -4,6 +4,7 @@ namespace App\Livewire\Director;
 
 use App\Support\Api;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class PendingL2 extends Component
 {

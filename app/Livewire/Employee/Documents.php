@@ -5,6 +5,7 @@ namespace App\Livewire\Employee;
 use App\Support\Api;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class Documents extends Component
 {

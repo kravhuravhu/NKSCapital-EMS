@@ -327,6 +327,59 @@ class AuthController extends Controller
         ], 200);
     }
 
+    /**
+     * POST /api/v1/auth/qr/anonymous
+     * Public. Creates an anonymous challenge and returns a scannable payload.
+     */
+    public function qrAnonymous(Request $request)
+    {
+        $challenge = QrLoginChallenge::create([
+            'challenge' => Str::random(64),
+            'user_id' => null,
+            'challenge_token' => null,
+            'status' => 'pending',
+            'expires_at' => now()->addMinutes(3),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        $qrUrl = route('auth.qr.landing', ['challenge' => $challenge->challenge]);
+
+        $qrImage = null;
+        if (class_exists(\SimpleSoftwareIO\QrCode\Facades\QrCode::class)) {
+            $qrImage = 'data:image/png;base64,' . base64_encode(
+                \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(280)->generate($qrUrl)
+            );
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'challenge' => $challenge->challenge,
+                'qr_url' => $qrUrl,
+                'qr_image' => $qrImage,
+                'expires_at' => $challenge->expires_at->toIso8601String(),
+                'expires_in_seconds' => 180,
+            ],
+        ], 200);
+    }
+
+    /**
+     * POST /api/v1/auth/qr/cancel/{challenge}
+     * Public. The desktop can revoke a challenge it started.
+     */
+    public function qrCancel(Request $request, string $challenge)
+    {
+        $qr = QrLoginChallenge::where('challenge', $challenge)->first();
+
+        if ($qr && $qr->status === 'pending') {
+            $qr->status = 'expired';
+            $qr->save();
+        }
+
+        return response()->json(['status' => 'success'], 200);
+    }
+
     public function logout(Request $request)
     {
         $token = $request->user()?->currentAccessToken();

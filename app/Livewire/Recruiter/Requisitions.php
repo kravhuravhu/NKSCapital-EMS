@@ -6,6 +6,7 @@ use App\Support\Api;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class Requisitions extends Component
 {

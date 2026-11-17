@@ -8,6 +8,7 @@ use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use App\Support\RoleCheck;
 
 class DashboardController extends Controller
 {
@@ -173,10 +174,11 @@ class DashboardController extends Controller
 
     protected function requireRole($user, array $roles): void
     {
-        if (!in_array($user->role, $roles)) {
+        if (!RoleCheck::has($user, $roles)) {
             AuditService::logWarning('DASHBOARD_ACCESS_DENIED', 'users', $user->id, [
                 'required' => $roles,
-                'actual' => $user->role,
+                'column_role' => $user->role,
+                'spatie_roles' => $user->getRoleNames(),
                 'dashboard' => request()->path(),
             ]);
             abort(response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403));

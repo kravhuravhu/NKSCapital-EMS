@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ProjectChangeRequest;
 use App\Models\Notification;
+use App\Support\RoleCheck;
 
 class ProjectController extends Controller
 {
@@ -100,7 +101,7 @@ class ProjectController extends Controller
     public function createProject(Request $request)
     {
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to create projects'
@@ -156,7 +157,7 @@ class ProjectController extends Controller
     public function updateProject(Request $request, $id)
     {
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to update projects',
@@ -209,7 +210,7 @@ class ProjectController extends Controller
      */
     public function archiveProject($id)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to archive projects',
@@ -246,7 +247,7 @@ class ProjectController extends Controller
     public function assignEmployee(Request $request)
     {
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to assign employees',
@@ -328,7 +329,7 @@ class ProjectController extends Controller
     public function removeEmployee(Request $request)
     {
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to remove employees'
@@ -382,7 +383,7 @@ class ProjectController extends Controller
     public function assignProjectManager(Request $request)
     {
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to assign project managers',

@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use App\Support\Api;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class ClientTemplates extends Component
 {

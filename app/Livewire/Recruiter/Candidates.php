@@ -5,6 +5,7 @@ namespace App\Livewire\Recruiter;
 use App\Support\Api;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class Candidates extends Component
 {

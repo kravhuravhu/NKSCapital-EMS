@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Support\Api;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class LeaveReasons extends Component
 {

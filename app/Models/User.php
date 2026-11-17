@@ -290,7 +290,9 @@ class User extends Authenticatable
      */
     public function setRoleAttribute($value)
     {
-        if ($value && !in_array($value, ['employee', 'manager', 'director', 'admin', 'recruiter'])) {
+        $allowed = ['employee', 'manager', 'director', 'admin', 'recruiter', 'operational_manager', 'super_admin'];
+
+        if ($value && !in_array($value, $allowed, true)) {
             throw new \InvalidArgumentException('Invalid role.');
         }
         $this->attributes['role'] = $value;

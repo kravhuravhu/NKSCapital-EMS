@@ -45,7 +45,9 @@ class QrLoginService
             throw new \RuntimeException('This challenge has expired.');
         }
 
-        if ((int) $qr->user_id !== (int) $approver->id) {
+        if ($qr->user_id === null) {
+            $qr->user_id = $approver->id;
+        } elseif ((int) $qr->user_id !== (int) $approver->id) {
             throw new \RuntimeException('You can only approve your own login.');
         }
 

@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Support\RoleCheck;
 
 class IntegrationController extends Controller
 {
@@ -306,7 +307,7 @@ class IntegrationController extends Controller
     protected function requireRole(array $roles)
     {
         $user = Auth::user();
-        if (!in_array($user->role, $roles)) {
+        if (!RoleCheck::has($user, $roles)) {
             AuditService::logWarning('INTEGRATION_ACCESS_DENIED', 'integrations', 0, [
                 'actor_id' => $user->id,
                 'required' => $roles,
