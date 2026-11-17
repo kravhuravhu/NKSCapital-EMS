@@ -4,6 +4,7 @@ namespace App\Livewire\Employee;
 
 use App\Support\Api;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class Projects extends Component
 {

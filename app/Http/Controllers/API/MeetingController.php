@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Support\RoleCheck;
 
 class MeetingController extends Controller
 {
@@ -403,7 +404,7 @@ class MeetingController extends Controller
     protected function requireRole(array $roles): User
     {
         $user = Auth::user();
-        if (!in_array($user->role, $roles)) {
+        if (!RoleCheck::has($user, $roles)) {
             AuditService::logWarning('MEETING_ACCESS_DENIED', 'meetings', 0, [
                 'actor_id' => $user->id,
                 'required' => $roles,

@@ -6,6 +6,7 @@ use App\Support\AuditActionVerb;
 use App\Support\Api;
 use Carbon\Carbon;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class Dashboard extends Component
 {

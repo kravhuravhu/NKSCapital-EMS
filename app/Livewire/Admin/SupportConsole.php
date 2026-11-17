@@ -7,6 +7,7 @@ use App\Support\Api;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class SupportConsole extends Component
 {

@@ -10,6 +10,7 @@ use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use App\Support\RoleCheck;
 
 class DelegationController extends Controller
 {
@@ -235,7 +236,7 @@ class DelegationController extends Controller
     protected function requireRole(array $roles): User
     {
         $user = Auth::user();
-        if (!in_array($user->role, $roles)) {
+        if (!RoleCheck::has($user, $roles)) {
             AuditService::logWarning('DELEGATION_ACCESS_DENIED', 'approval_delegations', 0, [
                 'actor_id' => $user->id,
                 'required' => $roles,

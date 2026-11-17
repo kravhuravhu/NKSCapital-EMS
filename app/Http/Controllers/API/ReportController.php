@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Support\RoleCheck;
 
 class ReportController extends Controller
 {
@@ -300,11 +301,12 @@ class ReportController extends Controller
 
     protected function requireRole(User $user, array $roles): void
     {
-        if (!in_array($user->role, $roles)) {
+        if (!RoleCheck::has($user, $roles)) {
             AuditService::logWarning('REPORT_ACCESS_DENIED', 'reports', 0, [
                 'actor_id' => $user->id,
                 'required' => $roles,
-                'actual' => $user->role,
+                'column_role' => $user->role,
+                'spatie_roles' => $user->getRoleNames(),
                 'path' => request()->path(),
             ]);
             abort(response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403));

@@ -55,4 +55,9 @@ class QrLoginChallenge extends Model
     {
         return $this->expires_at->isPast();
     }
+
+    public function isAnonymous(): bool
+    {
+        return $this->user_id === null;
+    }
 }

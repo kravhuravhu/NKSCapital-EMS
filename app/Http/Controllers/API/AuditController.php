@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Support\RoleCheck;
 
 class AuditController extends Controller
 {
@@ -360,7 +361,7 @@ class AuditController extends Controller
     protected function requireRole(array $roles): User
     {
         $user = Auth::user();
-        if (!in_array($user->role, $roles)) {
+        if (!RoleCheck::has($user, $roles)) {
             AuditService::logWarning('AUDIT_ACCESS_DENIED', 'audit_logs', 0, [
                 'actor_id' => $user->id,
                 'required' => $roles,

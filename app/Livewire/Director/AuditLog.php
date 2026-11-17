@@ -5,6 +5,7 @@ namespace App\Livewire\Director;
 use App\Support\AuditActionVerb;
 use App\Support\Api;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class AuditLog extends Component
 {

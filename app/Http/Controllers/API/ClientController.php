@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Support\RoleCheck;
 
 class ClientController extends Controller
 {
@@ -59,7 +60,7 @@ class ClientController extends Controller
     public function createClient(Request $request)
     {
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to create clients'
@@ -123,7 +124,7 @@ class ClientController extends Controller
         }
 
         // permission check
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to update clients',
@@ -176,7 +177,7 @@ class ClientController extends Controller
             ], 404);
         }
 
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to deactivate clients',
@@ -209,7 +210,7 @@ class ClientController extends Controller
     public function addClientManager(Request $request)
     {
         // Check permission
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to add client managers'
@@ -286,7 +287,7 @@ class ClientController extends Controller
      */
     public function uploadClientTemplate(Request $request)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to upload templates',
@@ -398,7 +399,7 @@ class ClientController extends Controller
      */
     public function updateClientTemplate(Request $request, $id)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has(Auth::user(), ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to update templates',

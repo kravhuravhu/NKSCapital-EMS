@@ -6,6 +6,7 @@ use App\Support\Api;
 use Carbon\Carbon;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class Offers extends Component
 {

@@ -4,6 +4,7 @@ namespace App\Livewire\Shared;
 
 use App\Support\Api;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class GlobalSearch extends Component
 {

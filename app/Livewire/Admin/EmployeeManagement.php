@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use App\Support\Api;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class EmployeeManagement extends Component
 {
