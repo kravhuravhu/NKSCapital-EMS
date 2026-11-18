@@ -164,6 +164,10 @@
                                 </div>
                             </dl>
 
+                            <div class="nks-field">
+                                <label class="nks-label">Admin password <span class="nks-required">*</span></label>
+                                <input type="password" wire:model="updatePassword" class="nks-input" autocomplete="current-password">
+                            </div>
                             <footer class="ap-card-foot">
                                 <button type="button" wire:click="openView({{ $p['id'] }})" class="nks-btn nks-btn--outline nks-btn--sm">
                                     <i class="fa-solid fa-eye"></i>

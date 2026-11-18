@@ -16,9 +16,11 @@ class Dashboard extends Component
 
     public array $recentActivity = [];
 
-    public function load(): void
+    public function load(bool $silent = false): void
     {
-        $this->loading = true;
+        if (! $silent) {
+            $this->loading = true;
+        }
         $this->error = null;
 
         $dashboard = Api::get('/dashboard/admin');
@@ -42,6 +44,11 @@ class Dashboard extends Component
         }
 
         $this->loading = false;
+    }
+
+    public function poll(): void
+    {
+        $this->load(silent: true);
     }
 
     public function mount(): void

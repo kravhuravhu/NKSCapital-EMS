@@ -76,6 +76,12 @@
                                                 Approve
                                             </button>
                                             <button type="button"
+                                                    wire:click="openOnboarding({{ $ts['user']['id'] }})"
+                                                    class="nks-btn nks-btn--outline nks-btn--sm"
+                                                    title="Onboarding">
+                                                <i class="fa-solid fa-list-check"></i>
+                                            </button>
+                                            <button type="button"
                                                     wire:click="openReject({{ $ts['id'] }})"
                                                     class="nks-btn nks-btn--danger nks-btn--sm">
                                                 <i class="fa-solid fa-xmark"></i>
@@ -239,4 +245,6 @@
             </div>
         </div>
     @endif
+
+    @include('partials.onboarding-modal')
 </div>

@@ -29,6 +29,8 @@ class BackupRestore extends Component
     public string $restoreConfirm = '';
     public bool $restoring = false;
 
+    public array $tooling = [];
+
     public function mount(): void
     {
         $this->isSuperAdmin = auth()->user()->role === 'super_admin';
@@ -49,6 +51,12 @@ class BackupRestore extends Component
         }
 
         $this->backups = $list['data']['backups'] ?? [];
+
+        $this->tooling = $list['data']['tooling'] ?? [
+            'driver' => 'unknown',
+            'mysqldump_available' => false,
+            'supports_restorable_backups' => false,
+        ];
 
         $health = Api::get('/admin/health');
 

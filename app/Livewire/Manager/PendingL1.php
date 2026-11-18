@@ -5,6 +5,7 @@ namespace App\Livewire\Manager;
 use App\Support\Api;
 use Livewire\Component;
 use App\Livewire\Concerns\HasFlashMessages;
+use App\Livewire\Concerns\HandlesOnboarding;
 
 class PendingL1 extends Component
 {
@@ -24,6 +25,8 @@ class PendingL1 extends Component
     public bool $showApprove = false;
     public ?int $approveId = null;
     public string $approveComment = '';
+
+    use HandlesOnboarding;
 
     public function mount(): void
     {

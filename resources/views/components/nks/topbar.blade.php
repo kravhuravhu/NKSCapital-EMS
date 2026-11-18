@@ -6,12 +6,6 @@
     );
     $roleFallback = \App\Support\RoleLabels::label($user->role);
     $subtitle = $user->position ?: $roleFallback;
-    $unread = (int) (\App\Models\Notification::where('user_id', $user->id)
-        ->where('is_read', false)
-        ->where(function ($q) {
-            $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
-        })
-        ->count());
     $breadcrumbTrail = array_filter([
         ['label' => 'NKS Capital', 'url' => route('portal.dashboard')],
         ['label' => $breadcrumb ?? $title ?? 'Dashboard', 'url' => null],
@@ -48,16 +42,8 @@
             <i class="fa-solid fa-moon" id="nks-theme-icon" aria-hidden="true"></i>
         </button>
 
-        @if (in_array($user->role, ['employee', 'manager', 'director', 'admin', 'super_admin'], true))
-            <a href="{{ route('portal.employee.notifications') }}"
-               class="nks-icon-btn"
-               aria-label="Notifications"
-               wire:navigate>
-                <i class="fa-regular fa-bell" aria-hidden="true"></i>
-                @if ($unread > 0)
-                    <span class="nks-dot" aria-hidden="true"></span>
-                @endif
-            </a>
+        @if (in_array($user->role, ['employee', 'manager', 'director', 'operational_manager', 'admin', 'super_admin'], true))
+            @livewire('shared.notification-badge')
         @endif
 
         <div class="nks-user-menu-wrap"

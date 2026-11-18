@@ -48,6 +48,8 @@ class Clients extends Component
     public ?int $managerClientId = null;
     public array $managerForm = [];
 
+    public string $managerPassword = '';
+
     public function mount(): void
     {
         $this->resetCreateForm();
@@ -347,6 +349,7 @@ class Clients extends Component
         $this->showAddManager = false;
         $this->managerClientId = null;
         $this->managerForm = [];
+        $this->managerPassword  = '';
     }
 
     public function submitAddManager(): void
@@ -354,28 +357,49 @@ class Clients extends Component
         $this->error = null;
         $this->flash = null;
 
+        if (empty($this->managerClientId)) {
+            $this->error = 'Select a client.';
+            return;
+        }
+
         if (empty($this->managerForm['name']) || empty($this->managerForm['email'])) {
             $this->error = 'Name and email are required.';
             return;
         }
 
+        if (empty($this->managerPassword)) {
+            $this->error = 'Enter your password to confirm this action.';
+            return;
+        }
+
+        if (!Auth::validate([
+            'email' => auth()->user()->email,
+            'password' => $this->managerPassword,
+        ])) {
+            $this->error = 'Password is incorrect.';
+            return;
+        }
+
         $payload = [
-            'client_id' => $this->managerClientId,
-            'name' => $this->managerForm['name'],
-            'email' => $this->managerForm['email'],
+            'client_id' => (int) $this->managerClientId,
+            'name' => trim($this->managerForm['name']),
+            'email' => strtolower(trim($this->managerForm['email'])),
             'is_primary' => (bool) $this->managerForm['is_primary'],
+            'password' => $this->managerPassword,
         ];
 
-        if (! empty($this->managerForm['phone'])) {
-            $payload['phone'] = $this->managerForm['phone'];
+        if (!empty($this->managerForm['phone'])) {
+            $payload['phone'] = trim($this->managerForm['phone']);
         }
 
         $response = Api::post('/client/manager/add', $payload);
 
-        if (! $response['ok']) {
+        if (!$response['ok']) {
             $errs = $response['errors'] ?? [];
+
             $this->error = collect($errs)->flatten()->first()
                 ?: ($response['message'] ?? 'Failed to add client manager.');
+
             return;
         }
 
@@ -384,7 +408,11 @@ class Clients extends Component
         $this->load();
 
         if ($this->viewClient && (int) $this->viewClient['id'] === (int) $this->managerClientId) {
-            $updated = collect($this->clients)->firstWhere('id', $this->managerClientId);
+            $updated = collect($this->clients)->firstWhere(
+                'id',
+                (int) $this->managerClientId
+            );
+
             if ($updated) {
                 $this->viewClient = $updated;
             }

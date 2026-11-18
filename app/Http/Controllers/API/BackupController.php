@@ -42,6 +42,11 @@ class BackupController extends Controller
             'data' => [
                 'backups' => $rows,
                 'total' => count($rows),
+                'tooling' => [
+                    'driver' => $this->backups->getDatabaseDriver(),
+                    'mysqldump_available' => $this->backups->isMysqldumpAvailable(),
+                    'supports_restorable_backups' => in_array($this->backups->getDatabaseDriver(), ['sqlite'], true) || $this->backups->isMysqldumpAvailable(),
+                ],
             ],
         ], 200);
     }

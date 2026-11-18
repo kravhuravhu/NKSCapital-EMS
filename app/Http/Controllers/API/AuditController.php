@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use App\Support\RoleCheck;
+use Illuminate\Support\Facades\Cache;
 
 class AuditController extends Controller
 {
@@ -193,7 +194,17 @@ class AuditController extends Controller
     {
         $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager']);
 
+        $cacheKey = 'audit:verify-chain:result';
+        $cached = Cache::get($cacheKey);
+
+        if ($cached && isset($cached['cached_at'])
+            && now()->diffInMinutes(\Carbon\Carbon::parse($cached['cached_at'])) < 5) {
+            return response()->json(['status' => 'success', 'data' => $cached], 200);
+        }
+
         $result = AuditService::verifyChain();
+        $result['cached_at'] = now()->toIso8601String();
+        Cache::put($cacheKey, $result, now()->addMinutes(5));
 
         AuditService::log(
             action: 'AUDIT_CHAIN_VERIFIED',
@@ -204,10 +215,17 @@ class AuditController extends Controller
             severity: $result['is_valid'] ? 'success' : 'critical'
         );
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $result,
-        ], 200);
+        return response()->json(['status' => 'success', 'data' => $result], 200);
+    }
+
+    /**
+     * POST /api/v1/admin/audit/verify-chain/refresh
+     */
+    public function verifyChainRefresh()
+    {
+        $this->requireRole(['admin', 'super_admin', 'director', 'operational_manager']);
+        Cache::forget('audit:verify-chain:result');
+        return $this->verifyChain();
     }
 
     /**

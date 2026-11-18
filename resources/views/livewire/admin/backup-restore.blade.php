@@ -44,6 +44,18 @@
             </button>
         </div>
 
+        @if (! ($tooling['supports_restorable_backups'] ?? true))
+            <div class="nks-notice nks-notice--warning" style="margin-bottom: 16px;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div class="nks-notice-body">
+                    <strong style="display: block;">Backups will use the PHP fallback dump</strong>
+                    The server does not have <code>mysqldump</code> installed. Backups are still created,
+                    but they cannot be restored from this portal. Install <code>mysqldump</code> on the
+                    server and re-deploy to enable restorable .sql backups.
+                </div>
+            </div>
+        @endif
+
         @if ($loading)
             <x-nks.spinner block label="Loading backups…" />
         @elseif (count($backups) === 0)

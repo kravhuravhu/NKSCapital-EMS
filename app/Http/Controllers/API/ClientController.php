@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Support\RoleCheck;
+use Illuminate\Support\Facades\Hash;
+use App\Services\AuditService;
 
 class ClientController extends Controller
 {
@@ -223,6 +225,7 @@ class ClientController extends Controller
             'email' => 'required|email',
             'phone' => 'nullable|string',
             'is_primary' => 'nullable|boolean',
+            'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -231,6 +234,13 @@ class ClientController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $validator->errors()
             ], 422);
+        }
+
+        if (!Hash::check((string) $request->password, Auth::user()->password)) {
+            AuditService::logWarning('CLIENT_MANAGER_ADD_PASSWORD_FAILED', 'client_managers', 0, [
+                'actor_id' => Auth::id(),
+            ]);
+            return response()->json(['status' => 'error', 'message' => 'Password is incorrect'], 422);
         }
 
         // If setting as primary, unset other primary managers
@@ -420,6 +430,7 @@ class ClientController extends Controller
             'branding_settings' => 'nullable|json',
             'template_content' => 'nullable|string',
             'template_file' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+            'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -428,6 +439,13 @@ class ClientController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $validator->errors(),
             ], 422);
+        }
+
+        if (!Hash::check((string) $request->password, Auth::user()->password)) {
+            AuditService::logWarning('CLIENT_TEMPLATE_UPDATE_PASSWORD_FAILED', 'client_templates', 0, [
+                'actor_id' => Auth::id(),
+            ]);
+            return response()->json(['status' => 'error', 'message' => 'Password is incorrect'], 422);
         }
 
         if ($request->hasFile('template_file')) {

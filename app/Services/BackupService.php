@@ -311,4 +311,14 @@ class BackupService
 
         return round($bytes / 1073741824, 2) . ' GB';
     }
+
+    public function isMysqldumpAvailable(): bool
+    {
+        return $this->hasBinary('mysqldump');
+    }
+
+    public function getDatabaseDriver(): string
+    {
+        return DB::getDriverName();
+    }
 }

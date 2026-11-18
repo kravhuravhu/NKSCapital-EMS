@@ -65,6 +65,8 @@ class Projects extends Component
     public string $archiveName = '';
     public string $archivePassword = '';
 
+    public string $assignManagerPassword = '';
+
     public function mount(): void
     {
         $this->resetCreateForm();
@@ -346,31 +348,54 @@ class Projects extends Component
         $this->error = null;
         $this->flash = null;
 
+        if (empty($this->assignManagerProjectId)) {
+            $this->error = 'Invalid project selected.';
+            return;
+        }
+
         if (empty($this->assignManagerId)) {
             $this->error = 'Select a manager.';
             return;
         }
 
-        $response = Api::post('/project/assign-manager', [
-            'project_id' => $this->assignManagerProjectId,
-            'project_manager_id' => $this->assignManagerId,
-        ]);
-
-        if (! $response['ok']) {
-            $errs = $response['errors'] ?? [];
-            $this->error = collect($errs)->flatten()->first()
-                ?: ($response['message'] ?? 'Failed to assign manager.');
+        if (empty($this->assignManagerPassword)) {
+            $this->error = 'Enter your password to confirm this action.';
             return;
         }
+
+        if (!Auth::validate([
+            'email' => auth()->user()->email,
+            'password' => $this->assignManagerPassword,
+        ])) {
+            $this->error = 'Password is incorrect.';
+            return;
+        }
+
+        $response = Api::post('/project/assign-manager', [
+            'project_id' => (int) $this->assignManagerProjectId,
+            'project_manager_id' => (int) $this->assignManagerId,
+            'password' => $this->assignManagerPassword,
+        ]);
+
+        if (!$response['ok']) {
+            $errs = $response['errors'] ?? [];
+
+            $this->error = collect($errs)->flatten()->first()
+                ?: ($response['message'] ?? 'Failed to assign manager.');
+
+            return;
+        }
+
+        $projectId = $this->viewProject['project']['id'] ?? $this->assignManagerProjectId;
 
         $this->flash = 'Project manager assigned.';
         $this->closeAssignManager();
 
-        if ($this->showView) {
-            $this->openView($this->viewProject['project']['id'] ?? 0);
-        }
-
         $this->load();
+
+        if ($this->showView && $projectId) {
+            $this->openView($projectId);
+        }
     }
 
     public function openAssignEmployee(int $projectId): void
