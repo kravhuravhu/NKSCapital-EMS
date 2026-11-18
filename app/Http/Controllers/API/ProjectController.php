@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\ProjectChangeRequest;
 use App\Models\Notification;
 use App\Support\RoleCheck;
+use App\Services\AuditService;
+use Illuminate\Support\Facades\Hash;
 
 class ProjectController extends Controller
 {
@@ -393,6 +395,7 @@ class ProjectController extends Controller
         $validator = Validator::make($request->all(), [
             'project_id' => 'required|exists:projects,id',
             'project_manager_id' => 'required|exists:users,id',
+            'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -401,6 +404,13 @@ class ProjectController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $validator->errors(),
             ], 422);
+        }
+
+        if (!Hash::check((string) $request->input('password'), Auth::user()->password)) {
+            AuditService::logWarning('PROJECT_MANAGER_ASSIGN_PASSWORD_FAILED', 'projects', 0, [
+                'actor_id' => Auth::id(),
+            ]);
+            return response()->json(['status' => 'error', 'message' => 'Password is incorrect'], 422);
         }
 
         $project = Project::find($request->project_id);

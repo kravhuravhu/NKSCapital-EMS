@@ -20,10 +20,12 @@ class Dashboard extends Component
         // load() fires from wire:init.
     }
 
-    public function load(): void
+    public function load(bool $silent = false): void
     {
-        $this->loading = true;
-        $this->error   = null;
+        if (! $silent) {
+            $this->loading = true;
+        }
+        $this->error = null;
 
         $dashboard = Api::get('/dashboard/director');
 
@@ -46,6 +48,11 @@ class Dashboard extends Component
         }
 
         $this->loading = false;
+    }
+
+    public function poll(): void
+    {
+        $this->load(silent: true);
     }
 
     public function render()

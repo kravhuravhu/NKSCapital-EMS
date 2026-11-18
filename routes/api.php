@@ -408,6 +408,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('report', [AuditController::class, 'report']);
         Route::get('user/{userId}', [AuditController::class, 'userAudit']);
         Route::get('table/{tableName}', [AuditController::class, 'tableAudit']);
+        Route::post('verify-chain/refresh', [AuditController::class, 'verifyChainRefresh']);
     });
 
     // ========================================

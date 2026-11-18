@@ -33,6 +33,8 @@ class Roles extends Component
 
     public string $deletePassword = '';
 
+    public string $permPassword = '';
+
     public function mount(): void
     {
         $this->resetCreateForm();
@@ -246,21 +248,50 @@ class Roles extends Component
     public function submitPermissions(): void
     {
         $this->error = null;
-        if (!$this->permRole) return;
+        $this->flash = null;
+
+        if (empty($this->permRole['name'])) {
+            $this->error = 'Select a role.';
+            return;
+        }
+
+        if (empty($this->permPassword)) {
+            $this->error = 'Enter your password to confirm this action.';
+            return;
+        }
+
+        if (!is_array($this->permSelected)) {
+            $this->error = 'Invalid permissions selection.';
+            return;
+        }
+
+        if (!Auth::validate([
+            'email' => auth()->user()->email,
+            'password' => $this->permPassword,
+        ])) {
+            $this->error = 'Password is incorrect.';
+            return;
+        }
 
         $response = Api::post('/admin/roles/permissions/assign', [
             'role' => $this->permRole['name'],
             'permissions' => $this->permSelected,
+            'password' => $this->permPassword,
         ]);
 
         if (!$response['ok']) {
             $errs = $response['errors'] ?? [];
+
             $first = collect($errs)->flatten()->first();
-            $this->error = $first ?: ($response['message'] ?? 'Failed to save permissions.');
+
+            $this->error = $first
+                ?: ($response['message'] ?? 'Failed to save permissions.');
+
             return;
         }
 
         $this->flash = 'Permissions updated for ' . $this->permRole['name'] . '.';
+
         $this->closePermissions();
         $this->load();
     }

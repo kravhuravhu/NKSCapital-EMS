@@ -5,6 +5,7 @@ namespace App\Livewire\Manager;
 use App\Support\Api;
 use Livewire\Component;
 use App\Livewire\Concerns\HasFlashMessages;
+use App\Livewire\Concerns\HandlesOnboarding;
 
 class Projects extends Component
 {
@@ -31,6 +32,8 @@ class Projects extends Component
     public string $removeName = '';
 
     public bool $allEmployeesAssigned = false;
+
+    use HandlesOnboarding;
 
     public function mount(): void
     {

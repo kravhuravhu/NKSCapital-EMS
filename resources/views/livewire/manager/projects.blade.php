@@ -281,6 +281,24 @@
                                                     </button>
                                                 @endif
                                             </td>
+                                            <td>
+                                                <div style="display: flex; gap: 4px;">
+                                                    <button type="button"
+                                                            wire:click="openOnboarding({{ $user['id'] ?? 0 }})"
+                                                            class="nks-btn nks-btn--outline nks-btn--sm"
+                                                            title="Onboarding">
+                                                        <i class="fa-solid fa-list-check"></i>
+                                                    </button>
+                                                    @if ($isProjectManager)
+                                                        <button type="button"
+                                                                wire:click="openRemove({{ $user['id'] ?? 0 }}, '{{ addslashes($fullName) }}')"
+                                                                class="mp-remove-btn"
+                                                                title="Remove from project">
+                                                            <i class="fa-solid fa-user-minus"></i>
+                                                        </button>
+                                                    @endif
+                                                </div>
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -410,4 +428,6 @@
             </div>
         </div>
     @endif
+
+    @include('partials.onboarding-modal')
 </div>

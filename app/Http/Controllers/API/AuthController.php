@@ -129,24 +129,28 @@ class AuthController extends Controller
         $user->last_login_at = now();
         $user->save();
 
-        AuditService::log(
-            action: 'LOGIN_SUCCESS_OTP',
-            tableName: 'users',
-            recordId: $user->id,
-            logType: 'success'
-        );
+        if (!$this->userIsEnrolled($user)) {
+            AuditService::log(
+                action: 'LOGIN_REQUIRES_2FA_ENROLLMENT',
+                tableName: 'users',
+                recordId: $user->id,
+                newValues: ['email' => $user->email],
+                logType: 'warning',
+                severity: 'warning'
+            );
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Login successful',
-            'data' => [
-                'user' => $this->userPayload($user),
-                'token' => $token,
-                'token_type' => 'Bearer',
-                'permissions' => $user->getAllPermissions()->pluck('name'),
-                'roles' => $user->getRoleNames(),
-            ],
-        ], 200);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Sign in requires 2FA enrollment',
+                'data' => [
+                    'requires_enrollment' => true,
+                    'user_id' => $user->id,
+                    'enrollment_url' => url('/portal/security'),
+                    'user' => $this->userPayload($user),
+                    'roles' => $user->getRoleNames(),
+                ],
+            ], 200);
+        }
     }
 
     /**
@@ -628,6 +632,15 @@ class AuthController extends Controller
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    protected function userIsEnrolled(User $user): bool
+    {
+        if (!empty($user->two_factor_enabled) && !empty($user->two_factor_secret)) {
+            return true;
+        }
+
+        return $this->userHasPasskeys($user);
     }
 
     protected function userPayload(User $user): array

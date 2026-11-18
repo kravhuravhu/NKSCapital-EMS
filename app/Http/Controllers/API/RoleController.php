@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
+use App\Services\AuditService;
 
 class RoleController extends Controller
 {
@@ -214,6 +216,7 @@ class RoleController extends Controller
             'role' => 'required|string|exists:roles,name',
             'permissions' => 'required|array',
             'permissions.*' => 'required|string|exists:permissions,name',
+            'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -222,6 +225,13 @@ class RoleController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $validator->errors()
             ], 422);
+        }
+
+        if (!Hash::check((string) $request->input('password'), Auth::user()->password)) {
+            AuditService::logWarning('ROLE_PERMISSIONS_PASSWORD_FAILED', 'roles', 0, [
+                'actor_id' => Auth::id(),
+            ]);
+            return response()->json(['status' => 'error', 'message' => 'Password is incorrect'], 422);
         }
 
         $role = Role::findByName($request->role);

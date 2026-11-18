@@ -6,6 +6,7 @@ use App\Support\Api;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use App\Livewire\Concerns\HasFlashMessages;
+use App\Livewire\Concerns\HandlesOnboarding;
 
 class EmployeeManagement extends Component
 {
@@ -70,13 +71,7 @@ class EmployeeManagement extends Component
     public array $availableRoles = [];
     public string $rolesPrimary = '';
 
-    // on bonding
-    public bool $showOnboarding = false;
-    public ?int $onboardingUserId = null;
-    public string $onboardingName = '';
-    public array $onboardingItems = [];
-    public int $onboardingProgress = 0;
-    public ?string $onboardingError = null;
+    use HandlesOnboarding;
 
     public function mount(): void
     {
@@ -619,62 +614,6 @@ class EmployeeManagement extends Component
         } else {
             $this->rolesForm[] = $name;
         }
-    }
-
-        public function openOnboarding(int $id): void
-    {
-        $this->onboardingUserId = $id;
-        $this->onboardingError = null;
-        $this->showOnboarding = true;
-        $this->closeView();
-        $this->loadOnboarding();
-    }
-
-    public function closeOnboarding(): void
-    {
-        $this->showOnboarding = false;
-        $this->onboardingUserId = null;
-        $this->onboardingName = '';
-        $this->onboardingItems = [];
-        $this->onboardingProgress = 0;
-        $this->onboardingError = null;
-    }
-
-    protected function loadOnboarding(): void
-    {
-        if (! $this->onboardingUserId) return;
-
-        $response = Api::get('/employee/' . $this->onboardingUserId . '/onboarding');
-
-        if (! $response['ok']) {
-            $this->onboardingError = $response['message'] ?? 'Unable to load onboarding checklist.';
-            return;
-        }
-
-        $this->onboardingName = $response['data']['name'] ?? '';
-        $this->onboardingItems = $response['data']['items'] ?? [];
-        $this->onboardingProgress = (int) ($response['data']['progress'] ?? 0);
-    }
-
-    public function setOnboardingStatus(string $itemKey, string $status): void
-    {
-        if (! $this->onboardingUserId) return;
-
-        $this->onboardingError = null;
-
-        $response = Api::put('/employee/' . $this->onboardingUserId . '/onboarding', [
-            'item_key' => $itemKey,
-            'status' => $status,
-        ]);
-
-        if (! $response['ok']) {
-            $errs = $response['errors'] ?? [];
-            $this->onboardingError = collect($errs)->flatten()->first()
-                ?: ($response['message'] ?? 'Failed to update item.');
-            return;
-        }
-
-        $this->loadOnboarding();
     }
 
     public function render()

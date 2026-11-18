@@ -43,7 +43,8 @@
                         wire:loading.attr="disabled"
                         wire:target="verifyChain"
                         class="nks-btn nks-btn--outline nks-btn--sm">
-                    <i class="fa-solid fa-circle-check"></i>
+                    <i class="fa-solid fa-circle-check" wire:loading.remove wire:target="verifyChain"></i>
+                    <span class="nks-btn-spinner" wire:loading wire:target="verifyChain"></span>
                     Verify chain
                 </button>
                 <button type="button"

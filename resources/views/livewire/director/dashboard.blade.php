@@ -1,4 +1,4 @@
-<div class="page-dashboard" wire:init="load">
+<div class="page-dashboard" wire:init="load" wire:poll.60s="poll">
     <x-nks.loading-overlay :loading="$loading" targets="load" />
     <x-nks.notice-stack :error="$error" :success="$flash" />
     

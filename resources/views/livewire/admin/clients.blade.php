@@ -289,6 +289,10 @@
                         @endif
                     </div>
                 </div>
+                <div class="nks-field">
+                    <label class="nks-label">Admin password <span class="nks-required">*</span></label>
+                    <input type="password" wire:model="updatePassword" class="nks-input" autocomplete="current-password">
+                </div>
                 <footer class="nks-modal-foot">
                     <button type="button" wire:click="closeView" class="nks-btn nks-btn--outline">Close</button>
                     <button type="button" wire:click="openEdit({{ $viewClient['id'] }})" class="nks-btn nks-btn--primary">

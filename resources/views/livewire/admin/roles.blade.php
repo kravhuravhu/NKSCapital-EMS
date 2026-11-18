@@ -62,6 +62,11 @@
                             </div>
                         </div>
 
+                        <div class="nks-field">
+                            <label class="nks-label">Admin password <span class="nks-required">*</span></label>
+                            <input type="password" wire:model="updatePassword" class="nks-input" autocomplete="current-password">
+                        </div>
+
                         <footer class="rl-card-foot">
                             <button type="button" wire:click="openPermissions({{ $role['id'] }})"
                                     class="nks-btn nks-btn--outline nks-btn--sm">

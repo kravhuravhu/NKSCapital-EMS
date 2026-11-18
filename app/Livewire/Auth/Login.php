@@ -152,7 +152,22 @@ class Login extends Component
             return;
         }
 
-        $this->completeLogin($response['data']);
+        $data = $response['data'] ?? [];
+
+        if (!empty($data['requires_enrollment'])) {
+            $user = User::find($data['user_id'] ?? null);
+
+            if (!$user) {
+                $this->error = 'Enrollment flow could not identify your account.';
+                return;
+            }
+
+            Auth::login($user);
+            $this->redirect($data['enrollment_url'] ?? route('portal.security'));
+            return;
+        }
+
+        $this->completeLogin($data);
     }
 
     public function resendOtp(): void

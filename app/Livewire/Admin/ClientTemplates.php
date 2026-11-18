@@ -38,6 +38,8 @@ class ClientTemplates extends Component
     public bool $showView = false;
     public ?array $viewTemplate = null;
 
+    public string $updatePassword = '';
+
     public function mount(): void
     {
         $this->resetUploadForm();
@@ -141,10 +143,12 @@ class ClientTemplates extends Component
             $this->error = 'Select a client.';
             return;
         }
+
         if (empty($this->uploadForm['template_name'])) {
             $this->error = 'Template name is required.';
             return;
         }
+
         if (!$this->uploadFile) {
             $this->error = 'Select a PDF or Word file to upload.';
             return;
@@ -157,10 +161,22 @@ class ClientTemplates extends Component
             return;
         }
 
+        if (empty($this->updatePassword)) {
+            $this->error = 'Enter your password to confirm this upload.';
+            return;
+        }
+
+        if (!Auth::validate(['email' => auth()->user()->email, 'password' => $this->updatePassword,])) {
+            $this->error = 'Password is incorrect.';
+            return;
+        }
+
         $payload = [
             'client_id' => $this->uploadForm['client_id'],
             'template_name' => $this->uploadForm['template_name'],
+            'password' => $this->updatePassword,
         ];
+
         if (!empty($this->uploadForm['template_content'])) {
             $payload['template_content'] = $this->uploadForm['template_content'];
         }
@@ -209,6 +225,7 @@ class ClientTemplates extends Component
         $this->updateId = null;
         $this->updateForm = [];
         $this->updateFile = null;
+        $this->updatePassword = '';
     }
 
     public function submitUpdate(): void

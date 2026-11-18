@@ -733,38 +733,36 @@ class LeaveController extends Controller
         }
 
         $wasApproved = in_array($leaveRequest->status, [
-            'approved', 'auto_approved', 'partially_approved', 'approved_pending_proof'
-        ]);
-        $daysToReturn = $leaveRequest->partial_approved_days ?? $leaveRequest->days_taken;
+            'approved', 'auto_approved', 'partially_approved', 'approved_pending_proof',
+        ], true);
+        $daysToReturn = (float) ($leaveRequest->partial_approved_days ?? $leaveRequest->days_taken);
         $isLate = $leaveRequest->isLateCancellation();
 
-        // Return balance if was approved and not late cancellation
-        if ($wasApproved && !$isLate) {
-            $employee = $leaveRequest->user;
-            $currentBalance = $employee->getLeaveBalance($leaveRequest->leave_type);
-            $newBalance = $currentBalance + $daysToReturn;
-            $employee->addLeaveBalance($leaveRequest->leave_type, $daysToReturn);
+        DB::transaction(function () use ($leaveRequest, $user, $wasApproved, $daysToReturn, $isLate, $request) {
+            if ($wasApproved && !$isLate) {
+                $employee = $leaveRequest->user;
+                $currentBalance = (float) $employee->getLeaveBalance($leaveRequest->leave_type);
+                $employee->addLeaveBalance($leaveRequest->leave_type, $daysToReturn);
 
-            // Log the balance restoration
-            LeaveBalance::create([
-                'user_id' => $employee->id,
-                'leave_type' => $leaveRequest->leave_type,
-                'balance_before' => $currentBalance,
-                'balance_after' => $newBalance,
-                'adjustment_reason' => 'Leave cancellation - balance restored',
-                'reference_id' => $leaveRequest->id,
-                'reference_type' => 'leave_cancellation',
-                'adjusted_by' => $user->id,
-                'adjusted_at' => now(),
-            ]);
-        }
+                LeaveBalance::create([
+                    'user_id' => $employee->id,
+                    'leave_type' => $leaveRequest->leave_type,
+                    'balance_before' => $currentBalance,
+                    'balance_after' => $currentBalance + $daysToReturn,
+                    'adjustment_reason' => 'Leave cancellation - balance restored',
+                    'reference_id' => $leaveRequest->id,
+                    'reference_type' => 'leave_cancellation',
+                    'adjusted_by' => $user->id,
+                    'adjusted_at' => now(),
+                ]);
+            }
 
-        // Remove calendar entries
-        LeaveCalendar::where('leave_request_id', $leaveRequest->id)->delete();
+            LeaveCalendar::where('leave_request_id', $leaveRequest->id)->delete();
 
-        $leaveRequest->status = 'cancelled';
-        $leaveRequest->rejection_reason = $request->reason ?? 'Cancelled by employee';
-        $leaveRequest->save();
+            $leaveRequest->status = 'cancelled';
+            $leaveRequest->rejection_reason = $request->reason ?? 'Cancelled by employee';
+            $leaveRequest->save();
+        });
 
         AuditService::log(
             action: 'LEAVE_CANCELLED',
@@ -775,19 +773,20 @@ class LeaveController extends Controller
                 'status' => 'cancelled',
                 'days_returned' => $wasApproved && !$isLate ? $daysToReturn : 0,
                 'is_late_cancellation' => $isLate,
-            ]
+            ],
+            logType: 'success'
         );
 
         return response()->json([
             'status' => 'success',
             'message' => $isLate
-                ? 'Leave cancelled (late cancellation - days forfeited)'
+                ? 'Leave cancelled (late cancellation, days forfeited)'
                 : 'Leave cancelled successfully',
             'data' => [
                 'leave_request' => $leaveRequest->fresh(),
                 'days_returned' => $wasApproved && !$isLate ? $daysToReturn : 0,
                 'is_late_cancellation' => $isLate,
-            ]
+            ],
         ], 200);
     }
 
