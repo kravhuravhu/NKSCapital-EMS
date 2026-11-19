@@ -5,6 +5,7 @@ namespace App\Livewire\Director;
 use App\Support\Api;
 use Livewire\Component;
 use App\Livewire\Concerns\HasFlashMessages;
+use App\Support\RoleCheck;
 
 class PendingL2 extends Component
 {
@@ -31,7 +32,7 @@ class PendingL2 extends Component
 
     public function mount(): void
     {
-        if (! in_array(auth()->user()->role, ['director', 'operational_manager', 'admin', 'super_admin'], true)) {
+        if (! RoleCheck::has(auth()->user(), ['director', 'operational_manager', 'admin', 'super_admin'])) {
             abort(403, 'Operational Manager or Director role required.');
         }
         // load() fires from wire:init.
@@ -42,7 +43,7 @@ class PendingL2 extends Component
         $this->loading = true;
         $this->error = null;
 
-        // 2FA is a hard requirement for L2 — check on every load
+        // 2FA is a hard requirement for L2 - check on every load
         $this->twoFactorEnabled = auth()->user()->hasTwoFactorEnabled();
 
         $response = Api::get('/timesheet/pr/pending/l2');

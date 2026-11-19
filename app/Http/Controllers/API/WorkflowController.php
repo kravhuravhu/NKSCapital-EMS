@@ -11,6 +11,7 @@ use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use App\Support\RoleCheck;
 
 class WorkflowController extends Controller
 {
@@ -64,7 +65,7 @@ class WorkflowController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
@@ -122,7 +123,7 @@ class WorkflowController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
@@ -175,7 +176,7 @@ class WorkflowController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
@@ -248,7 +249,7 @@ class WorkflowController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'

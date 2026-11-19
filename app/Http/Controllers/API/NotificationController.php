@@ -11,6 +11,7 @@ use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use App\Support\RoleCheck;
 
 class NotificationController extends Controller
 {
@@ -223,7 +224,7 @@ class NotificationController extends Controller
     public function sendEmail(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 

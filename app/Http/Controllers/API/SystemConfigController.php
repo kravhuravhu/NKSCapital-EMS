@@ -8,6 +8,7 @@ use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Support\RoleCheck;
 
 class SystemConfigController extends Controller
 {
@@ -101,7 +102,7 @@ class SystemConfigController extends Controller
             $value = $this->coerce($rawValue, $type);
 
             if ($value === null && $type !== 'string') {
-                $errors[$key] = "Invalid value for '{$key}' — expected {$type}";
+                $errors[$key] = "Invalid value for '{$key}' - expected {$type}";
                 continue;
             }
 
@@ -157,7 +158,7 @@ class SystemConfigController extends Controller
         if (array_key_exists($key, $this->schema)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Schema configs cannot be deleted — update the value instead.',
+                'message' => 'Schema configs cannot be deleted - update the value instead.',
             ], 422);
         }
 
@@ -225,7 +226,7 @@ class SystemConfigController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'super_admin', 'director'], true)) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             AuditService::logWarning('SYSTEM_CONFIG_ACCESS_DENIED', 'system_configs', 0, [
                 'actor_id' => $user->id,
                 'role' => $user->role,

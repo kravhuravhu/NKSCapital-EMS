@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use App\Support\RoleCheck;
 
 class EmployeeTypeController extends Controller
 {
@@ -70,7 +71,7 @@ class EmployeeTypeController extends Controller
 
         // Check permission
         $authUser = Auth::user();
-        if ($authUser->id !== $user->id && !in_array($authUser->role, ['admin', 'director', 'manager'])) {
+        if ($authUser->id !== $user->id && !RoleCheck::has($authUser, ['admin', 'director', 'manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to view this profile'
@@ -152,7 +153,7 @@ class EmployeeTypeController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized - Only admins can update employee types',
@@ -211,7 +212,7 @@ class EmployeeTypeController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized - Only admins can delete employee types',

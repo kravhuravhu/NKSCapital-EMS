@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use App\Support\RoleCheck;
 
 class DocumentController extends Controller
 {
@@ -131,7 +132,7 @@ class DocumentController extends Controller
 
         $document = Document::findOrFail($id);
 
-        if (!$document->is_shared && $document->user_id !== $user->id && !in_array($user->role, ['admin', 'director', 'super_admin'])) {
+        if (!$document->is_shared && $document->user_id !== $user->id && !RoleCheck::has($user, ['admin', 'director', 'super_admin'])) {
             abort(403);
         }
 

@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Support\RoleCheck;
 
 class SearchController extends Controller
 {
@@ -28,7 +29,7 @@ class SearchController extends Controller
         $query = '%' . $request->q . '%';
         $groups = [];
 
-        $canSeePeople = in_array($user->role, ['manager', 'director', 'admin', 'super_admin', 'recruiter'], true);
+        $canSeePeople = RoleCheck::has($user, ['manager', 'director', 'admin', 'super_admin', 'recruiter']);
 
         if ($canSeePeople) {
             $users = User::where('is_active', true)
@@ -53,7 +54,7 @@ class SearchController extends Controller
             }
         }
 
-        if (in_array($user->role, ['admin', 'super_admin', 'manager', 'director'], true)) {
+        if (RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])) {
             $clients = Client::where('is_active', true)
                 ->where(function ($q) use ($query) {
                     $q->where('company_name', 'like', $query)

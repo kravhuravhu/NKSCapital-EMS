@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Models\LeaveCalendar;
+use App\Support\RoleCheck;
 
 class PSTimesheetController extends Controller
 {
@@ -416,7 +417,7 @@ class PSTimesheetController extends Controller
         $timesheet = PSTimesheet::with(['details.project', 'user.client', 'clientManager'])
             ->findOrFail($id);
 
-        if ($user->id !== $timesheet->user_id && !in_array($user->role, ['admin', 'director', 'manager', 'operational_manager'])) {
+        if ($user->id !== $timesheet->user_id && !RoleCheck::has($user, ['admin', 'director', 'manager', 'operational_manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to view this timesheet'

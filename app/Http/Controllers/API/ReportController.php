@@ -62,7 +62,7 @@ class ReportController extends Controller
     }
 
     // ============================================================
-    // MANAGER — TEAM PERFORMANCE
+    // MANAGER - TEAM PERFORMANCE
     // ============================================================
 
     /**
@@ -81,7 +81,7 @@ class ReportController extends Controller
     }
 
     // ============================================================
-    // DIRECTOR — COMPANY KPI & FINANCIAL
+    // DIRECTOR - COMPANY KPI & FINANCIAL
     // ============================================================
 
     /**
@@ -115,7 +115,7 @@ class ReportController extends Controller
     }
 
     // ============================================================
-    // ADMIN — SYSTEM USAGE
+    // ADMIN - SYSTEM USAGE
     // ============================================================
 
     /**
@@ -134,7 +134,7 @@ class ReportController extends Controller
     }
 
     // ============================================================
-    // RECRUITMENT — PIPELINE
+    // RECRUITMENT - PIPELINE
     // ============================================================
 
     /**
@@ -153,7 +153,7 @@ class ReportController extends Controller
     }
 
     // ============================================================
-    // COMPLIANCE — AUDIT
+    // COMPLIANCE - AUDIT
     // ============================================================
 
     /**
@@ -316,7 +316,7 @@ class ReportController extends Controller
     protected function requireEmployeeType(User $user, string $type): void
     {
         if ($user->employee_type !== $type
-            && !in_array($user->role, ['admin', 'super_admin', 'director', 'manager'])) {
+            && !RoleCheck::has($user, ['admin', 'super_admin', 'director', 'manager'])) {
             abort(response()->json([
                 'status' => 'error',
                 'message' => "This report is only available for {$type} employees"

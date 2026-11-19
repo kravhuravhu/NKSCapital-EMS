@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Support\RoleCheck;
 
 class QueueController extends Controller
 {
@@ -273,7 +274,7 @@ class QueueController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, $roles, true)) {
+        if (!RoleCheck::has($user, $roles)) {
             AuditService::logWarning('QUEUE_ACCESS_DENIED', 'queue', 0, [
                 'actor_id' => $user->id,
                 'required' => $roles,

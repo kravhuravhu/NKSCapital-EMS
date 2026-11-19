@@ -470,7 +470,7 @@ class LeaveController extends Controller
         $leaveRequest = LeaveRequest::findOrFail($request->leave_request_id);
 
         // Check permission (manager or director)
-        if (!in_array($user->role, ['manager', 'director', 'admin', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['manager', 'director', 'admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -534,7 +534,7 @@ class LeaveController extends Controller
         $user = Auth::user();
         $leaveRequest = LeaveRequest::findOrFail($request->leave_request_id);
 
-        if (!in_array($user->role, ['manager', 'director', 'admin', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['manager', 'director', 'admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -837,7 +837,7 @@ class LeaveController extends Controller
             $query->where('user_id', $request->user_id);
         }
 
-        if (!in_array($user->role, ['admin', 'director', 'manager', 'super_admin', 'operational_manager'], true)) {
+        if (!RoleCheck::has($user, ['admin', 'director', 'manager', 'super_admin', 'operational_manager'])) {
             $query->whereHas('user', function ($q) use ($user) {
                 $q->where('department', $user->department);
             });
@@ -878,7 +878,7 @@ class LeaveController extends Controller
             $halfDayQuery->where('user_id', $request->user_id);
         }
 
-        if (!in_array($user->role, ['admin', 'director', 'manager', 'super_admin', 'operational_manager'], true)) {
+        if (!RoleCheck::has($user, ['admin', 'director', 'manager', 'super_admin', 'operational_manager'])) {
             $halfDayQuery->whereHas('user', function ($q) use ($user) {
                 $q->where('department', $user->department);
             });
@@ -973,7 +973,7 @@ class LeaveController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['manager', 'director', 'admin', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['manager', 'director', 'admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -1004,7 +1004,7 @@ class LeaveController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'director', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'director', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Only Admin and Director can adjust balances'
@@ -1159,7 +1159,7 @@ class LeaveController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['manager', 'director', 'admin', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['manager', 'director', 'admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 

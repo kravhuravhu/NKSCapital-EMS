@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use App\Support\RoleCheck;
 
 class TimesheetReportController extends Controller
 {
@@ -34,7 +35,7 @@ class TimesheetReportController extends Controller
         $user = Auth::user();
 
         // Only Director, Admin, or Finance
-        if (!in_array($user->role, ['admin', 'director', 'finance', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'director', 'finance', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to export payroll data'
@@ -231,7 +232,7 @@ class TimesheetReportController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'director', 'manager', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'director', 'manager', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
@@ -276,7 +277,7 @@ class TimesheetReportController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'director', 'manager', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'director', 'manager', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
@@ -335,7 +336,7 @@ class TimesheetReportController extends Controller
 
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'director', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'director', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
@@ -417,7 +418,7 @@ class TimesheetReportController extends Controller
 
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'director', 'manager', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'director', 'manager', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
@@ -486,7 +487,7 @@ class TimesheetReportController extends Controller
 
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'director', 'manager', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'director', 'manager', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
@@ -566,7 +567,7 @@ class TimesheetReportController extends Controller
 
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'director', 'manager', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'director', 'manager', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'

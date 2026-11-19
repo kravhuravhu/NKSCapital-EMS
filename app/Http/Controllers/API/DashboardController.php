@@ -188,7 +188,7 @@ class DashboardController extends Controller
     protected function requireEmployeeType($user, string $type): void
     {
         if ($user->employee_type !== $type
-            && !in_array($user->role, ['admin', 'super_admin', 'director', 'operational_manager', 'manager'])) {
+            && !RoleCheck::has($user, ['admin', 'super_admin', 'director', 'operational_manager', 'manager'])) {
             abort(response()->json([
                 'status' => 'error',
                 'message' => "Dashboard is only available for {$type} employees"

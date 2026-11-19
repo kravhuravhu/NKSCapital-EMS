@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Support\RoleCheck;
 
 class AssetController extends Controller
 {
@@ -29,7 +30,7 @@ class AssetController extends Controller
     public function register(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -69,7 +70,7 @@ class AssetController extends Controller
     public function loan(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -116,7 +117,7 @@ class AssetController extends Controller
     public function returnAsset(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -158,7 +159,7 @@ class AssetController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => $asset->fresh()->status === 'repair_requested'
-                ? 'Asset returned — flagged for repair'
+                ? 'Asset returned - flagged for repair'
                 : 'Asset returned successfully',
             'data' => [
                 'asset' => $asset->fresh(),
@@ -173,7 +174,7 @@ class AssetController extends Controller
     public function overdue()
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -370,7 +371,7 @@ class AssetController extends Controller
         $asset = Asset::findOrFail($request->asset_id);
 
         // If employee, must own the asset
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])) {
             if ($asset->current_assignee_id !== $user->id) {
                 return response()->json(['status' => 'error', 'message' => 'You can only request repair for assets assigned to you.'], 403);
             }
@@ -405,7 +406,7 @@ class AssetController extends Controller
             'custodyHistory.creator:id,first_name,last_name',
         ])->findOrFail($assetId);
 
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])
             && $asset->current_assignee_id !== $user->id) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
@@ -428,7 +429,7 @@ class AssetController extends Controller
     public function report(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -505,7 +506,7 @@ class AssetController extends Controller
     public function listAssets(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -555,12 +556,12 @@ class AssetController extends Controller
 
     /**
      * PUT /api/v1/asset/update/{id}
-     * Admin correction of asset metadata (not loan state — use loan/return).
+     * Admin correction of asset metadata (not loan state - use loan/return).
      */
     public function updateAsset(Request $request, $id)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -614,7 +615,7 @@ class AssetController extends Controller
     public function retireAsset(Request $request, $id)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 

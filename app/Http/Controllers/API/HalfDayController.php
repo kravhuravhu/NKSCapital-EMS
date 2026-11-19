@@ -9,6 +9,7 @@ use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Support\RoleCheck;
 
 class HalfDayController extends Controller
 {
@@ -77,7 +78,7 @@ class HalfDayController extends Controller
     public function pending()
     {
         $user = Auth::user();
-        if (! in_array($user->role, ['manager', 'director', 'admin', 'super_admin'], true)) {
+        if (! RoleCheck::has($user, ['manager', 'director', 'admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -93,7 +94,7 @@ class HalfDayController extends Controller
     public function respond(Request $request, $id)
     {
         $user = Auth::user();
-        if (! in_array($user->role, ['manager', 'director', 'admin', 'super_admin'], true)) {
+        if (! RoleCheck::has($user, ['manager', 'director', 'admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -108,7 +109,7 @@ class HalfDayController extends Controller
 
         $notice = HalfDayNotice::findOrFail($id);
 
-        if ($notice->manager_id !== $user->id && ! in_array($user->role, ['admin', 'super_admin'], true)) {
+        if ($notice->manager_id !== $user->id && ! RoleCheck::has($user, ['admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
