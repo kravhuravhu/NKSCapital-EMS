@@ -17,6 +17,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Models\LeaveCalendar;
 use App\Models\SystemConfig;
+use App\Support\RoleCheck;
 
 class PRTimesheetController extends Controller
 {
@@ -749,7 +750,7 @@ class PRTimesheetController extends Controller
         if ($user->id !== $timesheet->user_id 
             && $user->id !== $timesheet->level1_approver_id
             && $user->id !== $timesheet->level2_approver_id
-            && !in_array($user->role, ['admin', 'director', 'operational_manager', 'manager'])) {
+            && !RoleCheck::has($user, ['admin', 'director', 'operational_manager', 'manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to view this timesheet'
@@ -823,7 +824,7 @@ class PRTimesheetController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['manager', 'admin', 'director'])) {
+        if (!RoleCheck::has($user, ['manager', 'admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
@@ -852,7 +853,7 @@ class PRTimesheetController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['director', 'operational_manager', 'admin'])) {
+        if (!RoleCheck::has($user, ['director', 'operational_manager', 'admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'

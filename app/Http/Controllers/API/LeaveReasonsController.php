@@ -8,6 +8,7 @@ use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Support\RoleCheck;
 
 class LeaveReasonsController extends Controller
 {
@@ -22,7 +23,7 @@ class LeaveReasonsController extends Controller
     public function index()
     {
         $user = Auth::user();
-        if (! in_array($user->role, ['admin', 'super_admin', 'director'], true)) {
+        if (! RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -37,7 +38,7 @@ class LeaveReasonsController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
-        if (! in_array($user->role, ['admin', 'super_admin', 'director'], true)) {
+        if (! RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -76,7 +77,7 @@ class LeaveReasonsController extends Controller
     public function update(Request $request, $id)
     {
         $user = Auth::user();
-        if (! in_array($user->role, ['admin', 'super_admin', 'director'], true)) {
+        if (! RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -112,7 +113,7 @@ class LeaveReasonsController extends Controller
     public function destroy($id)
     {
         $user = Auth::user();
-        if (! in_array($user->role, ['admin', 'super_admin'], true)) {
+        if (! RoleCheck::has($user, ['admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 

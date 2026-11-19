@@ -125,7 +125,7 @@ class EmployeeController extends Controller
 
         // Check permission
         $authUser = Auth::user();
-        if ($authUser->id !== $user->id && !in_array($authUser->role, ['admin', 'director', 'manager'])) {
+        if ($authUser->id !== $user->id && !RoleCheck::has($authUser, ['admin', 'director', 'manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to view this profile'
@@ -207,7 +207,7 @@ class EmployeeController extends Controller
     {
         $authUser = Auth::user();
 
-        if (! in_array($authUser->role, ['admin', 'super_admin'], true)) {
+        if (! RoleCheck::has($authUser, ['admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -277,7 +277,7 @@ class EmployeeController extends Controller
     {
         $authUser = Auth::user();
 
-        if (!in_array($authUser->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has($authUser, ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to view this profile.'
@@ -329,7 +329,7 @@ class EmployeeController extends Controller
 
         // Check permission
         $authUser = Auth::user();
-        if (!in_array($authUser->role, ['admin', 'director', 'manager'])) {
+        if (!RoleCheck::has($authUser, ['admin', 'director', 'manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to update this profile'
@@ -450,7 +450,7 @@ class EmployeeController extends Controller
     {
         $authUser = Auth::user();
 
-        if (!in_array($authUser->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has($authUser, ['admin', 'super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to reactivate employees.'
@@ -598,7 +598,7 @@ class EmployeeController extends Controller
 
         // Check permission
         $authUser = Auth::user();
-        if ($authUser->id !== $user->id && !in_array($authUser->role, ['admin', 'director', 'manager'])) {
+        if ($authUser->id !== $user->id && !RoleCheck::has($authUser, ['admin', 'director', 'manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to view this history'

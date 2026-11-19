@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Support\RoleCheck;
 
 class ContractController extends Controller
 {
@@ -27,7 +28,7 @@ class ContractController extends Controller
     public function upload(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -132,7 +133,7 @@ class ContractController extends Controller
     public function renew(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'director', 'manager'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director', 'manager'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -173,7 +174,7 @@ class ContractController extends Controller
     public function updateStatus(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -216,7 +217,7 @@ class ContractController extends Controller
         $contract = Contract::findOrFail($id);
 
         // Employee can sign their own; admins can sign on behalf
-        if ($user->id !== $contract->user_id && !in_array($user->role, ['admin', 'super_admin', 'director'])) {
+        if ($user->id !== $contract->user_id && !RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -247,7 +248,7 @@ class ContractController extends Controller
     public function expiring(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'manager', 'director'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'manager', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -301,7 +302,7 @@ class ContractController extends Controller
     public function listContracts(Request $request)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin', 'director', 'manager'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin', 'director', 'manager'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -383,12 +384,12 @@ class ContractController extends Controller
 
     /**
      * DELETE /api/v1/contract/delete/{id}
-     * Soft delete via status — hard delete only for drafts.
+     * Soft delete via status - hard delete only for drafts.
      */
     public function destroy($id)
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -429,7 +430,7 @@ class ContractController extends Controller
     protected function canView(User $actor, Contract $contract): bool
     {
         if ($actor->id === $contract->user_id) return true;
-        if (in_array($actor->role, ['admin', 'super_admin', 'director'])) return true;
+        if (RoleCheck::has($actor, ['admin', 'super_admin', 'director'])) return true;
         if ($actor->role === 'manager' && $contract->user?->manager_id === $actor->id) return true;
         return false;
     }
@@ -437,7 +438,7 @@ class ContractController extends Controller
     protected function canViewUser(User $actor, User $target): bool
     {
         if ($actor->id === $target->id) return true;
-        if (in_array($actor->role, ['admin', 'super_admin', 'director'])) return true;
+        if (RoleCheck::has($actor, ['admin', 'super_admin', 'director'])) return true;
         if ($actor->role === 'manager' && $target->manager_id === $actor->id) return true;
         return false;
     }

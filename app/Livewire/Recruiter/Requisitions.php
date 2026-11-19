@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 use App\Livewire\Concerns\HasFlashMessages;
+use App\Support\RoleCheck;
 
 class Requisitions extends Component
 {
@@ -489,7 +490,7 @@ class Requisitions extends Component
     {
         if (! $row) return false;
 
-        if (! in_array(auth()->user()->role, ['admin', 'super_admin', 'director', 'operational_manager'], true)) {
+        if (! RoleCheck::has(auth()->user(), ['admin', 'super_admin', 'director', 'operational_manager'])) {
             return false;
         }
 

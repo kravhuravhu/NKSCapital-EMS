@@ -1,10 +1,5 @@
 <div>
-    @if ($error)
-        <div class="nks-auth-status nks-auth-status--error" role="alert">
-            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-            <span>{{ $error }}</span>
-        </div>
-    @endif
+    <x-nks.notice-stack :error="$error" :success="$flash" />
 
     <nav class="nks-auth-tabs" role="tablist">
         <button type="button"
@@ -69,16 +64,8 @@
                 </div>
 
                 <button type="submit" class="nks-auth-submit" wire:loading.attr="disabled" wire:target="submitPassword">
-
-                    <span wire:loading.remove wire:target="submitPassword">
-                        Continue
-                    </span>
-
-                    <span wire:loading wire:target="submitPassword" class="nks-auth-loading">
-                        <span class="nks-btn-spinner"></span>
-                        Verifying...
-                    </span>
-
+                    <span>Continue</span>
+                    <span class="nks-btn-spinner" wire:loading wire:target="submitPassword"></span>
                     <i class="fa-solid fa-arrow-right" wire:loading.remove wire:target="submitPassword" aria-hidden="true"></i>
                 </button>
             </form>
@@ -104,16 +91,8 @@
                 </div>
 
                 <button type="submit" class="nks-auth-submit" wire:loading.attr="disabled" wire:target="submitOtp">
-                    <span wire:loading.remove wire:target="submitOtp">
-                        Sign in
-                    </span>
-
-                    <span wire:loading wire:target="submitOtp"
-                        class="nks-auth-loading">
-                        <span class="nks-btn-spinner"></span>
-                        Signing in...
-                    </span>
-
+                    <span>Sign in</span>
+                    <span class="nks-btn-spinner" wire:loading wire:target="submitOtp"></span>
                     <i class="fa-solid fa-arrow-right" wire:loading.remove wire:target="submitOtp" aria-hidden="true"></i>
                 </button>
             </form>
@@ -127,27 +106,41 @@
             </div>
         @endif
     @else
-        <header class="nks-auth-heading">
-            <h1>Sign in with your phone</h1>
-            <p>Scan the QR code with your phone camera. On the phone, sign in as usual and approve the desktop.</p>
-        </header>
+        @if ($qrState === 'identify')
+            <header class="nks-auth-heading">
+                <h1>Sign in with your phone</h1>
+                <p>Enter your email or employee number. You will get a QR code to scan with the phone you are already signed in on.</p>
+            </header>
 
-        <div class="nks-auth-qr" wire:poll.2s="pollQrStatus">
-            @if ($qrLoading)
-                <div class="nks-auth-qr-loading">
-                    <span class="nks-btn-spinner" style="display: inline-block; width: 20px; height: 20px;"></span>
-                    <span>Generating QR code...</span>
+            <form wire:submit="startQr" class="nks-auth-form" novalidate>
+                <div class="nks-auth-field">
+                    <label for="qr-identifier">Email or employee number</label>
+                    <div class="nks-auth-input-wrap">
+                        <i class="fa-solid fa-user" aria-hidden="true"></i>
+                        <input id="qr-identifier"
+                               type="text"
+                               wire:model="qrIdentifier"
+                               required
+                               autofocus
+                               autocomplete="username"
+                               placeholder="Email or employee number">
+                    </div>
+                    @error('qrIdentifier') <small class="nks-auth-error">{{ $message }}</small> @enderror
                 </div>
-            @elseif ($qrExpired)
-                <div class="nks-auth-qr-expired">
-                    <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
-                    <p>This QR code has expired.</p>
-                    <button type="button" wire:click="refreshQr" class="nks-btn nks-btn--primary nks-btn--sm">
-                        <i class="fa-solid fa-rotate-right"></i>
-                        Generate a new QR code
-                    </button>
-                </div>
-            @elseif ($qrData)
+
+                <button type="submit" class="nks-auth-submit" wire:loading.attr="disabled" wire:target="startQr">
+                    <span>Get QR code</span>
+                    <span class="nks-btn-spinner" wire:loading wire:target="startQr"></span>
+                    <i class="fa-solid fa-qrcode" wire:loading.remove wire:target="startQr" aria-hidden="true"></i>
+                </button>
+            </form>
+        @elseif ($qrState === 'pending' && $qrData)
+            <header class="nks-auth-heading">
+                <h1>Scan to sign in</h1>
+                <p>Scan the QR code with your phone camera. On the phone, confirm with your password to approve this sign in.</p>
+            </header>
+
+            <div class="nks-auth-qr" wire:poll.3s="pollQrStatus">
                 <div class="nks-auth-qr-image-wrap">
                     @if (! empty($qrData['qr_image']))
                         <img src="{{ $qrData['qr_image'] }}" alt="QR code" class="nks-auth-qr-image">
@@ -157,20 +150,72 @@
                 </div>
 
                 <p class="nks-auth-qr-status">
-                    @if ($qrStatus === 'pending')
-                        <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
-                        Waiting for your phone...
-                    @elseif ($qrStatus === 'approved')
-                        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                        Approved. Signing in...
-                    @endif
+                    <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
+                    Waiting for your phone...
                 </p>
 
                 <p class="nks-auth-qr-hint">
-                    Expires in {{ (int) ceil(now()->diffInSeconds(\Carbon\Carbon::parse($qrData['expires_at']), false)) }} seconds.
+                    Expires in {{ max(0, (int) ceil(now()->diffInSeconds(\Carbon\Carbon::parse($qrData['expires_at']), false))) }} seconds.
                 </p>
-            @endif
-        </div>
+            </div>
+
+            <div class="nks-auth-links">
+                <a href="#" wire:click.prevent="cancelQr" wire:loading.attr="disabled" wire:target="cancelQr">
+                    <span wire:loading.remove wire:target="cancelQr">Use a different identity</span>
+                    <span wire:loading wire:target="cancelQr">Cancelling...</span>
+                </a>
+            </div>
+        @elseif ($qrState === 'approved')
+            <header class="nks-auth-heading">
+                <h1>Approved</h1>
+                <p>Your phone approved this sign in.</p>
+            </header>
+
+            <div class="nks-auth-qr">
+                <p class="nks-auth-qr-status">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                    Approved. Signing in...
+                </p>
+            </div>
+        @elseif ($qrState === 'expired')
+            <header class="nks-auth-heading">
+                <h1>QR code expired</h1>
+                <p>The code was not approved in time.</p>
+            </header>
+
+            <div class="nks-auth-qr-expired">
+                <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                <p>This QR code has expired.</p>
+                <button type="button" wire:click="regenerateQr" wire:loading.attr="disabled" wire:target="regenerateQr" class="nks-btn nks-btn--primary nks-btn--sm">
+                    <span class="nks-btn-spinner" wire:loading wire:target="regenerateQr"></span>
+                    <i class="fa-solid fa-rotate-right" wire:loading.remove wire:target="regenerateQr" aria-hidden="true"></i>
+                    Generate a new QR code
+                </button>
+            </div>
+
+            <div class="nks-auth-links">
+                <a href="#" wire:click.prevent="cancelQr">Use a different identity</a>
+            </div>
+        @else
+            <header class="nks-auth-heading">
+                <h1>QR sign in failed</h1>
+                <p>Something went wrong while setting up QR sign in.</p>
+            </header>
+
+            <div class="nks-auth-qr-expired">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                <p>We could not complete QR sign in.</p>
+                <button type="button" wire:click="retryQr" wire:loading.attr="disabled" wire:target="retryQr" class="nks-btn nks-btn--primary nks-btn--sm">
+                    <span class="nks-btn-spinner" wire:loading wire:target="retryQr"></span>
+                    <i class="fa-solid fa-rotate-right" wire:loading.remove wire:target="retryQr" aria-hidden="true"></i>
+                    Try again
+                </button>
+            </div>
+
+            <div class="nks-auth-links">
+                <a href="#" wire:click.prevent="cancelQr">Use a different identity</a>
+            </div>
+        @endif
 
         <div class="nks-auth-links">
             <a href="#" wire:click.prevent="selectTab('password')">Back to password sign in</a>

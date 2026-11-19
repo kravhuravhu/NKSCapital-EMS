@@ -68,7 +68,7 @@
                                                     class="nks-btn nks-btn--outline nks-btn--sm">
                                                 <i class="fa-solid fa-eye"></i>
                                                 View
-                                            </button>
+                                            </button> 
                                             <button type="button"
                                                     wire:click="openApprove({{ $ts['id'] }})"
                                                     class="nks-btn nks-btn--primary nks-btn--sm">

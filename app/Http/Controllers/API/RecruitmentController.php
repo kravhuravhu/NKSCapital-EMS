@@ -301,7 +301,7 @@ class RecruitmentController extends Controller
 
         $requisition = Requisition::findOrFail($request->requisition_id);
 
-        if (!$requisition->isOpenForApplications() && !in_array($user->role, ['admin', 'super_admin', 'director'])) {
+        if (!$requisition->isOpenForApplications() && !RoleCheck::has($user, ['admin', 'super_admin', 'director'])) {
             return response()->json(['status' => 'error', 'message' => 'Requisition is not open for applications'], 422);
         }
 

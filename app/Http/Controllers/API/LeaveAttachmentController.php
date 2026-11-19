@@ -11,6 +11,7 @@ use App\Services\LeaveProofService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use App\Support\RoleCheck;
 
 class LeaveAttachmentController extends Controller
 {
@@ -89,7 +90,7 @@ class LeaveAttachmentController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['manager', 'director', 'admin', 'super_admin'])) {
+        if (!RoleCheck::has($user, ['manager', 'director', 'admin', 'super_admin'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized to approve proof'
@@ -134,7 +135,7 @@ class LeaveAttachmentController extends Controller
         $leaveRequest = LeaveRequest::findOrFail($leaveRequestId);
 
         if ($user->id !== $leaveRequest->user_id
-            && !in_array($user->role, ['manager', 'director', 'admin', 'super_admin'])) {
+            && !RoleCheck::has($user, ['manager', 'director', 'admin', 'super_admin'])) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 

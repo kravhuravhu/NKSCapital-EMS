@@ -55,6 +55,7 @@ use App\Livewire\Employee\TimesheetHistory;
 use App\Support\RouteRole;
 use App\Http\Middleware\EnsureTwoFactorEnrolled;
 use App\Http\Controllers\API\ImpersonationController;
+use App\Http\Controllers\QrLandingController;
 use App\Livewire\Admin\SupportConsole;
 use App\Livewire\Admin\ImportEmployees;
 
@@ -64,9 +65,7 @@ Route::get('/', function () {
         : redirect()->route('login');
 });
 
-Route::get('/auth/qr/{challenge}', function (string $challenge) {
-    return view('auth.qr-approve', ['challenge' => $challenge]);
-})->name('auth.qr.landing');
+Route::get('/auth/qr/{challenge}', QrLandingController::class)->name('auth.qr.landing');
 
 Route::middleware(['auth'])->get('/dashboard', function () {
     return redirect()->route('portal.dashboard');

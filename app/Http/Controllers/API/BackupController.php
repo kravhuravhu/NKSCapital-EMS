@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use App\Support\RoleCheck;
 
 class BackupController extends Controller
 {
@@ -120,7 +121,7 @@ class BackupController extends Controller
     {
         $user = Auth::user();
 
-        // this is the most dangerous endpoint in the portal — super_admin only
+        // this is the most dangerous endpoint in the portal - super_admin only
         if ($user->role !== 'super_admin') {
             AuditService::logWarning('BACKUP_RESTORE_FORBIDDEN', 'system', 0, [
                 'actor_id' => $user->id,
@@ -210,7 +211,7 @@ class BackupController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, $roles, true)) {
+        if (!RoleCheck::has($user, $roles)) {
             AuditService::logWarning('BACKUP_ACCESS_DENIED', 'system', 0, [
                 'actor_id' => $user->id,
                 'required' => $roles,

@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Support\RoleCheck;
 
 class LeaveConfigController extends Controller
 {
@@ -37,7 +38,7 @@ class LeaveConfigController extends Controller
         $user = Auth::user();
 
         // Only Super Admin and Director can update
-        if (!in_array($user->role, ['super_admin', 'director', 'admin'])) {
+        if (!RoleCheck::has($user, ['super_admin', 'director', 'admin'])) {
             AuditService::logWarning('LEAVE_CONFIG_UPDATE_UNAUTHORIZED', 'leave_configs', 0, [
                 'actor_id' => $user->id,
             ]);
@@ -137,7 +138,7 @@ class LeaveConfigController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['super_admin', 'director'])) {
+        if (!RoleCheck::has($user, ['super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Only Super Admin and Director can modify accrual rates'
@@ -202,7 +203,7 @@ class LeaveConfigController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['super_admin', 'director'])) {
+        if (!RoleCheck::has($user, ['super_admin', 'director'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Only Super Admin and Director can modify entitlements'
@@ -263,8 +264,8 @@ class LeaveConfigController extends Controller
     {
         $user = Auth::user();
 
-        // matches update() policy — admin is allowed to adjust balances
-        if (!in_array($user->role, ['super_admin', 'director', 'admin', 'manager'])) {
+        // matches update() policy - admin is allowed to adjust balances
+        if (!RoleCheck::has($user, ['super_admin', 'director', 'admin', 'manager'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Only Super Admin, Director, Admin, or Manager can reset balances',

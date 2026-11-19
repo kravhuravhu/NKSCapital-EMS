@@ -151,6 +151,16 @@ class AuthController extends Controller
                 ],
             ], 200);
         }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'token' => $token,
+                'user' => $this->userPayload($user),
+                'permissions' => $user->getAllPermissions()->pluck('name'),
+                'roles' => $user->getRoleNames(),
+            ],
+        ], 200);
     }
 
     /**
@@ -237,12 +247,13 @@ class AuthController extends Controller
     }
 
     /**
-     * Approve a QR handoff from the phone. Requires auth.
+     * POST /api/v1/auth/qr/start
+     * Public. Identity-first: the challenge is bound to the user at creation.
      */
-    public function qrApprove(Request $request)
+    public function qrStart(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'challenge' => 'required|string',
+            'identifier' => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -253,16 +264,88 @@ class AuthController extends Controller
             ], 422);
         }
 
+        $user = $this->qr->findActiveUser($request->identifier);
+
+        if (!$user) {
+            AuditService::logWarning('QR_START_UNKNOWN_IDENTIFIER', 'users', 0, [
+                'identifier' => $request->identifier,
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No active account matches that email or employee number.',
+            ], 422);
+        }
+
+        $challenge = $this->qr->start($user);
+        $qrUrl = route('auth.qr.landing', ['challenge' => $challenge->challenge]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'challenge' => $challenge->challenge,
+                'qr_url' => $qrUrl,
+                'qr_image' => $this->qrImage($qrUrl),
+                'expires_at' => $challenge->expires_at->toIso8601String(),
+            ],
+        ], 200);
+    }
+
+    /**
+     * Approve a QR handoff from the phone. Requires auth, the approver must be
+     * the user the challenge was created for, and the password is re-checked.
+     */
+    public function qrApprove(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'challenge' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $approver = $request->user();
+        $qr = QrLoginChallenge::where('challenge', $request->challenge)->first();
+
+        if (!$qr) {
+            return response()->json(['status' => 'error', 'message' => 'Challenge not found'], 404);
+        }
+
+        if ($qr->user_id === null || (int) $approver->id !== (int) $qr->user_id) {
+            AuditService::logWarning('QR_LOGIN_APPROVE_REFUSED', 'users', (int) $approver->id, [
+                'challenge_user_id' => $qr->user_id,
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This sign-in request belongs to a different account.',
+            ], 403);
+        }
+
+        if (!Hash::check($request->password, $approver->password)) {
+            return response()->json(['status' => 'error', 'message' => 'Password is incorrect'], 422);
+        }
+
         try {
-            $this->qr->approve($request->challenge, $request->user());
+            $this->qr->approve($request->challenge, $approver);
         } catch (\RuntimeException $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+            $code = in_array($e->getCode(), [403, 404], true) ? $e->getCode() : 422;
+
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], $code);
         }
 
         AuditService::log(
             action: 'QR_LOGIN_APPROVED',
             tableName: 'users',
-            recordId: $request->user()->id,
+            recordId: $approver->id,
             newValues: ['challenge' => $request->challenge],
             logType: 'success'
         );
@@ -303,6 +386,17 @@ class AuthController extends Controller
 
         // approved
         $user = $qr->user;
+
+        if (!$user || !$user->is_active || (int) $qr->approved_by_id !== (int) $qr->user_id) {
+            $qr->status = 'expired';
+            $qr->save();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This sign-in request is no longer valid.',
+            ], 422);
+        }
+
         $token = $user->createToken('api-login-qr', ['*'], now()->addDays(7))->plainTextToken;
         $user->last_login_at = now();
         $user->save();
@@ -332,45 +426,8 @@ class AuthController extends Controller
     }
 
     /**
-     * POST /api/v1/auth/qr/anonymous
-     * Public. Creates an anonymous challenge and returns a scannable payload.
-     */
-    public function qrAnonymous(Request $request)
-    {
-        $challenge = QrLoginChallenge::create([
-            'challenge' => Str::random(64),
-            'user_id' => null,
-            'challenge_token' => null,
-            'status' => 'pending',
-            'expires_at' => now()->addMinutes(3),
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
-
-        $qrUrl = route('auth.qr.landing', ['challenge' => $challenge->challenge]);
-
-        $qrImage = null;
-        if (class_exists(\SimpleSoftwareIO\QrCode\Facades\QrCode::class)) {
-            $qrImage = 'data:image/png;base64,' . base64_encode(
-                \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(280)->generate($qrUrl)
-            );
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'challenge' => $challenge->challenge,
-                'qr_url' => $qrUrl,
-                'qr_image' => $qrImage,
-                'expires_at' => $challenge->expires_at->toIso8601String(),
-                'expires_in_seconds' => 180,
-            ],
-        ], 200);
-    }
-
-    /**
      * POST /api/v1/auth/qr/cancel/{challenge}
-     * Public. The desktop can revoke a challenge it started.
+     * Public. The desktop or the phone can revoke a pending challenge.
      */
     public function qrCancel(Request $request, string $challenge)
     {
@@ -619,6 +676,34 @@ class AuthController extends Controller
         );
 
         return response()->json(['status' => 'success', 'message' => 'Two factor disabled'], 200);
+    }
+
+    /**
+     * Base64 PNG of the QR payload. Falls back to an SVG data URI when the
+     * PNG backend (imagick) is not available, and to null when the QR package
+     * is not installed.
+     */
+    protected function qrImage(string $url): ?string
+    {
+        $facade = \SimpleSoftwareIO\QrCode\Facades\QrCode::class;
+
+        if (!class_exists($facade)) {
+            return null;
+        }
+
+        try {
+            return 'data:image/png;base64,' . base64_encode(
+                $facade::format('png')->size(280)->margin(1)->generate($url)
+            );
+        } catch (\Throwable) {
+            try {
+                return 'data:image/svg+xml;base64,' . base64_encode(
+                    (string) $facade::format('svg')->size(280)->margin(1)->generate($url)
+                );
+            } catch (\Throwable) {
+                return null;
+            }
+        }
     }
 
     protected function userHasPasskeys(User $user): bool

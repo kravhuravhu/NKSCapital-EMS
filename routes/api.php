@@ -60,7 +60,9 @@ Route::prefix('v1/auth')->group(function () {
     Route::middleware('throttle:api-otp')->post('verify-otp', [AuthController::class, 'verifyOtp']);
     Route::middleware('throttle:api-otp')->post('resend-otp', [AuthController::class, 'resendOtp']);
     Route::middleware('throttle:api-qr')->post('qr/initiate', [AuthController::class, 'qrInitiate']);
+    Route::middleware('throttle:api-qr')->post('qr/start', [AuthController::class, 'qrStart']);
     Route::middleware('throttle:api-qr')->get('qr/status/{challenge}', [AuthController::class, 'qrStatus']);
+    Route::middleware('throttle:api-qr')->post('qr/cancel/{challenge}', [AuthController::class, 'qrCancel']);
 
     Route::post('password/forgot', [AuthController::class, 'forgotPassword']);
     Route::post('password/reset', [AuthController::class, 'resetPassword']);
@@ -82,9 +84,6 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
             Route::post('2fa/verify', [AuthController::class, 'verify2FA']);
             Route::post('2fa/disable', [AuthController::class, 'disable2FA']);
         });
-
-        Route::middleware('throttle:api-qr')->post('qr/anonymous', [AuthController::class, 'qrAnonymous']);
-        Route::middleware('throttle:api-qr')->post('qr/cancel/{challenge}', [AuthController::class, 'qrCancel']);
     });
 
     // ========================================
@@ -310,7 +309,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     });
 
     // ========================================
-    // M8: Recruitment — Requisitions, Candidates, Interviews
+    // M8: Recruitment - Requisitions, Candidates, Interviews
     // ========================================
     Route::prefix('recruitment')->group(function () {
         // Requisitions
@@ -338,7 +337,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::put('interview/reschedule/{id}', [RecruitmentController::class, 'rescheduleInterview']);
 
         // ========================================
-        // M9: Recruitment — Offers, Conversion, & Analytics
+        // M9: Recruitment - Offers, Conversion, & Analytics
         // ========================================
         // Offers
         Route::post('offer/generate', [OfferController::class, 'generate']);
@@ -507,7 +506,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('2fa/disable', [SecurityController::class, 'disableTwoFactor']);
     });
 
-    // Payroll webhook (external system) — no auth, separate group
+    // Payroll webhook (external system) - no auth, separate group
     Route::middleware('throttle:api-payroll-webhook')->post('/v1/integrations/payroll/webhook', [IntegrationController::class, 'payrollWebhook']);
 
     Route::prefix('leave/reasons')->group(function () {
