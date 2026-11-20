@@ -685,24 +685,21 @@ class AuthController extends Controller
      */
     protected function qrImage(string $url): ?string
     {
-        $facade = \SimpleSoftwareIO\QrCode\Facades\QrCode::class;
-
-        if (!class_exists($facade)) {
+        if (!class_exists(\BaconQrCode\Writer::class)) {
             return null;
         }
 
         try {
-            return 'data:image/png;base64,' . base64_encode(
-                $facade::format('png')->size(280)->margin(1)->generate($url)
+            $renderer = new \BaconQrCode\Renderer\ImageRenderer(
+                new \BaconQrCode\Renderer\RendererStyle\RendererStyle(280, 1),
+                new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+            );
+
+            return 'data:image/svg+xml;base64,' . base64_encode(
+                (new \BaconQrCode\Writer($renderer))->writeString($url)
             );
         } catch (\Throwable) {
-            try {
-                return 'data:image/svg+xml;base64,' . base64_encode(
-                    (string) $facade::format('svg')->size(280)->margin(1)->generate($url)
-                );
-            } catch (\Throwable) {
-                return null;
-            }
+            return null;
         }
     }
 
