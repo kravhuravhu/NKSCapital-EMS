@@ -4,9 +4,12 @@ namespace App\Livewire\Shared;
 
 use App\Support\Api;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class NotificationBadge extends Component
 {
+    use HasFlashMessages;
+
     public int $unread = 0;
 
     public function mount(): void

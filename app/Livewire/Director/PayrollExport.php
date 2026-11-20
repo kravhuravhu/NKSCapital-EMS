@@ -8,6 +8,8 @@ use App\Livewire\Concerns\HasFlashMessages;
 
 class PayrollExport extends Component
 {
+    use HasFlashMessages;
+    
     public bool $loading = true;
     public bool $syncing = false;
     public bool $downloading = false;

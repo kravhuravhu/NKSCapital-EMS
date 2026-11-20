@@ -11,6 +11,8 @@ use App\Livewire\Concerns\HasFlashMessages;
 
 class SupportConsole extends Component
 {
+    use HasFlashMessages;
+    
     public bool $loading = false;
     public ?string $error = null;
     public ?string $flash = null;

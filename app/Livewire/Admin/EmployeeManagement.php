@@ -10,6 +10,8 @@ use App\Livewire\Concerns\HandlesOnboarding;
 
 class EmployeeManagement extends Component
 {
+    use HasFlashMessages;
+
     public bool $loading = true;
     public ?string $error = null;
     public ?string $flash = null;
@@ -70,8 +72,6 @@ class EmployeeManagement extends Component
     public array $rolesForm = [];
     public array $availableRoles = [];
     public string $rolesPrimary = '';
-
-    use HandlesOnboarding;
 
     public function mount(): void
     {

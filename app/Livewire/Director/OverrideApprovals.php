@@ -8,6 +8,8 @@ use App\Livewire\Concerns\HasFlashMessages;
 
 class OverrideApprovals extends Component
 {
+    use HasFlashMessages;
+
     public bool $loading = true;
     public bool $syncing = false;
     public ?string $error = null;
