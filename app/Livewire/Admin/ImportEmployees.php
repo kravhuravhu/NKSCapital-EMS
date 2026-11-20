@@ -12,6 +12,7 @@ use App\Livewire\Concerns\HasFlashMessages;
 class ImportEmployees extends Component
 {
     use WithFileUploads;
+    use HasFlashMessages;
 
     public bool $loading = false;
     public ?string $error = null;

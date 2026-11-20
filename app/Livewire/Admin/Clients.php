@@ -9,6 +9,8 @@ use App\Livewire\Concerns\HasFlashMessages;
 
 class Clients extends Component
 {
+    use HasFlashMessages;
+    
     public bool $loading = true;
     public ?string $error = null;
     public ?string $flash = null;

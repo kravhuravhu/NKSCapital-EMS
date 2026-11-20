@@ -8,6 +8,8 @@ use App\Livewire\Concerns\HasFlashMessages;
 
 class GlobalSearch extends Component
 {
+    use HasFlashMessages;
+    
     public string $query = '';
     public array $groups = [];
     public bool $open = false;

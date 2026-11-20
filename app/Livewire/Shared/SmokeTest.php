@@ -4,9 +4,12 @@ namespace App\Livewire\Shared;
 
 use App\Support\Api;
 use Livewire\Component;
+use App\Livewire\Concerns\HasFlashMessages;
 
 class SmokeTest extends Component
 {
+    use HasFlashMessages;
+
     public array $permissionsData = [];
     public array $pendingCounts   = [];
     public bool  $apiOk = false;

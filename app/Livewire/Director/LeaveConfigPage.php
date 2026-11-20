@@ -8,6 +8,8 @@ use App\Livewire\Concerns\HasFlashMessages;
 
 class LeaveConfigPage extends Component
 {
+    use HasFlashMessages;
+    
     public bool $loading = true;
     public bool $saving = false;
     public ?string $error = null;

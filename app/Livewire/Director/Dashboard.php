@@ -8,6 +8,8 @@ use App\Livewire\Concerns\HasFlashMessages;
 
 class Dashboard extends Component
 {
+    use HasFlashMessages;
+    
     public bool  $loading = true;
     public ?string $error = null;
 

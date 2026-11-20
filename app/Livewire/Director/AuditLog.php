@@ -9,6 +9,8 @@ use App\Livewire\Concerns\HasFlashMessages;
 
 class AuditLog extends Component
 {
+    use HasFlashMessages;
+    
     public bool $loading = true;
     public bool $verifying = false;
     public bool $exporting = false;

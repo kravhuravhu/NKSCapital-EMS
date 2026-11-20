@@ -11,6 +11,7 @@ use App\Livewire\Concerns\HasFlashMessages;
 class AssetManagement extends Component
 {
     use WithFileUploads;
+    use HasFlashMessages;
 
     public bool $loading = true;
     public ?string $error = null;

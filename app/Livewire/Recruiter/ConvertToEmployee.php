@@ -8,6 +8,8 @@ use App\Livewire\Concerns\HasFlashMessages;
 
 class ConvertToEmployee extends Component
 {
+    use HasFlashMessages;
+    
     public bool $loading = true;
     public bool $submitting = false;
     public ?string $error = null;

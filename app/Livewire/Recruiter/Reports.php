@@ -8,6 +8,8 @@ use App\Livewire\Concerns\HasFlashMessages;
 
 class Reports extends Component
 {
+    use HasFlashMessages;
+    
     public bool $loading = true;
     public bool $exporting = false;
     public ?string $error = null;

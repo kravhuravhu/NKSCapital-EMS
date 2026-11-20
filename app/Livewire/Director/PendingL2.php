@@ -9,6 +9,8 @@ use App\Support\RoleCheck;
 
 class PendingL2 extends Component
 {
+    use HasFlashMessages;
+    
     public bool $loading = true;
     public ?string $error = null;
     public ?string $flash = null;
