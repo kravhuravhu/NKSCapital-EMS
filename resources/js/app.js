@@ -1,5 +1,6 @@
 import './bootstrap';
 import './api';
+import { Passkeys, NotSupportedError, UserCancelledError, PasskeyExistsError, ServerError } from '@laravel/passkeys';
 
 import * as bootstrap from 'bootstrap';
 window.bootstrap = bootstrap;
@@ -10,6 +11,81 @@ document.addEventListener('alpine:init', () => {
     const Alpine = window.Alpine;
 
     if (!Alpine) return;
+
+    const passkeyMessage = (error, fallback) => {
+        if (error instanceof UserCancelledError) {
+            return 'The passkey prompt was cancelled. Try again when you are ready.';
+        }
+
+        if (error instanceof NotSupportedError) {
+            return 'This browser does not support passkeys.';
+        }
+
+        if (error instanceof PasskeyExistsError) {
+            return 'This device already has a passkey for your account.';
+        }
+
+        if (error instanceof ServerError && error.status === 429) {
+            return 'Too many attempts. Wait a minute and try again.';
+        }
+
+        return (error && error.message) ? error.message : fallback;
+    };
+
+    Alpine.data('nksPasskeyLogin', () => ({
+        phase: 'idle',
+        supported: true,
+
+        init() {
+            this.supported = Passkeys.isSupported();
+        },
+
+        get label() {
+            if (this.phase === 'waiting') return 'Waiting for your phone...';
+            if (this.phase === 'success') return 'Signing in...';
+            if (this.phase === 'error') return 'Try again';
+            return 'Show QR code';
+        },
+
+        get busy() {
+            return this.phase === 'waiting' || this.phase === 'success';
+        },
+
+        async run() {
+            if (this.busy || !this.supported) return;
+
+            this.phase = 'waiting';
+
+            try {
+                const response = await Passkeys.verify({ remember: false });
+
+                this.phase = 'success';
+                window.location.assign((response && response.redirect) || '/dashboard');
+            } catch (error) {
+                this.phase = 'error';
+                await this.$wire.passkeyFailed(passkeyMessage(error, 'Passkey sign in failed.'));
+            }
+        },
+    }));
+
+    Alpine.data('nksPasskeyRegister', () => ({
+        busy: false,
+
+        async run() {
+            if (this.busy) return;
+
+            this.busy = true;
+
+            try {
+                await Passkeys.register({ name: this.$wire.passkeyName });
+                await this.$wire.passkeyRegistered();
+            } catch (error) {
+                await this.$wire.passkeyFailed(passkeyMessage(error, 'Passkey registration failed.'));
+            } finally {
+                this.busy = false;
+            }
+        },
+    }));
 
     Alpine.directive('trap', (el) => {
         const selector = [

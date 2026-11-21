@@ -52,11 +52,9 @@
                             </strong>
                             <span>Sign in with your phone's biometrics instead of a code.</span>
                         </div>
-                        @if (Route::has('passkeys.index'))
-                            <a href="{{ route('passkeys.index') }}" class="nks-btn nks-btn--outline nks-btn--sm">
-                                Manage
-                            </a>
-                        @endif
+                        <button type="button" wire:click="openPasskey" class="nks-btn nks-btn--outline nks-btn--sm">
+                            Add passkey
+                        </button>
                     </div>
 
                     <div class="sc-row">
@@ -240,6 +238,52 @@
                 </div>
                 <footer class="nks-modal-foot">
                     <button type="button" wire:click="close2fa" class="nks-btn nks-btn--outline">Close</button>
+                </footer>
+            </div>
+        </div>
+    @endif
+
+    @if ($showPasskey)
+        <div class="nks-modal-backdrop" wire:click.self="closePasskey" @keydown.escape.window="$wire.closePasskey()">
+            <div class="nks-modal nks-modal--md" role="dialog" aria-modal="true" x-trap x-data="nksPasskeyRegister">
+                <header class="nks-modal-head">
+                    <h3>Add a passkey</h3>
+                    <button type="button" wire:click="closePasskey" class="nks-modal-close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </header>
+                <div class="nks-modal-body">
+                    @if ($passkeyStep === 'confirm')
+                        <p>Confirm your password, then your browser will ask you to create a passkey on this device or on your phone.</p>
+
+                        <div class="nks-field">
+                            <label class="nks-label" for="passkey-name">Passkey name</label>
+                            <input id="passkey-name" type="text" wire:model="passkeyName" class="nks-input" maxlength="100" placeholder="My phone">
+                        </div>
+
+                        <div class="nks-field">
+                            <label class="nks-label" for="passkey-password">Password</label>
+                            <input id="passkey-password" type="password" wire:model="passkeyPassword" class="nks-input" autocomplete="current-password">
+                        </div>
+
+                        <button type="button" wire:click="confirmPasskeyPassword" class="nks-btn nks-btn--primary nks-btn--block"
+                                wire:loading.attr="disabled" wire:target="confirmPasskeyPassword">
+                            <span class="nks-btn-spinner" wire:loading wire:target="confirmPasskeyPassword"></span>
+                            <i class="fa-solid fa-lock" wire:loading.remove wire:target="confirmPasskeyPassword"></i>
+                            Confirm password
+                        </button>
+                    @else
+                        <p>Password confirmed. Choose <strong>Create passkey</strong>, then pick this device or scan the QR code with your phone and confirm with your fingerprint or face.</p>
+
+                        <button type="button" @click="run()" :disabled="busy" class="nks-btn nks-btn--primary nks-btn--block">
+                            <span class="nks-btn-spinner" x-show="busy" x-cloak></span>
+                            <i class="fa-solid fa-fingerprint" x-show="!busy"></i>
+                            Create passkey
+                        </button>
+                    @endif
+                </div>
+                <footer class="nks-modal-foot">
+                    <button type="button" wire:click="closePasskey" class="nks-btn nks-btn--outline">Close</button>
                 </footer>
             </div>
         </div>

@@ -15,11 +15,14 @@ use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Fortify;
 use App\Http\Responses\LoginResponse;
 use App\Http\Responses\LogoutResponse;
+use App\Http\Responses\PasskeyLoginResponse;
 use App\Listeners\IssueSanctumTokenOnLogin;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
+use Laravel\Passkeys\Contracts\PasskeyLoginResponse as PasskeyLoginResponseContract;
+use Laravel\Passkeys\Passkeys;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -30,6 +33,7 @@ class FortifyServiceProvider extends ServiceProvider
     {
         $this->app->singleton(LoginResponseContract::class, LoginResponse::class);
         $this->app->singleton(LogoutResponseContract::class, LogoutResponse::class);
+        $this->app->singleton(PasskeyLoginResponseContract::class, PasskeyLoginResponse::class);
     }
 
     /**
@@ -42,6 +46,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::redirectUserForTwoFactorAuthenticationUsing(RedirectIfTwoFactorAuthenticatable::class);
+
+        Passkeys::authorizeLoginUsing(fn (Request $request, $user, $passkey) => (bool) ($user->is_active ?? false));
 
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());

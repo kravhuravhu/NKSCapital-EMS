@@ -6,6 +6,8 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Fortify\Contracts\PasskeyUser;
+use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
@@ -16,9 +18,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-class User extends Authenticatable
+class User extends Authenticatable implements PasskeyUser
 {
-    use HasApiTokens, Notifiable, HasRoles;
+    use HasApiTokens, Notifiable, HasRoles, PasskeyAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
@@ -609,14 +611,6 @@ class User extends Authenticatable
     public function twoFactorAuth(): HasOne
     {
         return $this->hasOne(TwoFactorAuth::class);
-    }
-
-    /**
-     * Get passkeys for this user.
-     */
-    public function passkeys(): HasMany
-    {
-        return $this->hasMany(Passkey::class);
     }
 
     // ---------- SPATIE PERMISSION OVERRIDE ----------

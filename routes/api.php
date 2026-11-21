@@ -60,7 +60,6 @@ Route::prefix('v1/auth')->group(function () {
     Route::middleware('throttle:api-otp')->post('verify-otp', [AuthController::class, 'verifyOtp']);
     Route::middleware('throttle:api-otp')->post('resend-otp', [AuthController::class, 'resendOtp']);
     Route::middleware('throttle:api-qr')->post('qr/initiate', [AuthController::class, 'qrInitiate']);
-    Route::middleware('throttle:api-qr')->post('qr/start', [AuthController::class, 'qrStart']);
     Route::middleware('throttle:api-qr')->get('qr/status/{challenge}', [AuthController::class, 'qrStatus']);
     Route::middleware('throttle:api-qr')->post('qr/cancel/{challenge}', [AuthController::class, 'qrCancel']);
 
