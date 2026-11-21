@@ -3,6 +3,8 @@
 namespace App\Livewire\Employee;
 
 use App\Support\Api;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use App\Livewire\Concerns\HasFlashMessages;
 
@@ -31,6 +33,10 @@ class Security extends Component
     public bool $verifying2fa = false;
 
     public int $passkeyCount = 0;
+    public bool $showPasskey = false;
+    public string $passkeyStep = 'confirm';
+    public string $passkeyName = '';
+    public string $passkeyPassword = '';
 
     public function mount(): void
     {
@@ -186,6 +192,70 @@ class Security extends Component
         $this->flash = 'Two factor authentication disabled.';
         $this->close2fa();
         $this->load();
+    }
+
+    public function openPasskey(): void
+    {
+        $this->error = null;
+        $this->passkeyName = '';
+        $this->passkeyPassword = '';
+        $this->passkeyStep = 'confirm';
+        $this->showPasskey = true;
+    }
+
+    public function closePasskey(): void
+    {
+        session()->forget('auth.password_confirmed_at');
+
+        $this->showPasskey = false;
+        $this->passkeyStep = 'confirm';
+        $this->passkeyName = '';
+        $this->passkeyPassword = '';
+    }
+
+    public function confirmPasskeyPassword(): void
+    {
+        $this->error = null;
+
+        $this->passkeyName = trim($this->passkeyName);
+
+        if ($this->passkeyName === '' || mb_strlen($this->passkeyName) > 100) {
+            $this->error = 'Enter a passkey name of up to 100 characters.';
+            return;
+        }
+
+        if ($this->passkeyPassword === '') {
+            $this->error = 'Enter your password to continue.';
+            return;
+        }
+
+        $user = Auth::user();
+
+        if (! $user || ! Auth::validate(['email' => $user->email, 'password' => $this->passkeyPassword])) {
+            $this->error = 'Password is incorrect.';
+            $this->passkeyPassword = '';
+            return;
+        }
+
+        $this->passkeyPassword = '';
+
+        session()->put('auth.password_confirmed_at', time());
+
+        $this->passkeyStep = 'ready';
+    }
+
+    public function passkeyRegistered(): void
+    {
+        $this->closePasskey();
+
+        $this->flash = 'Passkey added. You can now sign in with your phone.';
+        $this->load();
+    }
+
+    public function passkeyFailed(string $message): void
+    {
+        $this->flash = null;
+        $this->error = Str::limit(strip_tags($message), 200);
     }
 
     public function strengthPercent(): int

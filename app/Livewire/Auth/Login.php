@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\Api;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class Login extends Component
@@ -15,18 +16,11 @@ class Login extends Component
 
     public string $activeTab = 'password';
 
-    // Password flow
     public string $step = 'password';
     public string $email = '';
     public string $password = '';
     public string $code = '';
     public string $challengeToken = '';
-
-    // QR flow: identify, pending, approved, expired, error
-    public string $qrState = 'identify';
-    public string $qrIdentifier = '';
-    public ?array $qrData = null;
-    public string $qrChallenge = '';
 
     public ?string $error = null;
     public ?string $flash = null;
@@ -42,12 +36,8 @@ class Login extends Component
 
     public function selectTab(string $tab): void
     {
-        if (! in_array($tab, ['password', 'qr'], true) || $tab === $this->activeTab) {
+        if (! in_array($tab, ['password', 'qr'], true)) {
             return;
-        }
-
-        if ($this->activeTab === 'qr') {
-            $this->cancelQr();
         }
 
         $this->activeTab = $tab;
@@ -55,107 +45,10 @@ class Login extends Component
         $this->flash = null;
     }
 
-    public function startQr(): void
+    public function passkeyFailed(string $message): void
     {
-        $this->error = null;
         $this->flash = null;
-        $this->qrIdentifier = trim($this->qrIdentifier);
-
-        $this->validate(
-            ['qrIdentifier' => 'required|string|max:255'],
-            [],
-            ['qrIdentifier' => 'email or employee number']
-        );
-
-        $this->qrData = null;
-        $this->qrChallenge = '';
-
-        $response = Api::post('/auth/qr/start', ['identifier' => $this->qrIdentifier]);
-
-        if (! $response['ok']) {
-            $this->error = $response['message'] ?? 'Unable to start QR sign in.';
-            $this->qrState = in_array((int) $response['status'], [404, 422], true) ? 'identify' : 'error';
-            return;
-        }
-
-        $data = $response['data'] ?? [];
-
-        if (empty($data['challenge'])) {
-            $this->error = 'Unable to start QR sign in.';
-            $this->qrState = 'error';
-            return;
-        }
-
-        $this->qrData = $data;
-        $this->qrChallenge = $data['challenge'];
-        $this->qrState = 'pending';
-    }
-
-    public function regenerateQr(): void
-    {
-        $this->startQr();
-    }
-
-    public function retryQr(): void
-    {
-        if ($this->qrIdentifier === '') {
-            $this->resetQr();
-            return;
-        }
-
-        $this->startQr();
-    }
-
-    public function cancelQr(): void
-    {
-        if ($this->qrChallenge !== '' && $this->qrState === 'pending') {
-            Api::post('/auth/qr/cancel/' . $this->qrChallenge);
-        }
-
-        $this->resetQr();
-    }
-
-    protected function resetQr(): void
-    {
-        $this->qrState = 'identify';
-        $this->qrIdentifier = '';
-        $this->qrData = null;
-        $this->qrChallenge = '';
-        $this->error = null;
-    }
-
-    public function pollQrStatus(): void
-    {
-        if ($this->qrState !== 'pending' || $this->qrChallenge === '') {
-            return;
-        }
-
-        $response = Api::get('/auth/qr/status/' . $this->qrChallenge);
-
-        if (! $response['ok']) {
-            if (in_array((int) $response['status'], [404, 422], true)) {
-                $this->error = $response['message'] ?? 'This QR code is no longer valid.';
-                $this->qrState = 'error';
-            }
-
-            return;
-        }
-
-        $status = $response['data']['status'] ?? 'pending';
-
-        if (in_array($status, ['expired', 'consumed'], true)) {
-            $this->qrState = 'expired';
-            return;
-        }
-
-        if ($status === 'approved') {
-            $this->qrState = 'approved';
-            $this->completeLogin($response['data']);
-
-            if ($this->error) {
-                $this->qrState = 'error';
-            }
-        }
+        $this->error = Str::limit(strip_tags($message), 200);
     }
 
     public function submitPassword(): void
