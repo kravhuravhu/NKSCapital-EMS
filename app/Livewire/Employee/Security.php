@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use App\Livewire\Concerns\HasFlashMessages;
+use Illuminate\Support\Facades\Hash;
 
 class Security extends Component
 {
@@ -231,7 +232,7 @@ class Security extends Component
 
         $user = Auth::user();
 
-        if (! $user || ! Auth::validate(['email' => $user->email, 'password' => $this->passkeyPassword])) {
+        if (! $user || ! Hash::check($this->passkeyPassword, $user->password)) {
             $this->error = 'Password is incorrect.';
             $this->passkeyPassword = '';
             return;
